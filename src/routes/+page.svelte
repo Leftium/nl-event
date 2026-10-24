@@ -50,9 +50,12 @@
 		descriptionInput.scrollTop = scrollTop;
 		descriptionInput.scrollLeft = scrollLeft;
 	}
-	let titleSelection = $state('');
+	let descriptionSelection = $state('');
 	let selectionDescription = '';
 	let selectionIdentity: Core.identity | undefined;
+	let selectionRevision = -1;
+	let selectionStart = 0;
+	let selectionEnd = 0;
 
 	function displayDateTime(value: string) {
 		if (!/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$/.test(value)) return value;
@@ -90,27 +93,35 @@
 		return `${month} ${Number(value.slice(8, 10))}${year}${formatted.slice(10)}`;
 	}
 
-	function captureTitleSelection() {
-		titleSelection = descriptionInput.value.slice(
+	function captureDescriptionSelection() {
+		descriptionSelection = descriptionInput.value.slice(
 			descriptionInput.selectionStart,
 			descriptionInput.selectionEnd
 		);
 		selectionDescription = draft.description;
 		selectionIdentity = draft.identity;
+		selectionRevision = draft.revision;
+		selectionStart = descriptionInput.selectionStart;
+		selectionEnd = descriptionInput.selectionEnd;
 	}
 
-	async function useSelectionAsTitle() {
+	async function useSelectionAs(field: 'title' | 'location') {
 		if (
-			!titleSelection.trim() ||
+			!descriptionSelection.trim() ||
 			selectionDescription !== draft.description ||
-			selectionIdentity !== draft.identity
+			selectionIdentity !== draft.identity ||
+			selectionRevision !== draft.revision ||
+			descriptionInput.value !== selectionDescription ||
+			descriptionInput.selectionStart !== selectionStart ||
+			descriptionInput.selectionEnd !== selectionEnd ||
+			descriptionInput.value.slice(selectionStart, selectionEnd) !== descriptionSelection
 		)
 			return;
-		draft = Core.edit(draft, 'title', titleSelection);
-		titleSelection = '';
+		draft = Core.edit(draft, field, descriptionSelection);
+		descriptionSelection = '';
 		descriptionFullscreen = false;
 		await tick();
-		document.getElementById('title')?.focus();
+		document.getElementById(field)?.focus();
 	}
 	let parseTimer: ReturnType<typeof setTimeout> | undefined;
 	const newlyFocusedInputs = new WeakSet<HTMLInputElement>();
@@ -180,7 +191,7 @@
 		clipboardOperation += 1;
 		readingClipboard = false;
 		clearTimeout(parseTimer);
-		titleSelection = '';
+		descriptionSelection = '';
 		draft = Core.create(captureContext());
 		displayNow = draft.context.referenceInstant;
 		zoneDialog?.close();
@@ -198,7 +209,7 @@
 				message = 'Clipboard is empty. Your draft is unchanged.';
 				return;
 			}
-			titleSelection = '';
+			descriptionSelection = '';
 			draft = Core.replaceClipboard(draft, text, captureContext());
 			displayNow = draft.context.referenceInstant;
 			scheduleParse(true);
@@ -284,9 +295,9 @@
 					id="description"
 					bind:this={descriptionInput}
 					value={draft.description}
-					onselect={captureTitleSelection}
+					onselect={captureDescriptionSelection}
 					oninput={(event) => {
-						titleSelection = '';
+						descriptionSelection = '';
 						draft = Core.describe(draft, event.currentTarget.value);
 						scheduleParse(event instanceof InputEvent && event.inputType === 'insertFromPaste');
 					}}
@@ -294,17 +305,22 @@
 					wrap={descriptionWrap ? 'soft' : 'off'}
 					aria-describedby="parse-status"
 					disabled={!ready}></textarea>
-				{#if titleSelection.trim()}
-					<button
-						class="inline outline selection-title"
-						type="button"
-						onpointerdown={(event) => {
-							if (event.pointerType === 'mouse') event.preventDefault();
-						}}
-						onclick={useSelectionAsTitle}
-					>
-						Use selection as Title
-					</button>
+				{#if descriptionSelection.trim()}
+					<div class="selection-actions">
+						{#each ['title', 'location'] as field (field)}
+							<button
+								class="inline outline"
+								type="button"
+								onpointerdown={(event) => {
+									// Cancel mouse focus changes; WebKit touch needs its native click synthesis.
+									if (event.pointerType === 'mouse') event.preventDefault();
+								}}
+								onclick={() => useSelectionAs(field as 'title' | 'location')}
+							>
+								Use selection as {field === 'title' ? 'Title' : 'Location'}
+							</button>
+						{/each}
+					</div>
 				{/if}
 				<div class="editor-tools">
 					<small class="editor-counts" data-tooltip="Lines, words, characters (including spaces)">
@@ -778,10 +794,15 @@
 		clip-path: inset(50%);
 		white-space: nowrap;
 	}
-	.selection-title {
-		align-self: flex-start;
+	.selection-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.5rem;
 		flex-shrink: 0;
 		margin: 0.25rem 0.75rem;
+	}
+	.selection-actions button {
+		font-size: 0.8rem;
 	}
 	@media (any-pointer: coarse) {
 		.editor-icon {

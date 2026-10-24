@@ -422,7 +422,7 @@ it('parses the supplied decorated party announcement as one overnight schedule',
 		result = Core.validate(d);
 	expect(result.startValue).toBe('2026-08-14 23:00');
 	expect(result.endValue).toBe('2026-08-15 03:30');
-	expect(d.location.value).toBe('해피홀(Happy Hall) 서울 서대문구 명물길 37 지하1층');
+	expect(d.location.value).toBe('서울 서대문구 명물길 37');
 	expect(values(d, 'start')).toEqual(
 		expect.arrayContaining(['2026-08-14 23:00', '2026-08-15 00:30', '2026-08-15 02:00'])
 	);
@@ -476,4 +476,151 @@ it('does not infer English dates or weekdays from fragments inside names or ordi
 	expect(named.start).toMatchObject({ value: '2026-10-25', input: 'Tomorrow', ownership: 'auto' });
 	expect(parseText('Money talk 10/25 at 7pm').start.value).toBe('2026-10-25 19:00');
 	expect(parseText('Sunset meetup 10/26 at 7pm').start.value).toBe('2026-10-26 19:00');
+});
+
+describe('address-first labeled locations', () => {
+	const announcement = fs.readFileSync('tests/inputs/multiline-location-user.txt', 'utf8');
+	const flattened = fs.readFileSync(
+		'tests/fixtures/nl-event/inputs/k2-milonga-excerpt.txt',
+		'utf8'
+	);
+	it.each([announcement, flattened])(
+		'exports only the source address, preserving Description: %s',
+		(text) => {
+			const draft = parse(text);
+			expect(draft.location.value).toBe('연남동 568-51');
+			expect(values(draft, 'location')).toEqual(['연남동 568-51', '피스타']);
+			expect(draft.description).toBe(text);
+			const event = Core.validate(draft).event!;
+			expect(event).toBeDefined();
+			expect(new URL(Core.googleUrl(event)).searchParams.get('location')).toBe('연남동 568-51');
+			expect(new URL(Core.googleUrl(event)).searchParams.get('details')).toBe(text);
+			const ics = Core.ics(event, 'location-regression', '20261024T030000Z').replace(/\r\n /g, '');
+			expect(ics).toContain('LOCATION:연남동 568-51\r\n');
+		}
+	);
+	it.each(['장소', '주소', '위치', 'Location', 'Venue', 'location', 'VENUE'])(
+		'recognizes decorated multiline and inline %s labels',
+		(label) => {
+			for (const source of [
+				`${label}\n피스타\n연남동 568-51(B1)\n홍대역 2번출구`,
+				`**${label} :**\r\n\r\n~ **피스타**\r\n\r\n연남동 568-51 (B1)`,
+				`${label}:피스타, 연남동 568-51 (B1) 홍대역 2번출구`,
+				`**${label}**:\n피스타\n연남동 568-51(B1)`,
+				`${label} 피스타 연남동 568-51(B1)`
+			]) {
+				const draft = parse(source);
+				expect(draft.location.value).toBe('연남동 568-51');
+				expect(values(draft, 'location')).toEqual(['연남동 568-51', '피스타']);
+			}
+		}
+	);
+	it.each([
+		['📍 해피홀 서울 서대문구 명물길 37 지하1층', '서울 서대문구 명물길 37', '해피홀'],
+		['장소: 피스타, 연남동 568-51(B1)', '연남동 568-51', '피스타'],
+		['장소: 연남동 568-51번지', '연남동 568-51번지', undefined],
+		['Location: The Hall, 123 Main Street (Suite 2)', '123 Main Street', 'The Hall'],
+		['Venue\nThe Hall\n123 Main St, Floor 2', '123 Main St', 'The Hall'],
+		['주소: 서울 마포구 와우산로29길 27 지하 1층 101호', '서울 마포구 와우산로29길 27', undefined]
+	])('strips floor and unit annotations in %s', (text, address, venue) => {
+		const draft = parse(text!);
+		expect(draft.location.value).toBe(address);
+		if (venue) expect(values(draft, 'location')).toContain(venue);
+		expect(draft.description).toBe(text);
+	});
+	it.each(['장소\n~ **피스타**', '장소: 피스타 (B1)', 'Venue: The Hall (Floor 2)', '공간비틀즈'])(
+		'keeps venue-only fallback: %s',
+		(text) => {
+			expect(parse(text).location.value).toBe(
+				text.includes('피스타') ? '피스타' : text.includes('The Hall') ? 'The Hall' : '공간비틀즈'
+			);
+		}
+	);
+	it.each([
+		'장소',
+		'장소\n\n',
+		'장소\n6시 밀롱가 무료강습\n연남동 568-51',
+		'장소\n홍대역 2번출구\n연남동 568-51',
+		'Venue\nRegistration deadline: tomorrow\nThe Hall',
+		'Location\nDate: October 18, 2026\n123 Main Street',
+		'장소\n회비 20000원\n피스타',
+		'장소\n문의: test@example.com\n피스타',
+		'장소\nhttps://example.com\n피스타',
+		'장소\n추후 공지\n피스타',
+		'장소가 궁금하면 연락하세요',
+		'이 장소 안내는 추후 공지합니다',
+		'장소 안내를 확인하세요',
+		'장소\n친구들과 함께합니다\n피스타',
+		'Location\nTBD\nThe Hall',
+		'장소\n(B1)\n연남동 568-51',
+		'장소\nDirections: walk to 123 Main Street',
+		'장소\n홍대역 2번출구에서 연남동 568-51',
+		'장소\n홍대역에서 도보 5분',
+		'장소\n홍대역에서 도보 5분\n연남동 568-51',
+		'Location\nWalk to 123 Main Street',
+		'Location\nWalk 5 minutes from Hongdae Station',
+		'Location\nWalk 5 minutes from Hongdae Station\n123 Main Street',
+		'Location\nWalking 5 mins from the station\n123 Main Street',
+		'Location\nTake the subway to the hall\n123 Main Street',
+		'장소\n6시 연남동 568-51에서 무료강습',
+		'장소\n문의: 연남동 568-51',
+		'Location\nCome dance with us',
+		'Location\nCome dance with us\n123 Main Street',
+		'Location\nJoin us for a party\n123 Main Street',
+		'Venue\nPlease register by Friday\nThe Hall'
+	])('rejects empty sections, directions, copy and ordinary mentions: %s', (text) => {
+		expect(values(parse(text), 'location')).toEqual([]);
+	});
+	it.each(['날짜', '시간', 'Date', 'Time', 'Title', '등록', '문의'])(
+		'stops before neighboring %s sections',
+		(label) => {
+			const draft = parse(`장소\n피스타\n${label}: 연남동 568-51\n다른동 123-45`);
+			expect(values(draft, 'location')).toEqual(['피스타']);
+		}
+	);
+	it.each(['The Basement', 'Station Hall', 'The Walk', 'The Turn'])(
+		'keeps venue names containing direction words: %s',
+		(venue) => {
+			expect(values(parse(`Venue\n${venue}`), 'location')).toEqual([venue]);
+			expect(values(parse(`Venue\n${venue}\n123 Main Street`), 'location')).toEqual([
+				'123 Main Street',
+				venue
+			]);
+		}
+	);
+	it('stops at unrelated copy and does not concatenate adjacent venues', () => {
+		expect(values(parse('장소\n피스타\n함께 즐겨요!\n연남동 568-51'), 'location')).toEqual([
+			'피스타'
+		]);
+		expect(values(parse('장소\n피스타\n다른홀\n연남동 568-51'), 'location')).toEqual(['피스타']);
+		expect(values(parse('장소\nLocation: The Hall'), 'location')).toEqual(['The Hall']);
+	});
+	it('preserves repeated UTF-16 evidence and deterministic address-first deduplication', () => {
+		const text =
+			'🙂 한글 prefix\r\n**장소:**\r\n~ **피스타**\r\n연남동 568-51(B1)\r\n홍대역 2번출구\r\n장소: 피스타, 연남동 568-51 (B1)';
+		const draft = parse(text);
+		const candidates = Core.alternatives(draft, 'location');
+		expect(candidates.map((c) => c.value)).toEqual(['연남동 568-51', '피스타']);
+		expect(candidates[0].rank).toBeGreaterThan(candidates[1].rank);
+		for (const c of candidates) {
+			expect(c.spans).toHaveLength(2);
+			expect(c.spans.map((span) => text.slice(span.start, span.end))).toEqual([c.value, c.value]);
+			expect(c.spans[0].start).toBe(text.indexOf(c.value));
+		}
+		expect(Core.extract(draft).candidates).toEqual(draft.suggestions.candidates);
+	});
+	it('keeps Manual Location through reparses and restores the latest address on Auto', () => {
+		let draft = parse(announcement);
+		const venue = Core.alternatives(draft, 'location').find((c) => c.value === '피스타')!;
+		draft = Core.selectCandidate(draft, 'location', venue.id);
+		expect(draft.location.ownership).toBe('manual');
+		draft = settle(Core.describe(draft, '장소: The Hall, 123 Main Street'));
+		expect(draft.location.value).toBe('피스타');
+		draft = Core.edit(draft, 'location', '  exact 한글🙂  ');
+		expect(draft.location.value).toBe('  exact 한글🙂  ');
+		expect(draft.title.ownership).toBe('auto');
+		draft = Core.reset(draft, 'location');
+		expect(draft.location.value).toBe('123 Main Street');
+		expect(draft.location.ownership).toBe('auto');
+	});
 });

@@ -689,10 +689,7 @@ async function checkRhythmParty(page) {
 		await endTimes.getByRole('button', { name: '03:30', exact: true }).getAttribute('aria-pressed'),
 		'true'
 	);
-	assert.equal(
-		await page.locator('#location').inputValue(),
-		'해피홀(Happy Hall) 서울 서대문구 명물길 37 지하1층'
-	);
+	assert.equal(await page.locator('#location').inputValue(), '서울 서대문구 명물길 37');
 	const google = page.getByRole('link', { name: 'Open in Google Calendar' });
 	assert.equal(
 		new URL(await google.getAttribute('href')).searchParams.get('dates'),
@@ -960,6 +957,175 @@ async function checkFreeform(page) {
 		'20261025/20261027'
 	);
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+}
+
+async function checkMapLocations(page) {
+	const announcement = await fs.readFile('tests/inputs/multiline-location-user.txt', 'utf8');
+	const flattened = await fs.readFile(
+		'tests/fixtures/nl-event/inputs/k2-milonga-excerpt.txt',
+		'utf8'
+	);
+	for (const text of [announcement, flattened]) {
+		await page.getByRole('button', { name: 'Reset', exact: true }).click();
+		await page.locator('#description').fill(text);
+		await page.waitForFunction(() => document.querySelector('#location').value === '연남동 568-51');
+		assert.equal(await page.locator('#description').inputValue(), text);
+		const options = page.getByRole('list', { name: 'Location alternatives', exact: true });
+		assert.equal(await options.getByRole('button', { name: '피스타', exact: true }).count(), 1);
+		assert.equal(await options.getByRole('button').count(), 2);
+		const google = new URL(
+			await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
+		);
+		assert.equal(google.searchParams.get('location'), '연남동 568-51');
+		assert.equal(google.searchParams.get('details'), text);
+		const pending = page.waitForEvent('download');
+		await page.getByRole('button', { name: 'Download .ics', exact: true }).click();
+		const ics = (await fs.readFile(await (await pending).path(), 'utf8')).replace(/\r\n /g, '');
+		assert.ok(ics.includes('LOCATION:연남동 568-51\r\n'));
+		assert.ok(ics.includes('홍대역 2번출구'));
+		assert.ok(ics.includes('(B1)'));
+		await options.getByRole('button', { name: '피스타', exact: true }).click();
+		assert.equal(await page.locator('#location').inputValue(), '피스타');
+		assert.equal(
+			await page.getByRole('switch', { name: 'Auto Location', exact: true }).isChecked(),
+			false
+		);
+		await page.getByRole('switch', { name: 'Auto Location', exact: true }).click();
+		assert.equal(await page.locator('#location').inputValue(), '연남동 568-51');
+	}
+}
+
+async function checkSelectionActions(page, { touch = false } = {}) {
+	const textarea = page.locator('#description');
+	const selected = ' 한글🙂 venue ';
+	const text = `Title: Original\nTomorrow at 7pm\nLocation: The Hall\n[${selected}]`;
+	const activate = (action) => (touch ? action.tap() : action.click());
+	const waitParsed = () =>
+		page.waitForFunction(
+			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+		);
+	const capture = async () => {
+		await textarea.evaluate((node, selected) => {
+			node.focus();
+			const start = node.value.indexOf(selected);
+			node.setSelectionRange(start, start + selected.length);
+		}, selected);
+		await page.getByRole('button', { name: 'Use selection as Location', exact: true }).waitFor();
+	};
+	for (const field of ['title', 'location']) {
+		for (const fullscreen of [false, true]) {
+			for (const method of touch ? ['touch'] : ['mouse', 'keyboard']) {
+				await page.getByRole('button', { name: 'Reset', exact: true }).click();
+				await textarea.fill(text);
+				await waitParsed();
+				const before = await Promise.all(
+					['title', 'start', 'end', 'location'].map((name) => page.locator(`#${name}`).inputValue())
+				);
+				const bodyStyle = await page.evaluate(() => document.body.getAttribute('style'));
+				if (fullscreen)
+					await activate(page.getByRole('button', { name: 'Fullscreen editor', exact: true }));
+				await capture();
+				const action = page.getByRole('button', {
+					name: `Use selection as ${field === 'title' ? 'Title' : 'Location'}`,
+					exact: true
+				});
+				assert.equal(await page.locator('.selection-actions button').count(), 2);
+				assert.equal(
+					await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+					true
+				);
+				if (touch) {
+					assert.ok(await action.evaluate((node) => node.getBoundingClientRect().height >= 44));
+				}
+				if (method === 'keyboard') {
+					const tab =
+						page.context().browser().browserType().name() === 'webkit' ? 'Alt+Tab' : 'Tab';
+					await page.keyboard.press(tab);
+					if (field === 'location') await page.keyboard.press(tab);
+					assert.equal(await action.evaluate((node) => node === document.activeElement), true);
+					await page.keyboard.press('Enter');
+				} else await activate(action);
+				await page.waitForFunction((field) => document.activeElement?.id === field, field);
+				assert.equal(await page.locator(`#${field}`).inputValue(), selected);
+				assert.equal(await textarea.inputValue(), text);
+				assert.equal(await page.locator('.fullscreen').count(), 0);
+				assert.equal(await page.evaluate(() => document.body.getAttribute('style')), bodyStyle);
+				for (const [index, name] of ['title', 'start', 'end', 'location'].entries()) {
+					if (name !== field)
+						assert.equal(await page.locator(`#${name}`).inputValue(), before[index]);
+					const label = {
+						title: 'Title',
+						start: 'Start',
+						end: 'End/Duration',
+						location: 'Location'
+					}[name];
+					assert.equal(
+						await page.getByRole('switch', { name: `Auto ${label}`, exact: true }).isChecked(),
+						name !== field
+					);
+				}
+				await textarea.fill(text.replace('The Hall', 'New Hall'));
+				await waitParsed();
+				assert.equal(await page.locator(`#${field}`).inputValue(), selected);
+				await page
+					.getByRole('switch', {
+						name: `Auto ${field === 'title' ? 'Title' : 'Location'}`,
+						exact: true
+					})
+					.click();
+				assert.equal(
+					await page.locator(`#${field}`).inputValue(),
+					field === 'title' ? 'Original' : 'New Hall'
+				);
+			}
+		}
+	}
+	// Both actions reject a cached range whose DOM offsets drift before select fires.
+	for (const field of ['Title', 'Location']) {
+		await textarea.fill(text);
+		await waitParsed();
+		await capture();
+		await page
+			.getByRole('button', { name: `Use selection as ${field}`, exact: true })
+			.evaluate((button) => {
+				const node = document.querySelector('#description');
+				node.setSelectionRange(0, 0);
+				button.click();
+			});
+		assert.equal(
+			await page.getByRole('switch', { name: `Auto ${field}`, exact: true }).isChecked(),
+			true
+		);
+	}
+	for (const replacement of ['edit', 'reset', 'clipboard']) {
+		await textarea.fill(text);
+		await waitParsed();
+		await capture();
+		if (replacement === 'edit') await textarea.fill('Changed Description');
+		if (replacement === 'reset')
+			await page.getByRole('button', { name: 'Reset', exact: true }).click();
+		if (replacement === 'clipboard') {
+			await page.evaluate(() =>
+				Object.defineProperty(navigator, 'clipboard', {
+					configurable: true,
+					value: { readText: async () => 'Location: Replacement' }
+				})
+			);
+			await page.getByRole('button', { name: 'Paste from clipboard', exact: true }).click();
+		}
+		assert.equal(await page.locator('.selection-actions button').count(), 0);
+		for (const field of ['Title', 'Location'])
+			assert.equal(
+				await page.getByRole('switch', { name: `Auto ${field}`, exact: true }).isChecked(),
+				true
+			);
+	}
+	await textarea.fill('   ');
+	await textarea.evaluate((node) => {
+		node.focus();
+		node.setSelectionRange(0, 3);
+	});
+	assert.equal(await page.locator('.selection-actions button').count(), 0);
 }
 
 async function checkSelectedTitle(page, engine) {
@@ -1319,6 +1485,8 @@ for (const [name, engine] of [
 	await checkDurations(page);
 	await checkFreeform(page);
 	await checkSelectedTitle(page, name);
+	await checkMapLocations(page);
+	await checkSelectionActions(page);
 	await checkSelectOnFocus(page);
 	await checkLunch(page);
 	await checkFallbacks(page);
@@ -1598,10 +1766,11 @@ for (const [name, engine] of [
 		fullPage: true
 	});
 	await checkDescriptionEditor(touchPage, { touch: true });
+	await checkSelectionActions(touchPage, { touch: true });
 	await touchContext.close();
 	assert.deepEqual(errors, []);
 	console.log(
-		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, selected-text Title, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
+		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
 	);
 	await browser.close();
 }

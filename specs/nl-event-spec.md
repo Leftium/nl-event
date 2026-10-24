@@ -84,7 +84,7 @@ Description uses one native `#description` textarea in inline and fullscreen pre
 
 **Fullscreen editor** preserves textarea identity, draft, selection direction, and native editing. Expose Restore and Escape, keeping Escape available to IME composition first. Enter inserts a native newline in both presentations. Keep Reset, Paste from clipboard, parse status, and selection-as-Title reachable, including at 390px with a coarse pointer. The fullscreen dialog follows `visualViewport` size/offset changes, contains keyboard focus, and makes the covered page inert. Fullscreen suppresses the root scrollbar and reserved gutter. Close or unmount restores prior root/body styles and scroll position and removes presentation listeners. Applying selection-as-Title closes fullscreen and focuses Title. Physical iPhone Safari and Android Chrome virtual keyboard behavior remains a device verification requirement.
 
-Selecting text in Description exposes a compact **Use selection as Title** action. It copies the exact selection into Title, marks only Title Manual, and preserves Description and the other fields. Invalidate the selection action when Description changes or the draft is replaced.
+Non-whitespace Description selections expose peer **Use selection as Title** and **Use selection as Location** actions. A shared snapshot checks draft identity/revision, unchanged Description, exact payload and current UTF-16 offsets. Each action calls `Core.edit` for its target only, preserving exact selected text and independent ownership. Both work with mouse, keyboard and touch inline/fullscreen; applying exits fullscreen, restores scrolling and focuses the target input without replacing the native textarea. Description edits, Reset and clipboard replacement invalidate the snapshot. Manual Location survives reparses until Auto is restored.
 
 Show one right-aligned, muted **Auto** switch per field instead of separate state labels and reset links. Switching it off marks only that field Manual without changing its displayed value, source text, duration anchor, or DST choice. For a derived inferred Auto End, materialize the resolved preview and its offset at that transition; ordinary explicit fields retain their stored representation. Switching it on resets that field to the latest suggestion. Reset does not reuse a candidate from an older revision. If current suggestions are pending, clear the target and fill it only when the matching parse completes; indicate pending status.
 
@@ -128,6 +128,12 @@ When source evidence provides a complete Start but omits End, suggest a 60-minut
 Source ranges crossing midnight place End on the following date. Do not automatically roll a manually entered earlier End forward. K2's `19:00` lesson End is a 60-minute assumption, not quoted evidence or a claim that the lesson ends when the social begins; its overlap with the social remains visible.
 
 Block both exports when either date/time is invalid or the fields mix timed and date-only values. For timed events, End must be strictly after Start when compared as instants; for all-day events, the inclusive End must be on or after Start. Also block incomplete current Start/End values, missing Start/End, unknown/invalid zones for timed events, unresolved DST in the current values, and pending current parsing/validation. Unselected partial or ambiguous alternatives do not block an otherwise valid assembled draft. Title and Location may be empty; Description may be empty for manual entry. Inferred duration/year, past dates, and activity mismatch are warnings rather than automatic export blockers when the normalized event is otherwise valid.
+
+## Location extraction
+
+Location optimizes calendar/map handoff: prefer a credible source address alone, then a source venue when no usable address exists. Standalone `장소`, `주소`, `위치`, `Location`, and `Venue` labels (optional colon, conservative Markdown/list decoration) collect at most one venue and one address line. Blank separators are allowed; new labels, directions, fees, contacts, URLs and unrelated copy terminate the block. Inline labels, `📍`, and the existing `공간` fallback use the same address-first policy. Address and venue candidates retain separate original UTF-16 evidence, ranking and deduplication. Floor/unit annotations and transit exits stay in the verbatim Description. Never invent geography or geocode.
+
+The formatted announcement in `tests/inputs/multiline-location-user.txt` and flattened K2 both prefer exactly `연남동 568-51`, offering `피스타` separately. Both Google Calendar's `location` parameter and ICS `LOCATION` carry the clean address. Physical Google Maps and Apple Maps resolution remains a manual follow-up; browser serialization tests cannot establish geocoding success.
 
 ## Deterministic parsing policies
 
@@ -227,7 +233,7 @@ Escape text, use CRLF, and fold lines at 75 octets without splitting UTF-8 chara
 
 ## Fixture contract and provenance
 
-The adopted bundle lives at [`tests/fixtures/nl-event/`](../tests/fixtures/nl-event/README.md). Its 14 `.txt` inputs, 14 JSON expectation files, and one calendar-only oracle remain byte-for-byte as supplied. The fixture README adds local integration guidance. Expected assertions describe semantics rather than a required implementation data model.
+The adopted bundle lives at [`tests/fixtures/nl-event/`](../tests/fixtures/nl-event/README.md). Its 14 `.txt` inputs and independent calendar oracle remain byte-for-byte as supplied. Expectation assertions remain unchanged except K2 preferred Location, which now requires exactly `연남동 568-51` under the address-first policy. The fixture README adds local integration guidance. Expected assertions describe semantics rather than a required implementation data model.
 
 A parser test reads `inputs/<id>.txt` and injects only the paired expectation's `context` (`referenceInstant`, `browserTimeZone`, optional `eventTimeZoneOverride`). Compare output to `assertions` afterward. Never supply `source`, expected candidates, or calendar metadata to text parsing. Null assertions mean missing evidence; omitted assertions are not claims that other output must be empty.
 
@@ -306,6 +312,17 @@ Verified on the implementation branch on 2026-10-25 with Node 24.16.0 and pnpm 1
 - Chromium and WebKit `pnpm test:browser` pass with no page errors, including desktop and 390px coarse-pointer layouts and landscape/portrait changes. Focused editor checks cover compact height/six-line cap, internal overflow, wrap/counts, textarea identity and selection direction, fullscreen Restore/Escape, native Enter `beforeinput`/`input`, undo/redo, mouse/touch/keyboard selection-as-Title, Reset and clipboard replacement focus/size, and restoration of pre-existing body overflow styles and priority. Existing parser, ownership, stale-result and export checks remain; both exports retain leading/trailing spaces and a final newline. Desktop and touch fullscreen screenshots were reviewed.
 - Chromium additionally exercises native composition via CDP. Both engines check that composing Escape is left alone; paste scheduling is tested with browser `InputEvent` records and explicit clipboard reads are stubbed. OS clipboard permissions, physical IME candidate UI, and virtual keyboard/fullscreen behavior on iPhone Safari and Android Chrome still require device review. Desktop touch emulation does not verify those devices.
 - The owner approved the local presentation after reviewing the compact counters, integrated footer, swapped counter/control positions, and fullscreen scrollbar fix. External Chat review is the next checkpoint. Physical-device checks remain open; no merge is authorized.
+
+## PR #8 local verification
+
+- `pnpm test`: 268 tests pass across six files, including all 14 adopted fixtures. The formatted reproduction matches the PR text verbatim. Only K2's preferred Location assertion changed among fixture expectations.
+- `pnpm check`: zero errors/warnings. `pnpm lint` and `pnpm build` pass; the existing Vite chunk-size warning remains.
+- `pnpm test:browser`: Chromium and WebKit pass with no page errors. Both the formatted report and flattened K2 export exactly `연남동 568-51` through Google Calendar and ICS, offering `피스타` separately. Both selection actions pass mouse/keyboard/coarse-pointer inline/fullscreen checks, independent ownership and Auto restoration, stale/reset/clipboard invalidation, native editing and focus/scroll restoration. Fullscreen screenshots reviewed in both engines.
+- Independent review findings were fixed with regressions; final targeted review reported no findings.
+
+### Separate manual follow-up: physical calendars and Maps
+
+Unverified: on physical Android Chrome, open the Google Calendar form and resolve its Location in Google Maps. On a physical iPhone, import/open the ICS in iOS Calendar and resolve Location in Apple Maps. Confirm the intended place and retained Description, and check Safari touch selection and virtual-keyboard/fullscreen behavior. Browser serialization and touch emulation cannot prove geocoding success, signed-in calendar behavior, physical device behavior or native app handoff. No geography was enriched or independently verified.
 
 ## Deferred work and references
 

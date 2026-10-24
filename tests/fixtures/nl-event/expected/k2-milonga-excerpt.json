@@ -17,7 +17,7 @@
     "preferred": {
       "start": "2026-10-18 18:30",
       "end": "2026-10-18 22:30",
-      "locationContains": "피스타 연남동"
+      "location": "연남동 568-51"
     },
     "candidateValues": {
       "start": [
