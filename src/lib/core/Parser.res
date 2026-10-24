@@ -676,36 +676,33 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     | Some(label) => {
         let offset = String.length(label.text) - String.length(group(label, 1))
         let value = locationContent({...line, text: group(label, 1), start: line.start + offset})
-        if value.text != "" {
-          ignore(addLocation(value, true, 200))
-        } else {
-          // At most one venue line and one address line; never cross a new section
-          // or unrelated copy in search of an address. Blank separator lines are harmless.
-          let active = ref(true)
-          let venueFound = ref(false)
-          let consumed = ref(0)
-          lines->Array.forEachWithIndex((next, nextIndex) => {
-            if active.contents && nextIndex > index {
-              let content = locationContent(next)
-              if content.text != "" {
-                if (
-                  consumed.contents >= 2 ||
-                  locationLabel(content)->Option.isSome ||
-                  locationSectionBoundary(content.text)
-                ) {
+        let (address, venue) = value.text == "" ? (false, false) : addLocation(value, true, 200)
+        // An inline venue starts the same bounded block as a standalone header.
+        // A complete address or invalid inline value must not consume neighboring lines.
+        let active = ref(value.text == "" || (!address && venue))
+        let venueFound = ref(venue)
+        let consumed = ref(value.text == "" ? 0 : 1)
+        lines->Array.forEachWithIndex((next, nextIndex) => {
+          if active.contents && nextIndex > index {
+            let content = locationContent(next)
+            if content.text != "" {
+              if (
+                consumed.contents >= 2 ||
+                locationLabel(content)->Option.isSome ||
+                locationSectionBoundary(content.text)
+              ) {
+                active := false
+              } else {
+                let (address, venue) = addLocation(content, !venueFound.contents, 200)
+                consumed := consumed.contents + 1
+                venueFound := venueFound.contents || venue
+                if address || !venue {
                   active := false
-                } else {
-                  let (address, venue) = addLocation(content, !venueFound.contents, 200)
-                  consumed := consumed.contents + 1
-                  venueFound := venueFound.contents || venue
-                  if address || !venue {
-                    active := false
-                  }
                 }
               }
             }
-          })
-        }
+          }
+        })
       }
     | None =>
       if has(line.text, "^공간") {

@@ -499,6 +499,57 @@ describe('address-first labeled locations', () => {
 			expect(ics).toContain('LOCATION:연남동 568-51\r\n');
 		}
 	);
+	it.each([
+		{ label: '장소', venue: '피스타', address: '연남동 568-51', floor: '(B1)' },
+		{ label: 'Location', venue: 'The Hall', address: '123 Main Street', floor: ' (Suite 2)' },
+		{ label: 'Venue', venue: 'The Basement', address: '123 Main St', floor: ', Floor 2' }
+	])(
+		'continues inline $label venues into the next address with original evidence and exports',
+		({ label, venue, address, floor }) => {
+			for (const separator of ['\n', '\r\n\r\n']) {
+				const text = `🙂 provenance\nTomorrow at 7pm\n${label}: **${venue}**${separator}${address}${floor}`;
+				const draft = parse(text);
+				const candidates = Core.alternatives(draft, 'location');
+				expect(draft.location.value).toBe(address);
+				expect(candidates.map((c) => c.value)).toEqual([address, venue]);
+				expect(candidates[0].rank).toBeGreaterThan(candidates[1].rank);
+				for (const candidate of candidates) {
+					const start = text.indexOf(candidate.value);
+					expect(candidate.spans).toEqual([{ start, end: start + candidate.value.length }]);
+				}
+				expect(draft.description).toBe(text);
+				const event = Core.validate(draft).event!;
+				expect(event).toBeDefined();
+				expect(new URL(Core.googleUrl(event)).searchParams.get('location')).toBe(address);
+				expect(
+					Core.ics(event, 'inline-location', '20261024T030000Z').replace(/\r\n /g, '')
+				).toContain(`LOCATION:${address}\r\n`);
+			}
+		}
+	);
+	it.each([
+		'시간: 6시',
+		'Date: tomorrow',
+		'Location: The Hall\nCome dance with us',
+		'함께 즐겨요!',
+		'Come dance with us',
+		'홍대역에서 도보 5분',
+		'Walk 5 minutes from the station',
+		'다른홀'
+	])('stops an inline venue before unrelated or neighboring content: %s', (boundary) => {
+		const text = `장소: 피스타\n${boundary}\n연남동 568-51(B1)`;
+		const locations = values(parse(text), 'location');
+		expect(locations).not.toContain('연남동 568-51');
+		expect(locations).toContain('피스타');
+	});
+	it.each(['장소: 연남동 568-51(B1)', '장소: 피스타 연남동 568-51(B1)'])(
+		'does not continue an inline address: %s',
+		(inline) => {
+			const draft = parse(`${inline}\n다른동 123-45`);
+			expect(draft.location.value).toBe('연남동 568-51');
+			expect(values(draft, 'location')).not.toContain('다른동 123-45');
+		}
+	);
 	it.each(['장소', '주소', '위치', 'Location', 'Venue', 'location', 'VENUE'])(
 		'recognizes decorated multiline and inline %s labels',
 		(label) => {
@@ -617,6 +668,8 @@ describe('address-first labeled locations', () => {
 		draft = settle(Core.describe(draft, '장소: The Hall, 123 Main Street'));
 		expect(draft.location.value).toBe('피스타');
 		draft = Core.edit(draft, 'location', '  exact 한글🙂  ');
+		expect(draft.location.value).toBe('  exact 한글🙂  ');
+		draft = settle(Core.describe(draft, 'Location: The Hall\n123 Main Street (Suite 2)'));
 		expect(draft.location.value).toBe('  exact 한글🙂  ');
 		expect(draft.title.ownership).toBe('auto');
 		draft = Core.reset(draft, 'location');

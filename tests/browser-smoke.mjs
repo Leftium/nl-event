@@ -965,33 +965,49 @@ async function checkMapLocations(page) {
 		'tests/fixtures/nl-event/inputs/k2-milonga-excerpt.txt',
 		'utf8'
 	);
-	for (const text of [announcement, flattened]) {
+	for (const { text, address, venue } of [
+		{ text: announcement, address: '연남동 568-51', venue: '피스타' },
+		{ text: flattened, address: '연남동 568-51', venue: '피스타' },
+		{
+			text: 'Tomorrow at 7pm\n장소: 피스타\n연남동 568-51(B1)\n홍대역 2번출구',
+			address: '연남동 568-51',
+			venue: '피스타'
+		},
+		{
+			text: 'Tomorrow at 7pm\nLocation: The Hall\n123 Main Street (Suite 2)\nWalk 5 minutes from the station',
+			address: '123 Main Street',
+			venue: 'The Hall'
+		}
+	]) {
 		await page.getByRole('button', { name: 'Reset', exact: true }).click();
 		await page.locator('#description').fill(text);
-		await page.waitForFunction(() => document.querySelector('#location').value === '연남동 568-51');
+		await page.waitForFunction(
+			(address) => document.querySelector('#location').value === address,
+			address
+		);
 		assert.equal(await page.locator('#description').inputValue(), text);
 		const options = page.getByRole('list', { name: 'Location alternatives', exact: true });
-		assert.equal(await options.getByRole('button', { name: '피스타', exact: true }).count(), 1);
+		assert.equal(await options.getByRole('button', { name: venue, exact: true }).count(), 1);
 		assert.equal(await options.getByRole('button').count(), 2);
 		const google = new URL(
 			await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
 		);
-		assert.equal(google.searchParams.get('location'), '연남동 568-51');
+		assert.equal(google.searchParams.get('location'), address);
 		assert.equal(google.searchParams.get('details'), text);
 		const pending = page.waitForEvent('download');
 		await page.getByRole('button', { name: 'Download .ics', exact: true }).click();
 		const ics = (await fs.readFile(await (await pending).path(), 'utf8')).replace(/\r\n /g, '');
-		assert.ok(ics.includes('LOCATION:연남동 568-51\r\n'));
-		assert.ok(ics.includes('홍대역 2번출구'));
-		assert.ok(ics.includes('(B1)'));
-		await options.getByRole('button', { name: '피스타', exact: true }).click();
-		assert.equal(await page.locator('#location').inputValue(), '피스타');
+		assert.ok(ics.includes(`LOCATION:${address}\r\n`));
+		assert.ok(ics.includes(venue));
+		assert.ok(ics.includes(text.includes('(B1)') ? '(B1)' : '(Suite 2)'));
+		await options.getByRole('button', { name: venue, exact: true }).click();
+		assert.equal(await page.locator('#location').inputValue(), venue);
 		assert.equal(
 			await page.getByRole('switch', { name: 'Auto Location', exact: true }).isChecked(),
 			false
 		);
 		await page.getByRole('switch', { name: 'Auto Location', exact: true }).click();
-		assert.equal(await page.locator('#location').inputValue(), '연남동 568-51');
+		assert.equal(await page.locator('#location').inputValue(), address);
 	}
 }
 
