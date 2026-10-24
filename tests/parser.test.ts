@@ -1069,3 +1069,148 @@ describe('reviewed Korean midnight and backward dawn inheritance', () => {
 		}
 	);
 });
+
+describe('bounded Korean workshop series', () => {
+	const text = fs.readFileSync('tests/inputs/bulleted-workshop-sanitized.txt', 'utf8');
+	const period = '2026년 11월 1일 ~ 12월 6일 6주간 매주 일요일';
+	it('extracts a complete associated first session and source-backed venue through completeParse', () => {
+		const pending = Core.describe(Core.create(context), text);
+		const output = Core.extract(pending);
+		const d = Core.completeParse(pending, Core.parseTicket(pending), output, true);
+		expect(d.title.value).toBe('Blues Dance Workshop');
+		expect(d.start.value).toBe('2026-11-01 14:00');
+		expect(d.end.value).toBe('2026-11-01 16:00');
+		expect(d.location.value).toBe('사당 연습실');
+		expect(d.description).toBe(text);
+		for (const name of ['title', 'start', 'end', 'location'] as const)
+			expect(d[name].ownership).toBe('auto');
+		const start = output.candidates.find((c) => c.field === 'start' && c.value === d.start.value)!;
+		const end = output.candidates.find((c) => c.field === 'end' && c.value === d.end.value)!;
+		expect(start.completeness).toBe('complete');
+		expect(end.completeness).toBe('complete');
+		expect(start.groups.some((g) => end.groups.includes(g))).toBe(true);
+		expect(start.spans.map((s) => text.slice(s.start, s.end))).toEqual([
+			'2026년 11월 1일',
+			'오후 2시 '
+		]);
+		expect(end.spans.map((s) => text.slice(s.start, s.end))).toContain('4시');
+		const venue = output.candidates.find(
+			(c) => c.field === 'location' && c.value === '사당 연습실'
+		)!;
+		expect(venue.spans).toEqual([
+			{
+				start: text.indexOf('사당 연습실'),
+				end: text.indexOf('사당 연습실') + '사당 연습실'.length
+			}
+		]);
+		expect(output.contextDates).toContainEqual(expect.objectContaining({ value: '2026-12-06' }));
+		expect(values(d, 'start')).toContain('2026-12-06');
+		expect(Core.validate(d).startError).toBe('');
+		expect(Core.validate(d).endError).toBe('');
+		const event = Core.validate(d).event!;
+		const params = new URL(Core.googleUrl(event)).searchParams;
+		expect(params.get('dates')).toBe('20261101T050000Z/20261101T070000Z');
+		expect(params.get('location')).toBe('사당 연습실');
+		expect(params.get('details')).toBe(text);
+		const ics = Core.ics(event, 'workshop', '20261024T030000Z').replace(/\r\n /g, '');
+		expect(ics).toContain('DTSTART:20261101T050000Z\r\n');
+		expect(ics).toContain('DTEND:20261101T070000Z\r\n');
+		expect(ics).toContain('LOCATION:사당 연습실\r\n');
+		expect(ics).toContain(`DESCRIPTION:${text.replace(/,/g, '\\,').replace(/\n/g, '\\n')}\r\n`);
+		expect(ics).not.toContain('RRULE');
+		expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+	});
+	it.each([
+		text.replaceAll('●', '● '),
+		text.replace(/●(장소|기간|시간|비용)\n/g, '● $1: '),
+		text.replace(/●(장소|기간|시간|비용)\n/g, '$1： '),
+		text.replace(/●(장소|기간|시간|비용)/g, '## **$1**'),
+		text.replaceAll('\n', '\r\n'),
+		text.replace('Blues Dance Workshop', '🙂 Blues Dance Workshop').replaceAll('\n\n', '\n \n\n')
+	])('preserves dates, clocks and UTF-16 venue offsets across heading presentation', (source) => {
+		const d = parse(source);
+		expect(d.start.value).toBe('2026-11-01 14:00');
+		expect(d.end.value).toBe('2026-11-01 16:00');
+		expect(d.location.value).toBe('사당 연습실');
+		const venue = Core.alternatives(d, 'location').find((c) => c.value === '사당 연습실')!;
+		expect(venue.spans).toEqual([
+			{
+				start: source.indexOf('사당 연습실'),
+				end: source.indexOf('사당 연습실') + '사당 연습실'.length
+			}
+		]);
+	});
+	it.each([
+		['2026년 12월 27일 ~ 2027년 1월 31일 6주간 매주 일요일', '2026-12-27', '2027-01-31'],
+		['2026년 12월 27일 ~ 1월 31일 6주간 매주 일요일', '2026-12-27', '2027-01-31'],
+		['2027년 1월 31일 ~ 3월 7일 6주간 매주 일요일', '2027-01-31', '2027-03-07'],
+		['2028년 12월 31일 ~ 2월 4일 6주간 매주 일요일', '2028-12-31', '2029-02-04'],
+		['2026.11.01 ~ 2026.12.06 매주 일요일', '2026-11-01', '2026-12-06']
+	])('uses calendar-consistent first and final dates in %s', (window, first, last) => {
+		const d = parse(text.replace(period, window));
+		expect(d.start.value).toBe(`${first} 14:00`);
+		expect(d.end.value).toBe(`${first} 16:00`);
+		expect(d.suggestions.contextDates.some((c) => c.value === last)).toBe(true);
+		expect(values(d, 'start')).toContain(last);
+	});
+	it.each([
+		text.replace('매주 일요일', '매주 토요일'),
+		text.replace('12월 6일', '12월 5일'),
+		text.replace('6주간 매주 일요일', '5주간 매주 일요일'),
+		text.replace('6주간 매주 일요일', '0주간 매주 일요일'),
+		text.replace('오후 2시 ~ 4시', '오후 2시 또는 4시'),
+		text.replace('6주간 매주 일요일', '6주간'),
+		text.replace('6주간 매주 일요일', ''),
+		text.replace('2026년 11월 1일 ~ 12월 6일', '2026년 12월 6일 ~ 2026년 11월 1일'),
+		text.replace('●시간', '●신청\n참가 안내\n●시간'),
+		text.replace('●시간', '다른 모임\n●시간'),
+		text.replace('●비용', '추가 일정: 2026년 11월 8일\n●비용'),
+		text.replace('●시간', '●시간\n오전 9시 ~ 10시\n●시간'),
+		text.replace('오후 2시 ~ 4시', '2시 ~ 4시'),
+		text.replace('오후 2시 ~ 4시', '오후'),
+		text.replace('오후 2시 ~ 4시', '오후 2시'),
+		text.replace('●기간', '기간에 대해')
+	])('refuses to auto-pair unbounded, contradictory, ambiguous or unrelated evidence', (source) => {
+		const d = parse(source);
+		expect(d.start.value).toBe('');
+		expect(d.end.value).toBe('');
+		expect(Core.validate(d).event).toBeUndefined();
+	});
+	it('keeps fee and signup dates/clocks out of event evidence and source addresses first', () => {
+		const source =
+			text.replace('사당 연습실', '사당 연습실\n서울 동작구 동작대로 123') +
+			'오전 9시 ~ 10시 2026년 10월 29일\n●신청\n2026년 10월 30일 오후 1시 ~ 3시\nhttps://example.invalid\n';
+		const d = parse(source);
+		expect(d.location.value).toBe('서울 동작구 동작대로 123');
+		expect(values(d, 'location')).toContain('사당 연습실');
+		expect(d.start.value).toBe('2026-11-01 14:00');
+		expect(d.end.value).toBe('2026-11-01 16:00');
+		expect(
+			d.suggestions.candidates.some((c) => ['09:00', '10:00', '13:00', '15:00'].includes(c.time))
+		).toBe(false);
+		expect(
+			d.suggestions.candidates.some((c) => ['2026-10-29', '2026-10-30'].includes(c.date))
+		).toBe(false);
+	});
+	it('stops a venue block before period, time, fee and signup headings', () => {
+		for (const heading of ['기간', '시간', '비용', '신청']) {
+			const d = parse(`Title\n●장소\n●${heading}\n사당 연습실`);
+			expect(values(d, 'location')).toEqual([]);
+		}
+	});
+	it('preserves Manual ownership and normal alternative selection', () => {
+		let d = Core.create(context);
+		for (const name of ['title', 'start', 'end', 'location'] as const)
+			d = Core.edit(d, name, 'Mine');
+		d = settle(Core.describe(d, text));
+		for (const name of ['title', 'start', 'end', 'location'] as const) {
+			expect(d[name].value).toBe('Mine');
+			expect(d[name].ownership).toBe('manual');
+		}
+		const start = Core.alternatives(d, 'start').find((c) => c.value === '2026-11-01 14:00')!;
+		d = Core.selectCandidate(d, 'start', start.id);
+		expect(d.start.value).toBe(start.value);
+		expect(d.start.ownership).toBe('manual');
+		expect(d.end.value).toBe('Mine');
+	});
+});
