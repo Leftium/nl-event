@@ -274,3 +274,32 @@ describe('equivalent normalized calendar exports', () => {
 		expect(output.split('\r\n').filter((line) => line === 'END:VEVENT')).toHaveLength(1);
 	});
 });
+
+describe('overnight Auto completion and exports', () => {
+	it('exports the same complete event while preserving exact Description and Manual ownership', () => {
+		const text = fs.readFileSync('tests/inputs/overnight-party-sanitized.txt', 'utf8');
+		const pending = Core.describe(Core.create(context), text);
+		const d = Core.completeParse(pending, Core.parseTicket(pending), Core.extract(pending), true);
+		const event = normalized(d);
+		const query = new URL(Core.googleUrl(event)).searchParams;
+		expect(query.get('dates')).toBe('20261030T140000Z/20261030T173000Z');
+		expect(query.get('stz')).toBe('Asia/Seoul');
+		expect(query.get('location')).toBe('봉천살롱댄스홀');
+		expect(query.get('details')).toBe(text);
+		const ics = unfold(Core.ics(event, 'overnight', '20261024T030000Z'));
+		expect(ics).toContain('DTSTART:20261030T140000Z\r\n');
+		expect(ics).toContain('DTEND:20261030T173000Z\r\n');
+		expect(ics).toContain('LOCATION:봉천살롱댄스홀\r\n');
+		expect(ics).toContain(`DESCRIPTION:${text.replace(/\n/g, '\\n')}\r\n`);
+		const manual = Core.edit(Core.edit(pending, 'start', '2026-11-01 20:00'), 'location', 'Mine');
+		const completed = Core.completeParse(
+			manual,
+			Core.parseTicket(manual),
+			Core.extract(manual),
+			true
+		);
+		expect(completed.start.value).toBe('2026-11-01 20:00');
+		expect(completed.location.value).toBe('Mine');
+		expect(completed.description).toBe(text);
+	});
+});

@@ -910,3 +910,107 @@ describe('sanitized November spaced four-digit dates', () => {
 		expect(d.suggestions.contextDates).toEqual([]);
 	});
 });
+
+describe('Korean overnight party', () => {
+	const text = fs.readFileSync('tests/inputs/overnight-party-sanitized.txt', 'utf8');
+	it('auto-resolves the complete event and retains related next-day DJ ranges', () => {
+		const d = parse(text);
+		expect(d.title.value).toBe('Slow Drag Night 파티 안내!');
+		expect(d.start.value).toBe('2026-10-30 23:00');
+		expect(d.end.value).toBe('2026-10-31 02:30');
+		expect(d.location.value).toBe('봉천살롱댄스홀');
+		expect(d.description).toBe(text);
+		for (const field of ['title', 'start', 'end', 'location'] as const)
+			expect(d[field].ownership).toBe('auto');
+		expect(Core.validate(d).event).toBeDefined();
+		for (const [start, end] of [
+			['2026-10-30 23:00', '2026-10-30 23:30'],
+			['2026-10-30 23:30', '2026-10-31 02:00'],
+			['2026-10-31 02:00', '2026-10-31 02:30']
+		]) {
+			expect(
+				Core.alternatives(d, 'start').some(
+					(s) =>
+						s.value === start &&
+						Core.alternatives(d, 'end').some(
+							(e) => e.value === end && s.groups.some((g) => e.groups.includes(g))
+						)
+				)
+			).toBe(true);
+		}
+		expect(d.suggestions.candidates.some((c) => /14:(00|30)/.test(c.time))).toBe(false);
+		expect(values(d, 'title').some((v) => /^(밤|새벽)$/.test(v))).toBe(false);
+		expect(values(d, 'start').some((v) => v.startsWith('2026-10-29'))).toBe(false);
+		expect(d.suggestions.contextDates.some((c) => c.value === '2026-10-29')).toBe(true);
+		for (const c of d.suggestions.candidates)
+			for (const span of c.spans) expect(text.slice(span.start, span.end)).not.toBe('');
+		const dawn = Core.alternatives(d, 'end').find((c) => c.value === '2026-10-31 02:30')!;
+		expect(dawn.spans.map((s) => text.slice(s.start, s.end))).toContain('새벽 2시 30분');
+	});
+	it.each([
+		['밤 11시 - 새벽 2시', '23:00', '02:00', true],
+		['밤 11시 - 11시 30분', '23:00', '23:30', false],
+		['새벽 2시 - 2시 30분', '02:00', '02:30', false],
+		['오후 11시 - 오전 2시', '23:00', '02:00', true],
+		['저녁 11시 - 아침 2시', '23:00', '02:00', true],
+		['오전 9시 - 오후 2시', '09:00', '14:00', false],
+		['아침 9시 - 저녁 7시', '09:00', '19:00', false],
+		['11시 - 밤 11시 30분', '23:00', '23:30', false],
+		['오후 11시 - 24:00', '23:00', '00:00', true]
+	])('scopes dayparts in %s', (range, start, end, overnight) => {
+		const d = parse(`Title: Party\n일자 및 시간: 10월 30일 (금)\n시간: ${range}\n메모: 오후`);
+		expect(d.start.value).toBe(`2026-10-30 ${start}`);
+		expect(d.end.value).toBe(`2026-10-${overnight ? '31' : '30'} ${end}`);
+	});
+	it('keeps unqualified clocks ambiguous and genuine competing dates unresolved', () => {
+		const ambiguous = parse('Party\n일자: 10월 30일\n시간: 11시 - 2시');
+		expect(Core.validate(ambiguous).event).toBeUndefined();
+		const competing = parse('Party\n10월 30일\n10월 31일\n밤 11시 - 새벽 2시');
+		expect(Core.validate(competing).event).toBeUndefined();
+		expect(Core.alternatives(competing, 'start').some((c) => c.completeness === 'complete')).toBe(
+			false
+		);
+	});
+	it('limits next-day association to following slots contained by the overall interval', () => {
+		const d = parse(
+			'Party\n일자: 10월 30일\n새벽 1시 - 새벽 2시\n시간: 밤 11시 - 새벽 2시 30분\n아침 2시 - 아침 8시'
+		);
+		expect(values(d, 'start')).toContain('2026-10-30 01:00');
+		expect(values(d, 'start')).toContain('2026-10-30 02:00');
+		expect(values(d, 'start')).not.toContain('2026-10-31 02:00');
+	});
+	it('retains separate labeled competing event dates and their own ranges', () => {
+		const d = parse(
+			'Party\n일자 및 시간: 10월 30일\n시간: 밤 11시 - 새벽 2시\n일자 및 시간: 10월 31일\n시간: 오후 7시 - 오후 9시'
+		);
+		expect(values(d, 'start')).toEqual(
+			expect.arrayContaining(['2026-10-30 23:00', '2026-10-31 19:00'])
+		);
+		expect(values(d, 'end')).toEqual(
+			expect.arrayContaining(['2026-10-31 02:00', '2026-10-31 21:00'])
+		);
+	});
+	it.each([
+		'https://map.naver.com/p/entry/place/123456789',
+		'https://map.kakao.com/link/map/123456789',
+		'https://www.google.com/maps/place/Hall',
+		'https://maps.app.goo.gl/example'
+	])('extracts the exact venue before %s with UTF-16 source offsets', (url) => {
+		const source = `🙂 Party\n10월 30일 오후 11시 - 새벽 2시\n장소: 봉천살롱댄스홀 ${url}`;
+		const d = parse(source);
+		expect(d.location.value).toBe('봉천살롱댄스홀');
+		const c = Core.alternatives(d, 'location')[0];
+		expect(c.spans.map((s) => source.slice(s.start, s.end))).toEqual(['봉천살롱댄스홀']);
+		expect(d.description).toBe(source);
+		expect(parse(`Party\n장소: ${url}`).location.value).toBe('');
+	});
+	it.each([
+		'봉천살롱댄스홀 https://example.com/maps',
+		'봉천살롱댄스홀 https://map.naver.com.evil.example/place/123',
+		'도보 5분 https://map.kakao.com/link/map/123',
+		'계좌 123 입금 https://map.naver.com/p/entry/place/123',
+		'봉천살롱댄스홀 https://map.kakao.com/link/map/123 추가 안내'
+	])('rejects unrelated URL, directions, payment or nontrailing prose: %s', (venue) => {
+		expect(parse(`Party\n장소: ${venue}`).location.value).toBe('');
+	});
+});
