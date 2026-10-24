@@ -732,6 +732,15 @@ async function checkFallbacks(page) {
 		await page.getByRole('switch', { name: 'Auto End/Duration', exact: true }).isChecked(),
 		true
 	);
+	const autoEnd = page.getByRole('switch', { name: 'Auto End/Duration', exact: true });
+	await autoEnd.uncheck();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 19:00');
+	await chip('Start', 'time', '12:00').click();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 19:00');
+	await autoEnd.check();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 13:00');
+	await chip('Start', 'time', '18:00').click();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 19:00');
 	assert.equal(await download.isEnabled(), true);
 	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 	await describe('Registration deadline: October 20, 2026\nClass 1: 12:15 - 1:15 pm');

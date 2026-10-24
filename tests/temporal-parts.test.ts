@@ -231,6 +231,48 @@ it('keeps inferred 09:00 and offers common clocks with a relative inferred End',
 	expect(Core.validate(undated).event).toBeUndefined();
 });
 
+it('freezes the resolved Auto End when switching to Manual and restores following on Auto', () => {
+	let d = parse('workout tomorrow');
+	const originalEnd = d.end;
+	d = Core.selectTemporalPart(d, 'start', 'time', '18:00');
+	expect(d.end).toBe(originalEnd);
+	expect(Core.validate(d).endValue).toBe('2026-10-25 19:00');
+	const event = Core.validate(d).event;
+	d = Core.setAutomatic(d, 'end', false);
+	expect(d.end).toMatchObject({ value: '2026-10-25 19:00', ownership: 'manual', offset: '+09:00' });
+	expect(d.end.input ?? d.end.value).toBe('2026-10-25 19:00');
+	expect(Core.validate(d).event).toEqual(event);
+	const manualEnd = d.end;
+	d = Core.selectTemporalPart(d, 'start', 'time', '12:00');
+	expect(d.end).toBe(manualEnd);
+	expect(Core.validate(d).endValue).toBe('2026-10-25 19:00');
+	d = Core.setAutomatic(d, 'end', true);
+	expect(d.end.ownership).toBe('auto');
+	expect(Core.inferredEndFollowsStart(d)).toBe(true);
+	expect(Core.validate(d).endValue).toBe('2026-10-25 13:00');
+	d = Core.selectTemporalPart(d, 'start', 'time', '07:00');
+	expect(Core.validate(d).endValue).toBe('2026-10-25 08:00');
+});
+
+it('retains the derived End offset inside a DST overlap when freezing Auto', () => {
+	const ctx = { referenceInstant: '2026-10-31T16:00:00Z', browserTimeZone: 'America/Chicago' };
+	let d = settle(Core.describe(Core.create(ctx), 'cancel netflix'));
+	d = Core.selectTemporalPart(d, 'start', 'date', '2026-11-01');
+	// Retain the generated Manual date while adding a source clock to Description.
+	d = settle(Core.describe(d, 'workout November 1, 2026 at 00:30'));
+	d = Core.selectTemporalPart(d, 'start', 'time', '00:30');
+	expect(Core.inferredEndFollowsStart(d)).toBe(true);
+	expect(Core.validate(d).endValue).toBe('2026-11-01 01:30');
+	const event = Core.validate(d).event;
+	expect(event?.end).toBe('20261101T063000Z');
+	d = Core.setAutomatic(d, 'end', false);
+	expect(d.end.offset).toBe('-05:00');
+	expect(Core.validate(d).event).toEqual(event);
+	expect(Core.validate(d).endChoices).toHaveLength(2);
+	d = Core.setAutomatic(d, 'end', true);
+	expect(Core.validate(d).event).toEqual(event);
+});
+
 it('defaults a single labeled deadline separately from undated class clocks', () => {
 	let d = parse('Registration deadline: October 20, 2026\nClass 1: 12:15 - 1:15 pm');
 	expect(Core.validate(d).event).toMatchObject({

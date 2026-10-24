@@ -150,8 +150,14 @@ let best = (draft, name) => {
   alternatives(draft, name)->Array.find(c => {
     let complete =
       c.completeness == "text" || c.completeness == "complete" || c.completeness == "all-day"
+    // Generated Start choices have no source group. Resetting Auto End can
+    // restore its inferred duration without claiming a source association.
     let coherent = switch chosenStart {
-    | Some(start) if name == #title || name == #end => associated(start, c)
+    | Some(start) if name == #title || name == #end =>
+      associated(start, c) ||
+      (name == #end &&
+      start.inferred->Array.includes("generated-suggestion") &&
+      c.inferred->Array.includes("assumed-end"))
     | _ => true
     }
     complete && coherent
@@ -244,15 +250,6 @@ let reset = (draft, name) => {
     pendingResets: draft.parseStatus == "pending"
       ? Array.concat(next.pendingResets, [name])
       : next.pendingResets,
-  }
-}
-@genType
-let setAutomatic = (draft, name, automatic) => {
-  if automatic {
-    reset(draft, name)
-  } else {
-    let next = {...draft, pendingResets: draft.pendingResets->Array.filter(n => n != name)}
-    setField(next, name, {...getField(next, name), ownership: #manual})
   }
 }
 @genType
@@ -715,6 +712,31 @@ let validate = (draft: draft): validation => {
       let result = validateBase(asDates)
       {...result, allDay: true}
     }
+  }
+}
+
+// Freeze a derived preview only at the ownership transition. Start choices
+// continue to leave the stored End untouched while it is Auto.
+@genType
+let setAutomatic = (draft, name, automatic) => {
+  if automatic {
+    reset(draft, name)
+  } else if name == #end && inferredEndFollowsStart(draft) {
+    let result = validate(draft)
+    let offset =
+      result.event
+      ->Option.flatMap(event =>
+        resolve(result.endValue, effectiveZone(draft)).choices->Array.find(choice =>
+          choice.instant == event.end
+        )
+      )
+      ->Option.map(choice => choice.offset)
+      ->Option.getOr("")
+    let next = edit(draft, #end, result.endValue)
+    {...next, end: {...next.end, offset}}
+  } else {
+    let next = {...draft, pendingResets: draft.pendingResets->Array.filter(n => n != name)}
+    setField(next, name, {...getField(next, name), ownership: #manual})
   }
 }
 
