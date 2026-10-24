@@ -677,3 +677,156 @@ describe('address-first labeled locations', () => {
 		expect(draft.location.ownership).toBe('auto');
 	});
 });
+
+describe('sanitized October prices, short years and end-of-day ranges', () => {
+	const text = fs.readFileSync('tests/inputs/blues-jam-october-sanitized.txt', 'utf8');
+	it('keeps the overall four-hour event, activity pairs, evidence and normalized exports', () => {
+		const d = parse(text);
+		expect(d.description).toBe(text);
+		expect(values(d, 'title')).toContain('BLUES JAM 치킨블루스!');
+		expect(d.start.value).toBe('2026-10-30 20:00');
+		expect(d.end.value).toBe('2026-10-31 00:00');
+		expect(d.suggestions.contextDates).toEqual([]);
+		expect(d.suggestions.warnings).not.toContain('weekday-mismatch');
+		for (const [group, start, end] of [
+			['overall', '2026-10-30 20:00', '2026-10-31 00:00'],
+			['practice', '2026-10-30 20:00', '2026-10-30 22:00'],
+			['social', '2026-10-30 22:00', '2026-10-31 00:00']
+		]) {
+			const id = `${group}:2026-10-30`;
+			expect(
+				Core.alternatives(d, 'start').some((c) => c.value === start && c.groups.includes(id))
+			).toBe(true);
+			expect(
+				Core.alternatives(d, 'end').some((c) => c.value === end && c.groups.includes(id))
+			).toBe(true);
+		}
+		const dates = Core.temporalOptions(d, 'start', 'date').map((o) => o.value);
+		expect(dates).toEqual(['2026-10-30', '2026-10-31']);
+		const spans = Core.alternatives(d, 'end')
+			.find((c) => c.value === d.end.value)!
+			.spans.map((s) => text.slice(s.start, s.end).trim());
+		expect(spans).toContain('24:00');
+		expect(
+			d.suggestions.candidates
+				.filter((c) => c.field !== 'title')
+				.flatMap((c) => c.spans)
+				.some((s) => text.slice(s.start, s.end).includes('1.5'))
+		).toBe(false);
+		const event = Core.validate(d).event!;
+		expect(event).toBeDefined();
+		const query = new URL(Core.googleUrl(event)).searchParams;
+		expect(query.get('dates')).toBe('20261030T110000Z/20261030T150000Z');
+		expect(query.get('details')).toBe(text);
+		const ics = Core.ics(event, 'october', '20261024T030000Z');
+		expect(ics).toContain('DTSTART:20261030T110000Z\r\nDTEND:20261030T150000Z');
+	});
+	it.each(['1.5만', '1.5만원', '1.5 만원', '2.5천원', '1.5 KRW', '₩1.5', 'KRW 1.5', '$1.5'])(
+		'ignores monetary token %s in event and contextual date evidence',
+		(price) => {
+			for (const line of [
+				`참여시 - ${price}`,
+				`참가비: ${price}`,
+				`일시: 2026-10-30 20:00~24:00, ${price}`
+			]) {
+				const d = parse(`일시: 2026-10-30 20:00~24:00\n${line}`);
+				expect(d.start.value).toBe('2026-10-30 20:00');
+				expect(d.end.value).toBe('2026-10-31 00:00');
+				expect(d.suggestions.contextDates).toEqual([]);
+				expect(
+					d.suggestions.candidates
+						.filter((c) => c.date)
+						.every((c) => /^2026-10-(30|31)$/.test(c.date))
+				).toBe(true);
+			}
+		}
+	);
+	it('preserves ordinary numeric dates and full-year conflicts', () => {
+		for (const label of ['', '만남', '원데이'])
+			expect(parse(`일시: 1.5 ${label} 20:00~22:00`).start.value).toBe('2027-01-05 20:00');
+		const d = parse('BLUES JAM 26.10.30\n일시: 2027-10-30 20:00~24:00');
+		expect(d.start.value).toBe('2027-10-30 20:00');
+		expect(values(d, 'start')).toContain('2026-10-30');
+	});
+	it.each(['26.10.30', '26/10/30', '26-10-30', '2026.10.30'])(
+		'recognizes %s as one bounded date with exact heading provenance',
+		(token) => {
+			const source = `🙂 JAM ${token} 금요일\n20:00~24:00`;
+			const d = parse(source);
+			expect(d.start.value).toBe('2026-10-30 20:00');
+			expect(d.end.value).toBe('2026-10-31 00:00');
+			expect(values(d, 'start')).not.toContain('2026-10-30 09:00');
+			const dateSpans = Core.alternatives(d, 'start')
+				.flatMap((c) => c.spans)
+				.filter((s) => source.slice(s.start, s.end).includes(token));
+			expect(dateSpans.length).toBeGreaterThan(0);
+			for (const span of dateSpans) expect(source.slice(span.start, span.end)).toBe(token);
+		}
+	);
+	it.each([
+		'26.02.30',
+		'26.13.01',
+		'26.10.300',
+		'126.10.30',
+		'v26.10.30',
+		'version 1.5.0',
+		'version 1.5',
+		'https://example.test/26.10.30',
+		'계좌 26.10.30'
+	])('does not produce partial or spurious dates from %s', (token) => {
+		const d = parse(token);
+		expect(values(d, 'start')).toEqual([]);
+		expect(d.suggestions.contextDates).toEqual([]);
+	});
+	it('uses the reference century deterministically', () => {
+		expect(
+			parse('Date: 26.10.30 20:00~24:00', { ...context, referenceInstant: '2126-10-24T03:00:00Z' })
+				.start.value
+		).toBe('2126-10-30 20:00');
+	});
+	it.each(['24:00', '24:01', '24:30', '25:00', '24:00pm', '오후 24:00', '24시', '24:000'])(
+		'never offers standalone %s as a start or canonical 24-hour clock',
+		(clock) => {
+			const d = parse(`일시: 2026-10-30 ${clock}`);
+			expect(d.suggestions.candidates.filter((c) => c.time)).toEqual([]);
+		}
+	);
+	it.each(['24:01', '24:30', '25:00', '24:00pm', '오후 24:00', '24시', '24:000'])(
+		'rejects invalid endpoint %s',
+		(clock) => {
+			const d = parse(`일시: 2026-10-30 20:00~${clock}`);
+			expect(Core.alternatives(d, 'end').some((c) => !c.inferred.includes('assumed-end'))).toBe(
+				false
+			);
+		}
+	);
+	it.each([
+		['20:00~24:00', '2026-10-31 00:00'],
+		['20:00~00:00', '2026-10-31 00:00'],
+		['20:00~23:59', '2026-10-30 23:59'],
+		['23:00~02:00', '2026-10-31 02:00']
+	])('preserves rollover for %s', (range, end) => {
+		expect(parse(`일시: 10월 30일 금요일 ${range}`).end.value).toBe(end);
+	});
+	it('does not reinterpret a range starting at 24:00 as a later start', () => {
+		const d = parse('Date: 2026-10-30 24:00~02:00');
+		expect(d.suggestions.candidates.filter((c) => c.time)).toEqual([]);
+	});
+	it('rolls listed midnight endpoints forward once and retains subsequent slots', () => {
+		const d = parse('일시: 2026-10-30\n22:00~24:00 소셜\n00:00~02:00 After');
+		expect(d.start.value).toBe('2026-10-30 22:00');
+		expect(d.end.value).toBe('2026-10-31 02:00');
+		expect(values(d, 'start')).toContain('2026-10-31 00:00');
+		expect(values(d, 'end')).toContain('2026-10-31 00:00');
+	});
+	it('keeps undated range endpoints partial and uses Temporal across DST', () => {
+		const partial = parse('Social 20:00~24:00');
+		expect(values(partial, 'end')).toEqual(['00:00']);
+		expect(Core.validate(partial).event).toBeUndefined();
+		const d = parse('Date: 2026-03-08 00:00~24:00', context, 'America/New_York');
+		expect(d.end.value).toBe('2026-03-09 00:00');
+		expect(new URL(Core.googleUrl(Core.validate(d).event!)).searchParams.get('dates')).toBe(
+			'20260308T050000Z/20260309T040000Z'
+		);
+	});
+});

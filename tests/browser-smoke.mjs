@@ -656,6 +656,47 @@ async function checkSlowSaturday(page) {
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 }
 
+async function checkOctoberMidnight(page) {
+	const text = await fs.readFile('tests/inputs/blues-jam-october-sanitized.txt', 'utf8');
+	await page.locator('#description').fill(text);
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	assert.equal(await page.locator('#description').inputValue(), text);
+	assert.match(await page.locator('#start-hint').textContent(), /2026-10-30 20:00/);
+	assert.match(await page.locator('#end-hint').textContent(), /2026-10-31 00:00/);
+	for (const field of ['Start', 'End/Duration']) {
+		const dates = page.getByRole('list', { name: `${field} date alternatives`, exact: true });
+		assert.deepEqual(
+			await dates
+				.getByRole('button')
+				.evaluateAll((nodes) => nodes.map((n) => n.getAttribute('aria-label'))),
+			['2026-10-30', '2026-10-31']
+		);
+		const times = page.getByRole('list', { name: `${field} time alternatives`, exact: true });
+		assert.equal(await times.getByRole('button', { name: '22:00', exact: true }).count(), 1);
+		assert.equal(await times.getByRole('button', { name: '24:00', exact: true }).count(), 0);
+	}
+	assert.equal(
+		await page
+			.getByRole('list', { name: 'End/Duration duration alternatives', exact: true })
+			.getByRole('button', { name: '4h', exact: true })
+			.getAttribute('aria-pressed'),
+		'true'
+	);
+	const query = new URL(
+		await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
+	).searchParams;
+	assert.equal(query.get('dates'), '20261030T110000Z/20261030T150000Z');
+	assert.equal(query.get('details'), text);
+	const pending = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Download .ics', exact: true }).click();
+	const ics = (await fs.readFile(await (await pending).path(), 'utf8')).replace(/\r\n /g, '');
+	assert.match(ics, /DTSTART:20261030T110000Z\r\nDTEND:20261030T150000Z/);
+	assert.ok(ics.includes(`DESCRIPTION:${text.replace(/\n/g, '\\n')}\r\n`));
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+}
+
 async function checkRhythmParty(page) {
 	await page
 		.locator('#description')
@@ -1497,6 +1538,7 @@ for (const [name, engine] of [
 	await checkEnglishDates(page);
 	await checkSlowSaturday(page);
 	await checkRhythmParty(page);
+	await checkOctoberMidnight(page);
 	await checkTemporalParts(page);
 	await checkDurations(page);
 	await checkFreeform(page);
@@ -1786,7 +1828,7 @@ for (const [name, engine] of [
 	await touchContext.close();
 	assert.deepEqual(errors, []);
 	console.log(
-		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
+		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, sanitized October short-year/prices/midnight with four-hour Google/ICS parity, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
 	);
 	await browser.close();
 }
