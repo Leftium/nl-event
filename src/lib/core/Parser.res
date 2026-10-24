@@ -308,6 +308,57 @@ let headingTitle = (line: lexical, reference, seasonYear, evening, englishSpans:
   ->trim
 }
 
+// Keep lexical offsets while removing presentation only at the edges.
+let locationContent = (line: lexical): lexical => {
+  let leading = matches(line.text, "^[\\s~*#>•·✓✔☑✅-]+")->Array.get(0)
+  let start = leading->Option.map(m => m.end)->Option.getOr(0)
+  let rest = slice(line.text, start, String.length(line.text))
+  let trailing = matches(rest, "[\\s*~]+$")->Array.get(0)
+  let end = trailing->Option.map(m => m.start)->Option.getOr(String.length(rest))
+  {text: slice(rest, 0, end), groups: [], start: line.start + start, end: line.start + start + end}
+}
+let locationLabel = (line: lexical) =>
+  matches(
+    line.text,
+    "^(?:(?:장소|주소|위치|Location|Venue)(?:\\*{1,2})?(?:\\s*[:：]\\s*|\\s+|$)|📍\\s*)(.*)$",
+  )->Array.get(0)
+let locationSectionBoundary = text =>
+  has(
+    text,
+    "^(?:날짜|시간|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission)(?:\\s|[:：]|$)",
+  )
+let locationBoundary = text =>
+  has(
+    text,
+    "^(?:(?:날짜|시간|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission|https?)(?:\\s|[:：]|$)|[♥❤])|https?://|www\\.|@|\\d+\\s*(?:시|원|번\\s*출구)|(?:역\\s*\\d*\\s*번?\\s*출구)|\\b(?:directions?|exit\\s+\\d+|walk(?:ing)?\\s+\\d+\\s*(?:minutes?|mins?)|(?:walk|turn)\\s+(?:left|right|straight|towards?|for|to|from)|(?:subway|station)\\s+(?:exit|directions?))\\b|^(?:Take\\s+(?:the\\s+)?(?:subway|train|bus)|(?:subway|station|exit)\\s*[:：])|(?:역에서|에서\\s*도보|도보\\s*\\d+\\s*분|(?:좌|우)회전)|^(?:B\\d+|지하\\s*\\d+층|\\d+층)(?:\\s|$)",
+  )
+let locationAddresses = text =>
+  matches(
+    text,
+    "(?:(?:서울|부산|대구|인천|광주|대전|울산|세종|제주|[가-힣]+(?:특별시|광역시|도|시|군|구))\\s+)*[가-힣0-9]+(?:동|읍|면|리|로\\d*길|로|길)\\s+(?:산\\s*)?\\d+(?:-\\d+)?(?:번지)?(?![\\d가-힣-])|\\b\\d+[A-Za-z]?\\s+(?:[A-Za-z0-9.'-]+\\s+){1,5}(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct)\\b\\.?",
+  )
+let locationVenue = (line: lexical): lexical => {
+  let annotation =
+    matches(
+      line.text,
+      "\\s*(?:\\((?:B\\d+|지하[^)]*|\\d+\\s*(?:층|F)|(?:floor|unit|suite)[^)]*)\\)|(?:지하\\s*)?\\d+\\s*층|\\d+호|\\b(?:floor|unit|suite)\\b|[가-힣]+역\\s*\\d+\\s*번?\\s*출구)",
+    )->Array.get(0)
+  let end = annotation->Option.map(m => m.start)->Option.getOr(String.length(line.text))
+  locationContent({...line, text: slice(line.text, 0, end), end: line.start + end})
+}
+let credibleVenue = text =>
+  text != "" &&
+  String.length(text) <= 100 &&
+  !locationBoundary(text) &&
+  !has(
+    text,
+    "^(?:Come\\s+(?:dance|join|along|and|to)\\b|Join\\s+us\\b|Please\\b|We\\s+|Let's\\b|Enjoy\\s+|See\\s+you\\b|Bring\\s+|Don't\\b|Everyone\\b)",
+  ) &&
+  !has(
+    text,
+    "^(?:안내|공지|없음|미정|추후|장소|주소|위치)(?:\\s|$)|(?:합니다|입니다|하세요|있습니다|없습니다|예정)|[!?]|^\\d|^[,;:：-]+$|^(?:TBD|TBA|none|unknown)\\b",
+  )
+
 @genType
 let parse = (text, referenceInstant, browserZone, override: option<string>): output => {
   let lines = matches(text, "[^\\r\\n]+")->Array.map(line => {
@@ -535,21 +586,17 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
   // Only labeled values and credible headings become title/location evidence.
   lines->Array.forEachWithIndex((line, index) => {
     let titleLabel = matches(line.text, "^\\s*(?:제목|Title)\\s*[:：]\\s*(.+)$")->Array.get(0)
-    let locationLabel =
-      matches(
-        line.text,
-        "^\\s*(?:장소|주소|Location)\\s*[:：]?\\s+(.+)$|^\\s*📍\\s*(.+)$",
-      )->Array.get(0)
     let sourceSpan = [{start: line.start, end: line.end}]
     switch titleLabel {
     | Some(m) => add(#title, group(m, 1), "", "", "text", sourceSpan, [], 200, ["overall"], "Title")
     | None =>
       if (
         index == 0 &&
-          !has(
-            line.text,
-            "^(?:날짜|시간|일시|When|All day|Time zone|Location|장소|주소)[:： ]|^📍",
-          )
+        locationLabel(locationContent(line))->Option.isNone &&
+        !has(
+          line.text,
+          "^(?:날짜|시간|일시|When|All day|Time zone|Location|장소|주소)[:： ]|^📍",
+        )
       ) {
         add(
           #title,
@@ -571,23 +618,95 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         )
       }
     }
-    switch locationLabel {
-    | Some(m) =>
+  })
+  let addLocation = (line: lexical, venueAllowed, fallbackRank) => {
+    let addresses = locationAddresses(line.text)->Array.filter(address => {
+      // Address-shaped text inside a directions/contact/prose line is not location evidence.
+      let prefix = locationContent({...line, text: slice(line.text, 0, address.start)})
+      prefix.text == "" || credibleVenue(prefix.text)
+    })
+    addresses->Array.forEach(address =>
       add(
         #location,
-        group(m, 1) != "" ? group(m, 1) : group(m, 2),
+        address.text,
         "",
         "",
         "text",
-        sourceSpan,
+        [{start: line.start + address.start, end: line.start + address.end}],
         [],
-        200,
+        220,
         ["overall"],
-        "Location",
+        "Address",
       )
+    )
+    let venueEnd =
+      addresses->Array.get(0)->Option.map(m => m.start)->Option.getOr(String.length(line.text))
+    let venue = locationVenue({
+      ...line,
+      text: slice(line.text, 0, venueEnd),
+      end: line.start + venueEnd,
+    })
+    // A separating comma belongs to neither the venue nor address evidence.
+    let separator = matches(venue.text, "[,;]\\s*$")->Array.get(0)
+    let venue = switch separator {
+    | None => venue
+    | Some(m) =>
+      locationContent({...venue, text: slice(venue.text, 0, m.start), end: venue.start + m.start})
+    }
+    let acceptedVenue = venueAllowed && credibleVenue(venue.text)
+    if acceptedVenue {
+      add(
+        #location,
+        venue.text,
+        "",
+        "",
+        "text",
+        [{start: venue.start, end: venue.end}],
+        [],
+        fallbackRank,
+        ["overall"],
+        "Venue",
+      )
+    }
+    (Array.length(addresses) > 0, acceptedVenue)
+  }
+  lines->Array.forEachWithIndex((source, index) => {
+    let line = locationContent(source)
+    switch locationLabel(line) {
+    | Some(label) => {
+        let offset = String.length(label.text) - String.length(group(label, 1))
+        let value = locationContent({...line, text: group(label, 1), start: line.start + offset})
+        let (address, venue) = value.text == "" ? (false, false) : addLocation(value, true, 200)
+        // An inline venue starts the same bounded block as a standalone header.
+        // A complete address or invalid inline value must not consume neighboring lines.
+        let active = ref(value.text == "" || (!address && venue))
+        let venueFound = ref(venue)
+        let consumed = ref(value.text == "" ? 0 : 1)
+        lines->Array.forEachWithIndex((next, nextIndex) => {
+          if active.contents && nextIndex > index {
+            let content = locationContent(next)
+            if content.text != "" {
+              if (
+                consumed.contents >= 2 ||
+                locationLabel(content)->Option.isSome ||
+                locationSectionBoundary(content.text)
+              ) {
+                active := false
+              } else {
+                let (address, venue) = addLocation(content, !venueFound.contents, 200)
+                consumed := consumed.contents + 1
+                venueFound := venueFound.contents || venue
+                if address || !venue {
+                  active := false
+                }
+              }
+            }
+          }
+        })
+      }
     | None =>
       if has(line.text, "^공간") {
-        add(#location, line.text, "", "", "text", sourceSpan, [], 80, ["overall"], "Venue")
+        ignore(addLocation(line, true, 80))
       }
     }
   })
