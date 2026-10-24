@@ -155,11 +155,11 @@ it('sorts date chips chronologically including secondary source dates', () => {
 });
 
 // These regressions protect generated/source provenance and ownership boundaries.
-it('offers dates without inventing Auto evidence and completes an inclusive all-day day', () => {
+it('defaults to Tomorrow without inventing source evidence and retains suggestion text', () => {
 	let d = parse('cancel netflix');
 	expect(Core.validate(d).allDay).toBe(true);
-	expect(Core.validate(d).event).toBeUndefined();
-	expect(d.start.value).toBe('');
+	expect(Core.validate(d).event?.start).toBe('20261025');
+	expect(d.start).toMatchObject({ value: '2026-10-25', input: 'Tomorrow', ownership: 'auto' });
 	expect(d.suggestions.candidates.every((c) => !c.inferred.includes('generated-suggestion'))).toBe(
 		true
 	);
@@ -168,12 +168,14 @@ it('offers dates without inventing Auto evidence and completes an inclusive all-
 	).toEqual([
 		['Today', '2026-10-24', true],
 		['Tomorrow', '2026-10-25', true],
-		['In 7 days', '2026-10-31', true]
+		['In 7 days', '2026-10-31', true],
+		['In 30 days', '2026-11-23', true]
 	]);
 	const end = d.end;
 	d = Core.selectTemporalPart(d, 'start', 'date', '2026-10-25');
 	expect(d.end).toBe(end);
 	expect(d.start.ownership).toBe('manual');
+	expect(d.start.input).toBe('Tomorrow');
 	expect(d.selections[0].candidate.spans).toEqual([]);
 	expect(Core.validate(d).event).toMatchObject({
 		allDay: true,
@@ -189,8 +191,13 @@ it('offers dates without inventing Auto evidence and completes an inclusive all-
 	d = settle(Core.describe(d, 'cancel subscription'));
 	expect(Core.validate(d).event?.start).toBe('20261025');
 	d = Core.reset(d, 'start');
-	expect(d.start.value).toBe('');
-	expect(Core.validate(d).event).toBeUndefined();
+	expect(d.start.input).toBe('Tomorrow');
+	expect(d.start.ownership).toBe('auto');
+	d = Core.selectTemporalPart(d, 'start', 'date', '2026-11-23');
+	expect(d.start.input).toBe('In 30 days');
+	d = Core.selectTemporalPart(d, 'start', 'time', '19:00');
+	expect(d.start.input).toBe('In 30 days 19:00');
+	expect(Core.validate(d).startValue).toBe('2026-11-23 19:00');
 	expect(Core.temporalOptions(Core.create(context), 'start', 'date')).toEqual([]);
 	expect(Core.validate(parse('tomorrow evening')).allDay).toBe(false);
 });
@@ -218,7 +225,7 @@ it('keeps inferred 09:00 and offers common clocks with a relative inferred End',
 	expect(
 		Core.temporalOptions(parse('workout tomorrow at 8pm'), 'start', 'time').map((o) => o.value)
 	).toEqual(['20:00']);
-	let undated = parse('cancel netflix');
+	let undated = Core.edit(parse('cancel netflix'), 'start', '');
 	undated = Core.selectTemporalPart(undated, 'start', 'time', '19:00');
 	expect(Core.temporalParts(undated, 'start')).toEqual({ date: '', time: '19:00' });
 	expect(Core.validate(undated).event).toBeUndefined();

@@ -195,12 +195,34 @@ let candidateInput = (draft: draft, candidate: Parser.candidate) => {
     }
   }
 }
+// A missing-date default is a generated field value, never parser evidence.
+let defaultDateField = (draft: draft, name): option<field> => {
+  if (
+    name == #start &&
+    draft.parseStatus == "ready" &&
+    draft.description->String.trim != "" &&
+    !Parser.has(draft.description, "\\bin\\s+[-+\\d.]") &&
+    Array.length(draft.suggestions.contextDates) == 0 &&
+    !(draft.suggestions.candidates->Array.some(c => c.date != "" || c.time != ""))
+  ) {
+    let zone = draft.zoneOverride->Option.getOr(draft.suggestions.zone)
+    let date =
+      Parser.referenceDate(
+        draft.context.referenceInstant,
+        validZone(zone) ? zone : draft.context.browserTimeZone,
+      )->Parser.addDays(1)
+    Some({...emptyField, value: date, input: "Tomorrow"})
+  } else {
+    None
+  }
+}
 let autoField = (draft, name) =>
   best(draft, name)
   ->Option.map(c => {
     let field = {...emptyField, value: c.value}
     name == #start || name == #end ? {...field, input: candidateInput(draft, c)} : field
   })
+  ->Option.orElse(defaultDateField(draft, name))
   ->Option.getOr(emptyField)
 @genType
 let edit = (draft, name, value) =>
@@ -635,7 +657,10 @@ let validate = (draft: draft): validation => {
   let base = validateBase(draft)
   let mode =
     draft.allDayOverride->Option.orElse(
-      base.allDay && base.startError == "" && TimeInput.calendarDays(draft.end.value)->Option.isSome
+      base.allDay &&
+      base.startError == "" &&
+      (TimeInput.calendarDays(draft.end.value)->Option.isSome ||
+        (draft.end.value == "" && draft.end.ownership == #auto))
         ? Some(true)
         : None,
     )
@@ -887,7 +912,10 @@ let temporalCandidates = (draft: draft, name): array<Parser.candidate> => {
     let dates =
       source->Array.some(c => c.date != "")
         ? []
-        : [(0, "Today"), (1, "Tomorrow"), (7, "In 7 days")]->Array.map(((days, label)) => {
+        : [(0, "Today"), (1, "Tomorrow"), (7, "In 7 days"), (30, "In 30 days")]->Array.map(((
+            days,
+            label,
+          )) => {
             let date = Parser.addDays(reference, days)
             make(date, date, "", label)
           })
@@ -1034,7 +1062,9 @@ let selectTemporalPart = (draft: draft, name, part: temporalPart, value) => {
             : [],
         }
         let sourcePart = (c: Parser.candidate, part: temporalPart) => {
-          if (
+          if part == #date && generated(c) {
+            c.label
+          } else if (
             part == #time &&
               (c.inferred->Array.includes("assumed-end") ||
                 c.inferred->Array.includes("inferred-time"))
