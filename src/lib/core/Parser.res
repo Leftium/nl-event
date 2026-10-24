@@ -113,7 +113,7 @@ let dateEvidence = (line: lexical, reference, seasonYear) => {
   let text = line.text
   let explicit = matches(
     text,
-    "(?<![\\d])(?:(\\d{4})[./-])?(\\d{1,2})[./-](\\d{1,2})(?![\\d])|(?:(\\d{4})년\\s*)?(\\d{1,2})월\\s*(\\d{1,2})일",
+    "(?<![\\d\\p{L}./-])(?:(\\d{4}|\\d{2})(?:[ \\t]*\\.[ \\t]*|[/-]))?(\\d{1,2})(?:[ \\t]*\\.[ \\t]*|[/-])(\\d{1,2})(?![\\d:]|[ \\t]*[./-][ \\t]*\\d)|(?:(\\d{4})년\\s*)?(\\d{1,2})월\\s*(\\d{1,2})일",
   )
   let english = matches(
     text,
@@ -122,18 +122,33 @@ let dateEvidence = (line: lexical, reference, seasonYear) => {
   let numeric =
     explicit
     ->Array.filter(m =>
+      // Spacing is supported only for explicit four-digit dates. A numeric
+      // predecessor across whitespace still makes this a suffix, not a date.
+      (group(m, 5) != "" ||
+        ((!has(m.text, "[ \\t]") || String.length(group(m, 1)) == 4) &&
+          !has(slice(text, 0, m.start), "\\d[ \\t]*[./-][ \\t]*$"))) &&
       !has(
         slice(text, m.end, String.length(text)),
-        "^\\s*(?:days?|weeks?|hours?|hrs?|minutes?|mins?)\\b",
-      )
+        "^\\s*(?:(?:days?|weeks?|hours?|hrs?|minutes?|mins?|KRW|USD)\\b|(?:만|천)(?:원|(?![가-힣]))|(?:원|달러)(?![가-힣])|[₩$€])",
+      ) &&
+      !has(slice(text, 0, m.start), "(?:[₩$€]|\\b(?:KRW|USD|version|ver\\.?))\\s*$")
     )
     ->Array.map(m => {
       let korean = group(m, 5) != ""
       let y = korean ? group(m, 4) : group(m, 1)
       let month = number(group(m, korean ? 5 : 2))
       let day = number(group(m, korean ? 6 : 3))
+      // Short years use the source season's century, otherwise the event-local
+      // reference century. An explicit four-digit year always stays explicit.
+      let centuryYear = seasonYear != 0 ? seasonYear : dateParts(reference).year
+      let year =
+        y == ""
+          ? seasonYear
+          : String.length(y) == 2
+          ? centuryYear / 100 * 100 + number(y)
+          : number(y)
       inferDate(
-        y == "" ? seasonYear : number(y),
+        year,
         month,
         day,
         weekday(text),
@@ -212,7 +227,7 @@ type clock = {time: string, minutes: int, span: span, ambiguous: bool}
 let clocks = (line: lexical, evening) => {
   let tokens = matches(
     line.text,
-    "(?<![\\d:/])(?:(오전|오후|저녁|아침)\\s*)?(\\d{1,2})(?::(\\d{2})|시(?:\\s*(반|\\d{1,2}분))?)\\s*([ap]m?\\b)?|(?<![\\d:/])(\\d{1,2})\\s*([ap]m?)\\b|\\bmidnight\\b",
+    "(?<![\\d:/])(?:(오전|오후|저녁|아침)\\s*)?(\\d{1,2})(?::(\\d{2})(?![\\d:])|시(?:\\s*(반|\\d{1,2}분))?)\\s*([ap]m?\\b)?|(?<![\\d:/])(\\d{1,2})\\s*([ap]m?)\\b|\\bmidnight\\b",
   )
   // A bare first hour is meaningful only as part of an explicit range.
   let bare = matches(
@@ -222,8 +237,7 @@ let clocks = (line: lexical, evening) => {
   let all = Array.concat(tokens, bare)->Array.toSorted((a, b) => Int.toFloat(a.start - b.start))
   let sharedPM = has(line.text, "(?<=\\d)\\s*p(?:m)?\\b|오후|저녁") || evening
   let sharedAM = has(line.text, "(?<=\\d)\\s*a(?:m)?\\b|오전|아침")
-  all
-  ->Array.map(m => {
+  let parsed = all->Array.map(m => {
     let hourText = group(m, 2) != "" ? group(m, 2) : group(m, 6) != "" ? group(m, 6) : group(m, 1)
     let midnight = lower(m.text) == "midnight"
     let h = midnight ? 0 : number(hourText)
@@ -248,16 +262,41 @@ let clocks = (line: lexical, evening) => {
       h
     }
     let invalidMeridiem = has(m.text, "[ap]m?\\b") && (h < 1 || h > 12)
-    let explicit24 = has(m.text, "^0\\d:") || has(line.text, "(?:1[3-9]|2[0-3]):")
+    let explicit24 = has(m.text, "^0\\d:") || has(line.text, "(?:1[3-9]|2[0-4]):")
     let ambiguous = !midnight && !pm && !am && h < 13 && !explicit24
     {
-      time: `${pad(hour)}:${pad(minute)}`,
-      minutes: minute > 59 || h > 23 || invalidMeridiem ? -1 : hour * 60 + minute,
+      // Keep 1440 only as internal range-end evidence; canonical clocks use 00:00.
+      time: h == 24 ? "00:00" : `${pad(hour)}:${pad(minute)}`,
+      minutes: minute > 59 ||
+      h > 24 ||
+      invalidMeridiem ||
+      (h == 24 &&
+        (minute != 0 ||
+        !has(trim(m.text), "^24:00$") ||
+        !has(slice(line.text, 0, m.start), "[~–-]\\s*$")))
+        ? -1
+        : hour * 60 + minute,
       span: {start: line.start + m.start, end: line.start + m.end},
       ambiguous,
     }
   })
-  ->Array.filter(c => c.minutes >= 0 && c.minutes < 1440)
+  parsed->Array.filterWithIndex((c, index) => {
+    let previous = parsed->Array.get(index - 1)
+    let connected =
+      previous
+      ->Option.map(p =>
+        has(
+          slice(line.text, p.span.end - line.start, c.span.start - line.start),
+          "^\\s*[~–-]\\s*$",
+        )
+      )
+      ->Option.getOr(false)
+    let validPrevious =
+      previous->Option.map(p => p.minutes >= 0 && p.minutes < 1440)->Option.getOr(false)
+    c.minutes >= 0 &&
+    (c.minutes < 1440 || (connected && validPrevious)) &&
+    !(connected && !validPrevious)
+  })
 }
 
 let headingTitle = (line: lexical, reference, seasonYear, evening, englishSpans: array<span>) => {
@@ -543,7 +582,10 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
                 offset := offset.contents + 1
               }
               let date = {...base, date: addDays(base.date, offset.contents)}
-              let endDate = ending.minutes <= start.minutes ? addDays(date.date, 1) : date.date
+              let endDate =
+                ending.minutes == 1440 || ending.minutes <= start.minutes
+                  ? addDays(date.date, 1)
+                  : date.date
               slots := Array.concat(slots.contents, [(index, date, start, ending, endDate)])
               previous := start.minutes
             }
@@ -816,7 +858,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
       } else {
         sharedDate->Option.map(d => [d])->Option.getOr([])
       }
-      let startClock = lineClocks->Array.get(0)
+      let startClock = lineClocks->Array.get(0)->Option.filter(c => c.minutes < 1440)
       let endClock = lineClocks->Array.get(1)
       if allDay && Array.length(localDates) > 0 {
         let first = localDates->Array.get(0)->Option.getOrThrow
@@ -895,7 +937,9 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
               switch endClock {
               | Some(ending) => {
                   let endDate =
-                    d.date != "" && ending.minutes <= start.minutes ? addDays(d.date, 1) : d.date
+                    d.date != "" && (ending.minutes == 1440 || ending.minutes <= start.minutes)
+                      ? addDays(d.date, 1)
+                      : d.date
                   add(
                     #end,
                     complete && !ending.ambiguous ? `${endDate} ${ending.time}` : ending.time,

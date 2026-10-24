@@ -656,6 +656,92 @@ async function checkSlowSaturday(page) {
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 }
 
+async function checkNumericDateReports(page) {
+	for (const report of [
+		{
+			input: 'blues-jam-october-sanitized',
+			start: '2026-10-30 20:00',
+			end: '2026-10-31 00:00',
+			dates: ['2026-10-30', '2026-10-31'],
+			duration: '4h',
+			utc: '20261030T110000Z/20261030T150000Z',
+			startAlternative: '22:00',
+			endAlternative: '22:00',
+			inferred: false
+		},
+		{
+			input: 'november-spaced-date-sanitized',
+			start: '2026-11-14 20:00',
+			end: '2026-11-14 21:00',
+			dates: ['2026-11-14'],
+			duration: '1h',
+			utc: '20261114T110000Z/20261114T120000Z',
+			startAlternative: '22:30',
+			endAlternative: '23:00',
+			inferred: true
+		}
+	]) {
+		const text = await fs.readFile(`tests/inputs/${report.input}.txt`, 'utf8');
+		await page.locator('#description').fill(text);
+		await page.waitForFunction(
+			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+		);
+		assert.equal(await page.locator('#description').inputValue(), text);
+		assert.ok((await page.locator('#start-hint').textContent()).includes(report.start));
+		assert.ok((await page.locator('#end-hint').textContent()).includes(report.end));
+		if (report.inferred) {
+			assert.match(await page.locator('#start-hint').textContent(), /Sat/);
+			assert.match(await page.locator('#end-hint').textContent(), /inferred 60 min/);
+		}
+		for (const field of ['Start', 'End/Duration']) {
+			const dates = page.getByRole('list', { name: `${field} date alternatives`, exact: true });
+			assert.deepEqual(
+				await dates
+					.getByRole('button')
+					.evaluateAll((nodes) => nodes.map((n) => n.getAttribute('aria-label'))),
+				report.dates
+			);
+			const times = page.getByRole('list', { name: `${field} time alternatives`, exact: true });
+			assert.equal(
+				await times
+					.getByRole('button', {
+						name: field === 'Start' ? report.startAlternative : report.endAlternative,
+						exact: true
+					})
+					.count(),
+				1
+			);
+			assert.equal(await times.getByRole('button', { name: '24:00', exact: true }).count(), 0);
+		}
+		assert.equal(
+			await page
+				.getByRole('list', { name: 'End/Duration duration alternatives', exact: true })
+				.getByRole('button', { name: report.duration, exact: true })
+				.getAttribute('aria-pressed'),
+			'true'
+		);
+		const query = new URL(
+			await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
+		).searchParams;
+		assert.equal(query.get('dates'), report.utc);
+		assert.equal(query.get('details'), text);
+		const pending = page.waitForEvent('download');
+		await page.getByRole('button', { name: 'Download .ics', exact: true }).click();
+		const ics = (await fs.readFile(await (await pending).path(), 'utf8')).replace(/\r\n /g, '');
+		const [start, end] = report.utc.split('/');
+		assert.ok(ics.includes(`DTSTART:${start}\r\nDTEND:${end}`));
+		assert.ok(
+			ics.includes(
+				`DESCRIPTION:${text
+					.replace(/\\/g, '\\\\')
+					.replace(/([;,])/g, '\\$1')
+					.replace(/\n/g, '\\n')}\r\n`
+			)
+		);
+		await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	}
+}
+
 async function checkRhythmParty(page) {
 	await page
 		.locator('#description')
@@ -1497,6 +1583,7 @@ for (const [name, engine] of [
 	await checkEnglishDates(page);
 	await checkSlowSaturday(page);
 	await checkRhythmParty(page);
+	await checkNumericDateReports(page);
 	await checkTemporalParts(page);
 	await checkDurations(page);
 	await checkFreeform(page);
@@ -1786,7 +1873,7 @@ for (const [name, engine] of [
 	await touchContext.close();
 	assert.deepEqual(errors, []);
 	console.log(
-		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
+		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, sanitized October/November numeric dates, prices, midnight and inferred End with Google/ICS parity, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
 	);
 	await browser.close();
 }
