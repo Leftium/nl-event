@@ -4,6 +4,267 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+async function checkDescriptionEditor(page, { touch = false } = {}) {
+	const textarea = page.locator('#description');
+	const reset = page.getByRole('button', { name: 'Reset', exact: true });
+	const fullscreen = page.getByRole('button', { name: 'Fullscreen editor', exact: true });
+	const restore = page.getByRole('button', { name: 'Restore editor', exact: true });
+	const wrap = page.getByRole('button', { name: 'Word wrap', exact: true });
+	const activate = (node) => (touch ? node.tap() : node.click());
+	await reset.click();
+	await page.waitForFunction(() => document.querySelector('#description').clientHeight > 0);
+	const compact = await textarea.evaluate((node) => node.offsetHeight);
+	assert.ok(compact < 100);
+	assert.equal(await page.locator('.editor-counts [aria-hidden=true]').textContent(), '0w 0c');
+	const long = '한글🙂 long announcement '.repeat(30) + '\n'.repeat(20);
+	await textarea.fill(long);
+	await page.waitForFunction(() => {
+		const node = document.querySelector('#description');
+		return node.offsetHeight > 100 && node.scrollHeight > node.clientHeight;
+	});
+	assert.ok(
+		await textarea.evaluate((node) => {
+			const css = getComputedStyle(node);
+			return (
+				node.offsetHeight <=
+				parseFloat(css.lineHeight) * 6 +
+					parseFloat(css.paddingTop) +
+					parseFloat(css.paddingBottom) +
+					parseFloat(css.borderTopWidth) +
+					parseFloat(css.borderBottomWidth) +
+					1
+			);
+		})
+	);
+	await activate(wrap);
+	assert.equal(await textarea.getAttribute('wrap'), 'off');
+	assert.ok(await textarea.evaluate((node) => node.scrollWidth > node.clientWidth));
+	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+	await activate(wrap);
+	await textarea.fill('  한글🙂 title  \nsecond line  ');
+	await page.locator('#title').fill('Previous manual title');
+	assert.equal(await page.locator('.editor-counts [aria-hidden=true]').textContent(), '2L 4w 27c');
+	await textarea.evaluate((node) => {
+		window.editorTextarea = node;
+		node.focus();
+		node.setSelectionRange(2, 12, 'backward');
+	});
+	await page.evaluate(() => {
+		document.body.style.setProperty('overflow-y', 'scroll', 'important');
+		document.documentElement.style.setProperty('overflow-x', 'clip', 'important');
+		window.editorRootStyle = document.documentElement.getAttribute('style');
+		window.editorBodyStyle = document.body.getAttribute('style');
+		window.editorScroll = scrollY;
+	});
+	await activate(fullscreen);
+	assert.equal(await textarea.evaluate((node) => window.editorTextarea === node), true);
+	assert.deepEqual(
+		await textarea.evaluate((node) => [
+			node.selectionStart,
+			node.selectionEnd,
+			node.selectionDirection
+		]),
+		[2, 12, 'backward']
+	);
+	await page.waitForFunction(
+		() => document.querySelector('.fullscreen').getBoundingClientRect().height > 500
+	);
+	assert.ok(
+		await page
+			.locator('.fullscreen')
+			.evaluate(
+				(node) => node.getBoundingClientRect().right <= document.documentElement.clientWidth
+			)
+	);
+	assert.deepEqual(
+		await page.evaluate(() => {
+			const style = getComputedStyle(document.documentElement);
+			return [style.overflowY, style.scrollbarGutter];
+		}),
+		['hidden', 'auto']
+	);
+	assert.ok(
+		await page.locator('.editor-tools').evaluate((node) => {
+			const counter = node.querySelector('.editor-counts').getBoundingClientRect();
+			const control = node.querySelector('button').getBoundingClientRect();
+			return counter.right < control.left;
+		})
+	);
+	if (touch) {
+		assert.ok(await restore.evaluate((node) => node.offsetHeight >= 44));
+		await page.setViewportSize({ width: 844, height: 390 });
+		await page.waitForFunction(
+			() => document.querySelector('.fullscreen').getBoundingClientRect().height <= 390
+		);
+		assert.ok(
+			await restore.evaluate((node) => {
+				const rect = node.getBoundingClientRect();
+				return rect.top >= 0 && rect.bottom <= innerHeight;
+			})
+		);
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.waitForFunction(
+			() => document.querySelector('.fullscreen').getBoundingClientRect().height > 500
+		);
+	}
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-editor-${page.context().browser().browserType().name()}-${touch ? 'touch' : 'desktop'}-fullscreen.png`
+		)
+	});
+	const action = page.getByRole('button', { name: 'Use selection as Title', exact: true });
+	await activate(action);
+	await page.waitForFunction(
+		() =>
+			document.querySelector('#title').value === '한글🙂 title' &&
+			document.activeElement?.id === 'title'
+	);
+	assert.equal(await page.locator('#title').inputValue(), '한글🙂 title');
+	assert.equal(
+		await page.locator('#title').evaluate((node) => node === document.activeElement),
+		true
+	);
+	assert.equal(await restore.count(), 0);
+	assert.equal(
+		await page.getByRole('switch', { name: 'Auto Title', exact: true }).isChecked(),
+		false
+	);
+	assert.equal(
+		await page.evaluate(() => document.body.getAttribute('style') || ''),
+		await page.evaluate(() => window.editorBodyStyle || '')
+	);
+	assert.equal(
+		await page.evaluate(() => document.documentElement.getAttribute('style') || ''),
+		await page.evaluate(() => window.editorRootStyle || '')
+	);
+	// Start native undo coverage with a fresh editing history, independent of fill() setup.
+	await page.reload();
+	await page.waitForFunction(() => !document.querySelector('#description').disabled);
+	await activate(fullscreen);
+	// Enter must flow through beforeinput/input, update parsing, and keep native undo.
+	await textarea.pressSequentially('Title: Native');
+	await textarea.evaluate((node) => {
+		window.editorEvents = [];
+		for (const type of ['beforeinput', 'input'])
+			node.addEventListener(type, (event) =>
+				window.editorEvents.push([type, event.inputType, event.isTrusted])
+			);
+	});
+	await textarea.press('End');
+	await textarea.press('Enter');
+	assert.equal(await textarea.inputValue(), 'Title: Native\n');
+	assert.ok(
+		await page.evaluate(() =>
+			window.editorEvents.some(
+				([type, input, trusted]) => type === 'input' && input === 'insertLineBreak' && trusted
+			)
+		)
+	);
+	assert.ok(
+		await page.evaluate(() =>
+			window.editorEvents.some(
+				([type, input, trusted]) => type === 'beforeinput' && input === 'insertLineBreak' && trusted
+			)
+		)
+	);
+	await textarea.press('ControlOrMeta+z');
+	// Browsers may group preceding typing with Enter in one native undo unit.
+	assert.notEqual(await textarea.inputValue(), 'Title: Native\n');
+	await textarea.press('ControlOrMeta+Shift+z');
+	assert.equal(await textarea.inputValue(), 'Title: Native\n');
+	if (!touch) {
+		await textarea.evaluate((node) => {
+			node.focus();
+			node.setSelectionRange(7, 13);
+		});
+		await action.waitFor();
+		await textarea.press(
+			page.context().browser().browserType().name() === 'webkit' ? 'Alt+Tab' : 'Tab'
+		);
+		assert.equal(await action.evaluate((node) => node === document.activeElement), true);
+		await page.keyboard.press('Space');
+		await page.waitForFunction(() => document.activeElement?.id === 'title');
+		assert.equal(await page.locator('#title').inputValue(), 'Native');
+		await activate(fullscreen);
+	}
+	// Composition events must not trigger fullscreen Escape handling.
+	await textarea.dispatchEvent('keydown', { key: 'Escape', isComposing: true });
+	assert.equal(await restore.count(), 1);
+	await textarea.press('Escape');
+	assert.equal(await restore.count(), 0);
+	assert.equal(await textarea.evaluate((node) => node === document.activeElement), true);
+	await textarea.evaluate((node) => node.setSelectionRange(node.value.length, node.value.length));
+	await textarea.press('Enter');
+	assert.equal(await textarea.inputValue(), 'Title: Native\n\n');
+	if (!touch && page.context().browser().browserType().name() === 'chromium') {
+		const session = await page.context().newCDPSession(page);
+		await session.send('Input.imeSetComposition', {
+			text: '한',
+			selectionStart: 1,
+			selectionEnd: 1
+		});
+		await session.send('Input.insertText', { text: '한글' });
+		assert.equal(await textarea.inputValue(), 'Title: Native\n\n한글');
+		assert.ok(
+			await page.evaluate(() =>
+				window.editorEvents.some(
+					([type, input, trusted]) =>
+						type === 'input' && input === 'insertCompositionText' && trusted
+				)
+			)
+		);
+		await session.detach();
+	}
+	// Exercise the browser paste input contract without reading the host clipboard.
+	// Ordinary input schedules 250ms; insertFromPaste parses immediately in the parent.
+	assert.deepEqual(
+		await textarea.evaluate((node) => {
+			const scheduled = [];
+			const original = window.setTimeout;
+			window.setTimeout = (...args) => {
+				if (args[1] === 250) scheduled.push(250);
+				return original(...args);
+			};
+			try {
+				node.value = 'Ordinary edit';
+				node.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+				const ordinary = scheduled.length;
+				node.value = '  Pasted 한글🙂\nexact text  \n';
+				node.dispatchEvent(
+					new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste' })
+				);
+				return [ordinary, scheduled.length];
+			} finally {
+				window.setTimeout = original;
+			}
+		}),
+		[1, 1]
+	);
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	assert.equal(await textarea.inputValue(), '  Pasted 한글🙂\nexact text  \n');
+	assert.equal(await page.locator('.editor-counts [aria-hidden=true]').textContent(), '3L 4w 26c');
+	await activate(fullscreen);
+	await activate(restore);
+	assert.equal(await page.evaluate(() => document.body.getAttribute('style') || ''), '');
+	await reset.click();
+	await page.waitForFunction(
+		(height) => document.querySelector('#description').offsetHeight === height,
+		compact
+	);
+	assert.equal(await textarea.evaluate((node) => node === document.activeElement), true);
+	assert.equal(await page.locator('.editor-counts [aria-hidden=true]').textContent(), '0w 0c');
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-editor-${page.context().browser().browserType().name()}-${touch ? 'touch' : 'desktop'}.png`
+		),
+		fullPage: true
+	});
+}
+
 async function checkPendingClipboard(page) {
 	await page.evaluate(() => {
 		window.clipboardReads = [];
@@ -59,8 +320,21 @@ async function checkPendingClipboard(page) {
 		await page.getByRole('button', { name: 'Reading clipboard...', exact: true }).isDisabled(),
 		true
 	);
-	await complete(3, 'Valid clipboard text');
-	assert.equal(await page.locator('#description').inputValue(), 'Valid clipboard text');
+	await complete(3, 'Valid clipboard text' + '\n'.repeat(12));
+	assert.equal(
+		await page.locator('#description').inputValue(),
+		'Valid clipboard text' + '\n'.repeat(12)
+	);
+	assert.equal(
+		await page.locator('#description').evaluate((node) => node === document.activeElement),
+		true
+	);
+	await page.waitForFunction(
+		() =>
+			document.querySelector('#description').scrollHeight >
+			document.querySelector('#description').clientHeight
+	);
+	assert.match(await page.locator('.editor-counts [aria-hidden=true]').textContent(), /^13L 3w/);
 	assert.equal(await page.getByRole('status', { includeHidden: true }).textContent(), '');
 
 	// A stale completion must not clear a newer read's busy state or message.
@@ -1035,6 +1309,7 @@ for (const [name, engine] of [
 	await page.locator('#end-error').waitFor();
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 	assert.equal(await page.locator('#start-error, #end-error').count(), 0);
+	await checkDescriptionEditor(page);
 	await checkPendingClipboard(page);
 	await checkCandidates(page);
 	await checkEnglishDates(page);
@@ -1099,7 +1374,7 @@ for (const [name, engine] of [
 	assert.equal(await page.locator('.zone-token').textContent(), 'America/Chicago');
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 
-	await page.locator('#description').fill('Original 한글🙂\nDescription; comma, slash\\');
+	await page.locator('#description').fill('  Original 한글🙂\nDescription; comma, slash\\  \n');
 	await page.locator('#title').fill('Manual title');
 	await page.locator('#start').fill('2026-10-25 17:00');
 	await page.locator('#end').fill('2026-10-25 18:00');
@@ -1116,7 +1391,11 @@ for (const [name, engine] of [
 	};
 	const first = await download();
 	const uid = (text) => text.match(/UID:(.*)\r\n/)[1];
-	assert.ok(first.includes('DESCRIPTION:Original 한글🙂\\nDescription\\; comma\\, slash\\\\'));
+	assert.ok(
+		first
+			.replace(/\r\n /g, '')
+			.includes('DESCRIPTION:  Original 한글🙂\\nDescription\\; comma\\, slash\\\\  \\n\r\n')
+	);
 	await page.locator('#title').fill('Edited title');
 	assert.equal(uid(await download()), uid(first));
 	await page.getByRole('switch', { name: 'Auto Title', exact: true }).click();
@@ -1318,10 +1597,11 @@ for (const [name, engine] of [
 		path: path.join(os.tmpdir(), `nl-event-english-${name}-touch.png`),
 		fullPage: true
 	});
+	await checkDescriptionEditor(touchPage, { touch: true });
 	await touchContext.close();
 	assert.deepEqual(errors, []);
 	console.log(
-		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, selected-text Title, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets; no page errors`
+		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, selected-text Title, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
 	);
 	await browser.close();
 }
