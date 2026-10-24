@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '@leftium/nimble.css/core';
 	import favicon from '#lib/assets/favicon.svg';
 	import type { LayoutProps } from './$types';
 

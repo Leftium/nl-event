@@ -1,0 +1,11 @@
+{
+	"name": "nl-event",
+	"sources": [{ "dir": "src/lib/core", "subdirs": true }],
+	"package-specs": { "module": "esmodule", "in-source": true },
+	"suffix": ".res.js",
+	"gentypeconfig": {
+		"module": "esmodule",
+		"moduleResolution": "bundler",
+		"generatedFileExtension": ".gen.ts"
+	}
+}
