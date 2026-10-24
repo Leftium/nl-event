@@ -8,7 +8,12 @@ export function descriptionEditor(
 	let frame = 0;
 	let unlock: (() => void) | undefined;
 	let lastWidth = -1;
+	let lastFill = false;
 	const viewport = window.visualViewport;
+
+	function fillsPane() {
+		return getComputedStyle(shell).getPropertyValue('--editor-fill').trim() === '1';
+	}
 
 	function measure() {
 		cancelAnimationFrame(frame);
@@ -25,6 +30,20 @@ export function descriptionEditor(
 				textarea.style.height = '';
 				return;
 			}
+			if (fillsPane()) {
+				// Before sticking, the page heading occupies part of the viewport.
+				// Grow into that space as it scrolls away, keeping the toolbar visible.
+				const inset = parseFloat(getComputedStyle(shell).top) || 0;
+				const top = Math.max(inset, shell.getBoundingClientRect().top);
+				shell.style.setProperty(
+					'--editor-pane-height',
+					`${Math.max(0, innerHeight - top - inset)}px`
+				);
+				const scrollTop = textarea.scrollTop;
+				textarea.style.height = '';
+				textarea.scrollTop = scrollTop;
+				return;
+			}
 			const style = getComputedStyle(textarea);
 			const line = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
 			const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
@@ -34,6 +53,10 @@ export function descriptionEditor(
 			textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight + border, line + padding + border), line * 6 + padding + border)}px`;
 			textarea.scrollTop = scrollTop;
 		});
+	}
+
+	function pageScroll() {
+		if (!options.fullscreen && fillsPane()) measure();
 	}
 
 	function update(next: typeof initial) {
@@ -101,13 +124,17 @@ export function descriptionEditor(
 		}
 	}
 	const observer = new ResizeObserver(() => {
-		if (shell.clientWidth === lastWidth) return;
+		const fill = fillsPane();
+		// Height-only transitions can change modes while the capped shell width stays the same.
+		if (shell.clientWidth === lastWidth && fill === lastFill) return;
 		lastWidth = shell.clientWidth;
+		lastFill = fill;
 		measure();
 	});
 	observer.observe(shell);
 	shell.addEventListener('keydown', keydown);
 	window.addEventListener('resize', measure);
+	window.addEventListener('scroll', pageScroll, { passive: true });
 	viewport?.addEventListener('resize', measure);
 	viewport?.addEventListener('scroll', measure);
 	// Font loading can change line metrics without changing the shell width.
@@ -124,6 +151,7 @@ export function descriptionEditor(
 			observer.disconnect();
 			shell.removeEventListener('keydown', keydown);
 			window.removeEventListener('resize', measure);
+			window.removeEventListener('scroll', pageScroll);
 			viewport?.removeEventListener('resize', measure);
 			viewport?.removeEventListener('scroll', measure);
 			unlock?.();

@@ -5,6 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 
 async function checkDescriptionEditor(page, { touch = false } = {}) {
+	const originalViewport = page.viewportSize();
+	if (!touch) await page.setViewportSize({ width: 1100, height: 900 });
 	const textarea = page.locator('#description');
 	const reset = page.getByRole('button', { name: 'Reset', exact: true });
 	const fullscreen = page.getByRole('button', { name: 'Fullscreen editor', exact: true });
@@ -263,9 +265,148 @@ async function checkDescriptionEditor(page, { touch = false } = {}) {
 		),
 		fullPage: true
 	});
+	await page.setViewportSize(originalViewport);
+}
+
+async function checkStickyDescription(page) {
+	const textarea = page.locator('#description');
+	const reset = page.getByRole('button', { name: 'Reset', exact: true });
+	await reset.click();
+	await textarea.fill('Title: Sticky source\nTomorrow at 7pm\n' + 'Source line\n'.repeat(150));
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	await page.locator('#location').fill('Manual location');
+	const fieldState = () =>
+		page.locator('.event-details').evaluate((node) => ({
+			values: [...node.querySelectorAll('input')].map((input) => [input.value, input.checked]),
+			choices: [...node.querySelectorAll('[aria-pressed]')].map((button) =>
+				button.getAttribute('aria-pressed')
+			),
+			google: node.querySelector('a')?.href
+		}));
+	const before = await fieldState();
+	await textarea.evaluate((node) => {
+		window.stickyTextarea = node;
+		window.stickyInputs = 0;
+		node.addEventListener('input', () => window.stickyInputs++);
+		node.focus();
+		node.setSelectionRange(2, 12, 'backward');
+	});
+	for (const width of [1220, 1440, 1600, 1920, 1232, 1220, 1440]) {
+		await page.setViewportSize({ width, height: 900 });
+		const split = width >= 1232;
+		await page.waitForFunction((split) => {
+			const node = document.querySelector('#description');
+			return split ? node.style.height === '' : parseFloat(node.style.height) > 0;
+		}, split);
+		assert.deepEqual(
+			await textarea.evaluate((node) => [
+				node === window.stickyTextarea,
+				node === document.activeElement,
+				node.selectionStart,
+				node.selectionEnd,
+				node.selectionDirection
+			]),
+			[true, true, 2, 12, 'backward']
+		);
+		const layout = await page.evaluate(() => {
+			const source = document.querySelector('.description-editor').getBoundingClientRect();
+			const fields = document.querySelector('.event-details').getBoundingClientRect();
+			return {
+				left: source.width,
+				right: fields.width,
+				split: fields.left >= source.right,
+				overflow: document.documentElement.scrollWidth > innerWidth
+			};
+		});
+		assert.equal(layout.split, split);
+		assert.equal(layout.overflow, false, JSON.stringify({ width, ...layout }));
+		if (split) {
+			assert.ok(Math.abs(layout.right - 672) <= 1);
+			assert.ok(layout.left >= 480 && layout.left <= 800);
+		}
+	}
+	assert.deepEqual(await fieldState(), before);
+	assert.equal(await page.evaluate(() => window.stickyInputs), 0);
+	// The header still occupies space at scroll zero; the editor footer must fit then too.
+	await page.evaluate(() => window.scrollTo(0, 0));
+	await page.waitForFunction(() => {
+		const editor = document.querySelector('.description-editor').getBoundingClientRect();
+		const tools = document.querySelector('.editor-tools').getBoundingClientRect();
+		return editor.top >= 0 && editor.bottom <= innerHeight && tools.bottom <= innerHeight;
+	});
+	// Reach the actual document bottom, including space after the export actions.
+	// Merely revealing Download can miss the sticky containing-block boundary.
+	await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+	await page.waitForFunction(() => {
+		const node = document.querySelector('.description-editor');
+		const rect = node.getBoundingClientRect();
+		const inset = parseFloat(getComputedStyle(node).top);
+		return Math.abs(rect.top - inset) <= 1 && rect.bottom <= innerHeight;
+	});
+	const pageScroll = await page.evaluate(() => scrollY);
+	assert.ok(pageScroll > 0);
+	await textarea.evaluate((node) => {
+		node.scrollTop = 0;
+	});
+	// Move directly: locator.hover() may scroll the page to center its target.
+	const sourceBox = await textarea.boundingBox();
+	await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+	await page.mouse.wheel(0, 180);
+	await page.waitForFunction(() => document.querySelector('#description').scrollTop > 0);
+	assert.equal(await page.evaluate(() => scrollY), pageScroll);
+	const sourceScroll = await textarea.evaluate((node) => node.scrollTop);
+	await page.getByRole('button', { name: 'Fullscreen editor', exact: true }).click();
+	await textarea.press('Escape');
+	await page.waitForFunction(
+		() => getComputedStyle(document.querySelector('.description-editor')).position === 'sticky'
+	);
+	assert.equal(await textarea.evaluate((node) => node === window.stickyTextarea), true);
+	assert.equal(await textarea.evaluate((node) => node === document.activeElement), true);
+	assert.ok(Math.abs((await page.evaluate(() => scrollY)) - pageScroll) <= 1);
+	assert.ok(Math.abs((await textarea.evaluate((node) => node.scrollTop)) - sourceScroll) <= 1);
+	// A height-only transition must also clear/reinstate the inline autosize height.
+	for (const height of [300, 900]) {
+		await page.setViewportSize({ width: 1440, height });
+		await page.waitForFunction((fill) => {
+			const node = document.querySelector('#description');
+			return fill ? node.style.height === '' : parseFloat(node.style.height) > 0;
+		}, height === 900);
+	}
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-sticky-${page.context().browser().browserType().name()}.png`
+		)
+	});
+	// Start a fresh native history; WebKit can retain fill()/Reset edits in undo units.
+	// Keep that history through the breakpoint without assigning the value.
+	await page.reload();
+	await page.waitForFunction(() => !document.querySelector('#description').disabled);
+	await textarea.pressSequentially('Native resize');
+	await textarea.press('Enter');
+	await page.setViewportSize({ width: 390, height: 844 });
+	await textarea.press('ControlOrMeta+z');
+	assert.notEqual(await textarea.inputValue(), 'Native resize\n');
+	await textarea.press('ControlOrMeta+Shift+z');
+	assert.equal(await textarea.inputValue(), 'Native resize\n');
+	await reset.click();
+	// With an empty draft in a tall window, the editor can be taller than the form.
+	await page.setViewportSize({ width: 1440, height: 1600 });
+	await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+	await page.waitForFunction(() => {
+		const editor = document.querySelector('.description-editor').getBoundingClientRect();
+		const tools = document.querySelector('.editor-tools').getBoundingClientRect();
+		return editor.top >= 0 && editor.bottom <= innerHeight && tools.bottom <= innerHeight;
+	});
+	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+	await page.setViewportSize({ width: 1280, height: 900 });
 }
 
 async function checkPendingClipboard(page) {
+	const originalViewport = page.viewportSize();
+	await page.setViewportSize({ width: 1100, height: 900 });
 	await page.evaluate(() => {
 		window.clipboardReads = [];
 		Object.defineProperty(navigator, 'clipboard', {
@@ -351,6 +492,7 @@ async function checkPendingClipboard(page) {
 	assert.equal(await page.locator('#description').inputValue(), 'Current clipboard text');
 	assert.equal(await paste.isEnabled(), true);
 	await newEvent.click();
+	await page.setViewportSize(originalViewport);
 }
 
 async function checkEnglishDates(page) {
@@ -1123,7 +1265,7 @@ async function checkSelectionActions(page, { touch = false } = {}) {
 				const before = await Promise.all(
 					['title', 'start', 'end', 'location'].map((name) => page.locator(`#${name}`).inputValue())
 				);
-				const bodyStyle = await page.evaluate(() => document.body.getAttribute('style'));
+				const bodyStyle = await page.evaluate(() => document.body.getAttribute('style') || '');
 				if (fullscreen)
 					await activate(page.getByRole('button', { name: 'Fullscreen editor', exact: true }));
 				await capture();
@@ -1151,7 +1293,10 @@ async function checkSelectionActions(page, { touch = false } = {}) {
 				assert.equal(await page.locator(`#${field}`).inputValue(), selected);
 				assert.equal(await textarea.inputValue(), text);
 				assert.equal(await page.locator('.fullscreen').count(), 0);
-				assert.equal(await page.evaluate(() => document.body.getAttribute('style')), bodyStyle);
+				assert.equal(
+					await page.evaluate(() => document.body.getAttribute('style') || ''),
+					bodyStyle
+				);
 				for (const [index, name] of ['title', 'start', 'end', 'location'].entries()) {
 					if (name !== field)
 						assert.equal(await page.locator(`#${name}`).inputValue(), before[index]);
@@ -1578,6 +1723,7 @@ for (const [name, engine] of [
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 	assert.equal(await page.locator('#start-error, #end-error').count(), 0);
 	await checkDescriptionEditor(page);
+	await checkStickyDescription(page);
 	await checkPendingClipboard(page);
 	await checkCandidates(page);
 	await checkEnglishDates(page);

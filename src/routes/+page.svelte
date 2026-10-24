@@ -258,7 +258,7 @@
 	<header inert={descriptionFullscreen}>
 		<h1>NL Event</h1>
 	</header>
-	<form onsubmit={(event) => event.preventDefault()}>
+	<form class="workspace" onsubmit={(event) => event.preventDefault()}>
 		<section
 			class="description-editor"
 			class:fullscreen={descriptionFullscreen}
@@ -395,326 +395,334 @@
 				{/if}
 			</p>
 		</section>
-		{#each fields as { name, label, hint } (name)}
-			{@const field = Core.getField(draft, name)}
-			{@const hasInput = !!draft.description.trim() || !!(field.input ?? field.value).trim()}
-			{@const error = !hasInput
-				? ''
-				: name === 'start'
-					? result.startError
-					: name === 'end'
-						? result.endError
-						: ''}
-			{@const warnings = Core.evidenceWarnings(draft, name)}
-			{@const pairingWarning = !result.allDay && warnings.includes('Not paired in source')}
-			{@const choices =
-				name === 'start' ? result.startChoices : name === 'end' ? result.endChoices : []}
-			<fieldset class="event-field" aria-label={label} inert={descriptionFullscreen}>
-				<legend class="field-heading">
-					<span class="field-label">
-						<label for={name}>{label}</label>
-						{#if name === 'start'}
-							<button
-								type="button"
-								class="zone-token"
-								class:zone-hidden={result.allDay}
-								aria-hidden={result.allDay}
-								data-tooltip="Change time zone"
-								aria-label="Change time zone"
-								aria-haspopup="dialog"
-								disabled={!ready || result.allDay}
-								onclick={openZoneDialog}>{zone || 'Choose zone'}</button
-							>
-						{/if}
-					</span>
-				</legend>
-				<span class="field-controls">
-					<label class="ownership" data-tooltip="On: use suggestions. Off: keep this field Manual.">
-						Auto
-						<input
-							type="checkbox"
-							role="switch"
-							aria-label={`Auto ${label}`}
-							checked={field.ownership === 'auto'}
-							disabled={!ready}
-							onchange={(event) => {
-								draft = Core.setAutomatic(draft, name, event.currentTarget.checked);
-							}}
-						/>
-					</label>
-				</span>
-				<input
-					id={name}
-					type="text"
-					onfocus={(event) => event.currentTarget.select()}
-					onpointerdown={(event) => prepareInputSelection(event.currentTarget)}
-					onclick={(event) => finishInputSelection(event.currentTarget)}
-					placeholder={name === 'start'
-						? 'e.g. 30min or tomorrow at 7pm'
+		<div class="event-details" inert={descriptionFullscreen}>
+			{#each fields as { name, label, hint } (name)}
+				{@const field = Core.getField(draft, name)}
+				{@const hasInput = !!draft.description.trim() || !!(field.input ?? field.value).trim()}
+				{@const error = !hasInput
+					? ''
+					: name === 'start'
+						? result.startError
 						: name === 'end'
-							? 'e.g. 4hr or tomorrow at 8pm'
-							: undefined}
-					value={name === 'end' && Core.inferredEndFollowsStart(draft)
-						? result.endValue
-						: (field.input ?? field.value)}
-					disabled={!ready}
-					oninput={(event) => {
-						const now = new SvelteDate(Math.floor(Date.now() / 60000) * 60000);
-
-						draft = Core.editAt(draft, name, event.currentTarget.value, now.toISOString());
-					}}
-					aria-invalid={error ? 'true' : undefined}
-					aria-describedby={`${name}-hint${error ? ` ${name}-error` : ''}`}
-				/>
-				<small
-					id={`${name}-hint`}
-					class:error={!!error}
-					aria-live={name === 'start' || name === 'end' ? 'polite' : undefined}
-				>
-					{#if error}<span id={`${name}-error`}>{error}</span>
-					{:else if hasInput && (name === 'start' || name === 'end')}
-						{@const interpreted = name === 'start' ? result.startValue : result.endValue}
-						Interpreted as {displayDateTime(interpreted)}{interpreted.length === 10
-							? name === 'end'
-								? ' (all day, inclusive end)'
-								: ' (all day)'
-							: ''}.
-						{#if !result.allDay && field.ownership === 'auto' && draft.suggestions.candidates.some((c) => c.field === name && c.value === field.value && c.inferred.includes('assumed-end'))}
-							(inferred 60 min)
-						{:else if !result.allDay && field.ownership === 'auto' && draft.suggestions.candidates.some((c) => c.field === name && c.value === field.value && c.inferred.includes('inferred-time'))}
-							(inferred time){/if}
-					{:else}{hint}{/if}
-				</small>
-				{#each Core.partialLabels(draft, name) as label (label)}
-					<small class="partial-evidence">{label}</small>
-				{/each}
-				{#if name === 'end'}
-					{@const duration = Core.durationValue(draft)}
-					<div class="temporal-options">
-						<small class="part-label"
-							>Duration{duration > 0
-								? ` · ${Core.durationLabel(duration, result.allDay)}`
-								: ''}</small
+							? result.endError
+							: ''}
+				{@const warnings = Core.evidenceWarnings(draft, name)}
+				{@const pairingWarning = !result.allDay && warnings.includes('Not paired in source')}
+				{@const choices =
+					name === 'start' ? result.startChoices : name === 'end' ? result.endChoices : []}
+				<fieldset class="event-field" aria-label={label} inert={descriptionFullscreen}>
+					<legend class="field-heading">
+						<span class="field-label">
+							<label for={name}>{label}</label>
+							{#if name === 'start'}
+								<button
+									type="button"
+									class="zone-token"
+									class:zone-hidden={result.allDay}
+									aria-hidden={result.allDay}
+									data-tooltip="Change time zone"
+									aria-label="Change time zone"
+									aria-haspopup="dialog"
+									disabled={!ready || result.allDay}
+									onclick={openZoneDialog}>{zone || 'Choose zone'}</button
+								>
+							{/if}
+						</span>
+					</legend>
+					<span class="field-controls">
+						<label
+							class="ownership"
+							data-tooltip="On: use suggestions. Off: keep this field Manual."
 						>
-						<ul class="suggestions part-options" aria-label="End/Duration duration alternatives">
-							{#each Core.durationOptions(draft) as option (option.amount)}
+							Auto
+							<input
+								type="checkbox"
+								role="switch"
+								aria-label={`Auto ${label}`}
+								checked={field.ownership === 'auto'}
+								disabled={!ready}
+								onchange={(event) => {
+									draft = Core.setAutomatic(draft, name, event.currentTarget.checked);
+								}}
+							/>
+						</label>
+					</span>
+					<input
+						id={name}
+						type="text"
+						onfocus={(event) => event.currentTarget.select()}
+						onpointerdown={(event) => prepareInputSelection(event.currentTarget)}
+						onclick={(event) => finishInputSelection(event.currentTarget)}
+						placeholder={name === 'start'
+							? 'e.g. 30min or tomorrow at 7pm'
+							: name === 'end'
+								? 'e.g. 4hr or tomorrow at 8pm'
+								: undefined}
+						value={name === 'end' && Core.inferredEndFollowsStart(draft)
+							? result.endValue
+							: (field.input ?? field.value)}
+						disabled={!ready}
+						oninput={(event) => {
+							const now = new SvelteDate(Math.floor(Date.now() / 60000) * 60000);
+
+							draft = Core.editAt(draft, name, event.currentTarget.value, now.toISOString());
+						}}
+						aria-invalid={error ? 'true' : undefined}
+						aria-describedby={`${name}-hint${error ? ` ${name}-error` : ''}`}
+					/>
+					<small
+						id={`${name}-hint`}
+						class:error={!!error}
+						aria-live={name === 'start' || name === 'end' ? 'polite' : undefined}
+					>
+						{#if error}<span id={`${name}-error`}>{error}</span>
+						{:else if hasInput && (name === 'start' || name === 'end')}
+							{@const interpreted = name === 'start' ? result.startValue : result.endValue}
+							Interpreted as {displayDateTime(interpreted)}{interpreted.length === 10
+								? name === 'end'
+									? ' (all day, inclusive end)'
+									: ' (all day)'
+								: ''}.
+							{#if !result.allDay && field.ownership === 'auto' && draft.suggestions.candidates.some((c) => c.field === name && c.value === field.value && c.inferred.includes('assumed-end'))}
+								(inferred 60 min)
+							{:else if !result.allDay && field.ownership === 'auto' && draft.suggestions.candidates.some((c) => c.field === name && c.value === field.value && c.inferred.includes('inferred-time'))}
+								(inferred time){/if}
+						{:else}{hint}{/if}
+					</small>
+					{#each Core.partialLabels(draft, name) as label (label)}
+						<small class="partial-evidence">{label}</small>
+					{/each}
+					{#if name === 'end'}
+						{@const duration = Core.durationValue(draft)}
+						<div class="temporal-options">
+							<small class="part-label"
+								>Duration{duration > 0
+									? ` · ${Core.durationLabel(duration, result.allDay)}`
+									: ''}</small
+							>
+							<ul class="suggestions part-options" aria-label="End/Duration duration alternatives">
+								{#each Core.durationOptions(draft) as option (option.amount)}
+									<li>
+										<button
+											type="button"
+											class="suggestion part-option"
+											aria-pressed={option.selected}
+											data-tooltip={option.source
+												? `Suggested End - ${option.source}. Set End relative to Start.`
+												: option.custom
+													? 'Calculated from Start and End. Select to make End follow Start.'
+													: 'Set End relative to Start.'}
+											disabled={!ready || !!result.startError}
+											onclick={() => {
+												draft = Core.selectDuration(draft, option.amount);
+											}}
+										>
+											<span class="selection-mark" aria-hidden="true"></span>{option.label}
+										</button>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+					{#if name === 'start' || name === 'end'}
+						{#each ['date', 'time'] as part (part)}
+							{@const options = Core.temporalOptions(draft, name, part as Core.temporalPart)}
+							{#if options.length || part === 'time'}
+								<div class="temporal-options">
+									<small class="part-label"
+										>{part === 'date' ? 'Date' : 'Time'}
+										{#if part === 'time' && pairingWarning}<span
+												class="pairing-warning"
+												data-tooltip="This date and time were not paired in Description."
+												>Not paired in source</span
+											>{/if}
+									</small>
+									<ul class="suggestions part-options" aria-label={`${label} ${part} alternatives`}>
+										{#if part === 'time'}
+											<li>
+												<button
+													type="button"
+													class="suggestion part-option"
+													aria-pressed={result.allDay}
+													disabled={!ready}
+													data-tooltip={result.allDay
+														? 'Select again to restore times'
+														: 'Use calendar dates without times'}
+													onclick={() => {
+														draft = Core.setAllDay(draft, !result.allDay);
+													}}
+												>
+													<span class="selection-mark" aria-hidden="true"></span>All day
+												</button>
+											</li>
+										{/if}
+										{#each options as option (option.value)}
+											<li>
+												<button
+													type="button"
+													class="suggestion part-option"
+													class:unpaired={option.paired === false}
+													aria-label={option.label}
+													aria-pressed={option.selected && (part !== 'time' || !result.allDay)}
+													data-tooltip={`${option.paired === undefined ? '' : option.paired ? 'Paired with this date - ' : 'Not paired with this date - '}${option.source}${option.note ? ` - ${option.note}` : ''}`}
+													onclick={() => {
+														draft = Core.selectTemporalPart(
+															draft,
+															name,
+															part as Core.temporalPart,
+															option.value
+														);
+													}}
+												>
+													<span class="selection-mark" aria-hidden="true"></span>
+													<span
+														>{option.generated
+															? option.label
+															: part === 'date'
+																? displayDateOption(option.value)
+																: option.value}</span
+													>
+													{#if option.note}<span class="note">({option.note})</span>{/if}
+												</button>
+											</li>
+										{/each}
+									</ul>
+								</div>
+							{/if}
+						{/each}
+					{:else if Core.alternatives(draft, name).length}
+						<ul class="suggestions" aria-label={`${label} alternatives`}>
+							{#each Core.alternatives(draft, name) as candidate (candidate.id)}
 								<li>
 									<button
 										type="button"
-										class="suggestion part-option"
-										aria-pressed={option.selected}
-										data-tooltip={option.source
-											? `Suggested End - ${option.source}. Set End relative to Start.`
-											: option.custom
-												? 'Calculated from Start and End. Select to make End follow Start.'
-												: 'Set End relative to Start.'}
-										disabled={!ready || !!result.startError}
+										class="suggestion"
+										aria-label={candidate.value}
+										data-tooltip={candidate.value}
+										aria-pressed={field.value === candidate.value ||
+											draft.selections.some(
+												(s) =>
+													s.name === name &&
+													s.revision === draft.revision &&
+													s.candidate.id === candidate.id
+											)}
 										onclick={() => {
-											draft = Core.selectDuration(draft, option.amount);
+											draft = Core.selectCandidate(draft, name, candidate.id);
 										}}
 									>
-										<span class="selection-mark" aria-hidden="true"></span>{option.label}
+										<span class="selection-mark" aria-hidden="true"></span>
+										<span class="interpreted">{candidate.value}</span>
 									</button>
 								</li>
 							{/each}
 						</ul>
-					</div>
-				{/if}
-				{#if name === 'start' || name === 'end'}
-					{#each ['date', 'time'] as part (part)}
-						{@const options = Core.temporalOptions(draft, name, part as Core.temporalPart)}
-						{#if options.length || part === 'time'}
-							<div class="temporal-options">
-								<small class="part-label"
-									>{part === 'date' ? 'Date' : 'Time'}
-									{#if part === 'time' && pairingWarning}<span
-											class="pairing-warning"
-											data-tooltip="This date and time were not paired in Description."
-											>Not paired in source</span
-										>{/if}
-								</small>
-								<ul class="suggestions part-options" aria-label={`${label} ${part} alternatives`}>
-									{#if part === 'time'}
-										<li>
-											<button
-												type="button"
-												class="suggestion part-option"
-												aria-pressed={result.allDay}
-												disabled={!ready}
-												data-tooltip={result.allDay
-													? 'Select again to restore times'
-													: 'Use calendar dates without times'}
-												onclick={() => {
-													draft = Core.setAllDay(draft, !result.allDay);
-												}}
-											>
-												<span class="selection-mark" aria-hidden="true"></span>All day
-											</button>
-										</li>
-									{/if}
-									{#each options as option (option.value)}
-										<li>
-											<button
-												type="button"
-												class="suggestion part-option"
-												class:unpaired={option.paired === false}
-												aria-label={option.label}
-												aria-pressed={option.selected && (part !== 'time' || !result.allDay)}
-												data-tooltip={`${option.paired === undefined ? '' : option.paired ? 'Paired with this date - ' : 'Not paired with this date - '}${option.source}${option.note ? ` - ${option.note}` : ''}`}
-												onclick={() => {
-													draft = Core.selectTemporalPart(
-														draft,
-														name,
-														part as Core.temporalPart,
-														option.value
-													);
-												}}
-											>
-												<span class="selection-mark" aria-hidden="true"></span>
-												<span
-													>{option.generated
-														? option.label
-														: part === 'date'
-															? displayDateOption(option.value)
-															: option.value}</span
-												>
-												{#if option.note}<span class="note">({option.note})</span>{/if}
-											</button>
-										</li>
-									{/each}
-								</ul>
-							</div>
-						{/if}
-					{/each}
-				{:else if Core.alternatives(draft, name).length}
-					<ul class="suggestions" aria-label={`${label} alternatives`}>
-						{#each Core.alternatives(draft, name) as candidate (candidate.id)}
-							<li>
-								<button
-									type="button"
-									class="suggestion"
-									aria-label={candidate.value}
-									data-tooltip={candidate.value}
-									aria-pressed={field.value === candidate.value ||
-										draft.selections.some(
-											(s) =>
-												s.name === name &&
-												s.revision === draft.revision &&
-												s.candidate.id === candidate.id
-										)}
-									onclick={() => {
-										draft = Core.selectCandidate(draft, name, candidate.id);
-									}}
+					{/if}
+					{#each warnings.filter((warning) => warning !== 'Not paired in source') as warning (warning)}<p
+						>
+							{warning}
+						</p>{/each}
+					{#if choices.length > 1}
+						<fieldset>
+							<legend>{label} occurs twice in {zone}. Choose an offset.</legend>
+							{#each choices as choice, i (choice.offset)}
+								<label
+									><input
+										type="radio"
+										name={`${name}-offset`}
+										value={choice.offset}
+										checked={field.offset === choice.offset}
+										onchange={() => {
+											draft = Core.chooseOffset(draft, name, choice.offset);
+										}}
+									/>
+									{i === 0 ? 'Earlier' : 'Later'} (UTC{choice.offset})</label
 								>
-									<span class="selection-mark" aria-hidden="true"></span>
-									<span class="interpreted">{candidate.value}</span>
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-				{#each warnings.filter((warning) => warning !== 'Not paired in source') as warning (warning)}<p
-					>
-						{warning}
-					</p>{/each}
-				{#if choices.length > 1}
-					<fieldset>
-						<legend>{label} occurs twice in {zone}. Choose an offset.</legend>
-						{#each choices as choice, i (choice.offset)}
-							<label
-								><input
-									type="radio"
-									name={`${name}-offset`}
-									value={choice.offset}
-									checked={field.offset === choice.offset}
-									onchange={() => {
-										draft = Core.chooseOffset(draft, name, choice.offset);
-									}}
-								/>
-								{i === 0 ? 'Earlier' : 'Later'} (UTC{choice.offset})</label
-							>
-						{/each}
-					</fieldset>
-				{/if}
-			</fieldset>
-		{/each}
-	</form>
-	<div inert={descriptionFullscreen}>
-		<dialog
-			bind:this={zoneDialog}
-			aria-labelledby="zone-dialog-title"
-			onclose={() => {
-				if (
-					document.activeElement === document.body ||
-					zoneDialog.contains(document.activeElement)
-				) {
-					document.querySelector<HTMLButtonElement>('.zone-token')?.focus();
-				}
-			}}
-		>
-			<h2 id="zone-dialog-title">Choose time zone</h2>
-			<p class="zone-provenance">
-				{draft.zoneOverride !== undefined ? 'Manual override' : draft.suggestions.zoneProvenance}
-			</p>
-			<label for="zone">IANA time zone</label>
-			<input
-				id="zone"
-				type="text"
-				onfocus={(event) => event.currentTarget.select()}
-				onpointerdown={(event) => prepareInputSelection(event.currentTarget)}
-				onclick={(event) => finishInputSelection(event.currentTarget)}
-				value={zone}
-				placeholder="America/Chicago"
-				aria-invalid={!validZone(zone)}
-				aria-describedby="zone-hint"
-				oninput={(event) => changeZone(event.currentTarget.value)}
-			/>
-			<p id="zone-hint">Changing zone preserves entered wall times and clears offset choices.</p>
-			{#if !validZone(zone)}<p class="error">Enter a valid IANA time zone.</p>{/if}
-			{#if draft.suggestions.zoneWarning && draft.zoneOverride === undefined}
-				<p class="error">{draft.suggestions.zoneWarning}</p>
-			{/if}
-			<div class="actions">
-				<button type="button" class="inline outline" onclick={() => changeZone(undefined)}
-					>Use suggested zone</button
-				>
-				<button type="button" onclick={() => zoneDialog.close()}>Done</button>
-			</div>
-		</dialog>
-		{#if draft.suggestions.warnings.includes('weekday-mismatch')}
-			<p>The written weekday does not match the date. Check the suggested date.</p>
-		{/if}
-		{#if draft.suggestions.warnings.includes('multiple-source-dates')}
-			<p>Description contains several dates. Review the alternatives above.</p>
-		{/if}
-		{#if draft.suggestions.warnings.includes('Inferred lesson end may overlap the social.')}
-			<p>Inferred lesson end may overlap the social.</p>
-		{/if}
-		{#each result.warnings as warning (warning)}<p>{warning}</p>{/each}
-		<div class="actions">
-			{#if ready && result.event}
-				<!-- External calendar URL; this is not a SvelteKit route. -->
-				<!-- eslint-disable svelte/no-navigation-without-resolve -->
-				<a
-					class="nc-button"
-					href={Core.googleUrl(result.event)}
-					target="_blank"
-					rel="noopener noreferrer">Open in Google Calendar</a
-				>
-				<!-- eslint-enable svelte/no-navigation-without-resolve -->
-			{:else}
-				<button type="button" disabled>Open in Google Calendar</button>
-			{/if}
-			<button class="secondary" type="button" onclick={download} disabled={!ready || !result.event}
-				>Download .ics</button
+							{/each}
+						</fieldset>
+					{/if}
+				</fieldset>
+			{/each}
+			<dialog
+				bind:this={zoneDialog}
+				aria-labelledby="zone-dialog-title"
+				onclose={() => {
+					if (
+						document.activeElement === document.body ||
+						zoneDialog.contains(document.activeElement)
+					) {
+						document.querySelector<HTMLButtonElement>('.zone-token')?.focus();
+					}
+				}}
 			>
+				<h2 id="zone-dialog-title">Choose time zone</h2>
+				<p class="zone-provenance">
+					{draft.zoneOverride !== undefined ? 'Manual override' : draft.suggestions.zoneProvenance}
+				</p>
+				<label for="zone">IANA time zone</label>
+				<input
+					id="zone"
+					type="text"
+					onfocus={(event) => event.currentTarget.select()}
+					onpointerdown={(event) => prepareInputSelection(event.currentTarget)}
+					onclick={(event) => finishInputSelection(event.currentTarget)}
+					value={zone}
+					placeholder="America/Chicago"
+					aria-invalid={!validZone(zone)}
+					aria-describedby="zone-hint"
+					oninput={(event) => changeZone(event.currentTarget.value)}
+				/>
+				<p id="zone-hint">Changing zone preserves entered wall times and clears offset choices.</p>
+				{#if !validZone(zone)}<p class="error">Enter a valid IANA time zone.</p>{/if}
+				{#if draft.suggestions.zoneWarning && draft.zoneOverride === undefined}
+					<p class="error">{draft.suggestions.zoneWarning}</p>
+				{/if}
+				<div class="actions">
+					<button type="button" class="inline outline" onclick={() => changeZone(undefined)}
+						>Use suggested zone</button
+					>
+					<button type="button" onclick={() => zoneDialog.close()}>Done</button>
+				</div>
+			</dialog>
+			{#if draft.suggestions.warnings.includes('weekday-mismatch')}
+				<p>The written weekday does not match the date. Check the suggested date.</p>
+			{/if}
+			{#if draft.suggestions.warnings.includes('multiple-source-dates')}
+				<p>Description contains several dates. Review the alternatives above.</p>
+			{/if}
+			{#if draft.suggestions.warnings.includes('Inferred lesson end may overlap the social.')}
+				<p>Inferred lesson end may overlap the social.</p>
+			{/if}
+			{#each result.warnings as warning (warning)}<p>{warning}</p>{/each}
+			<div class="actions">
+				{#if ready && result.event}
+					<!-- External calendar URL; this is not a SvelteKit route. -->
+					<!-- eslint-disable svelte/no-navigation-without-resolve -->
+					<a
+						class="nc-button"
+						href={Core.googleUrl(result.event)}
+						target="_blank"
+						rel="noopener noreferrer">Open in Google Calendar</a
+					>
+					<!-- eslint-enable svelte/no-navigation-without-resolve -->
+				{:else}
+					<button type="button" disabled>Open in Google Calendar</button>
+				{/if}
+				<button
+					class="secondary"
+					type="button"
+					onclick={download}
+					disabled={!ready || !result.event}>Download .ics</button
+				>
+			</div>
+			<p>
+				Google Calendar opens an editable form. Finish saving there. Exporting keeps this draft.
+			</p>
+			<p>
+				Long descriptions can exceed browser URL limits and appear in browser history. Download .ics
+				to keep the full text in a file.
+			</p>
 		</div>
-		<p>Google Calendar opens an editable form. Finish saving there. Exporting keeps this draft.</p>
-		<p>
-			Long descriptions can exceed browser URL limits and appear in browser history. Download .ics
-			to keep the full text in a file.
-		</p>
-	</div>
+	</form>
 </main>
 
 <style>
@@ -851,6 +859,58 @@
 		max-width: 46rem;
 		margin: 0 auto;
 		padding: 1rem;
+	}
+	.event-details {
+		min-width: 0;
+	}
+	/* 30rem editor + 42rem form + 1.25rem gap + 2rem gutters, with scrollbar room. */
+	@media (min-width: 77rem) and (min-height: 32rem) {
+		:global(body) {
+			/* main owns the bottom gutter. Extra space outside the grid would push
+			   the sticky editor above its top inset at the end of document scrolling. */
+			padding-block-end: 0;
+		}
+		main {
+			/* Escape nimble's narrow body content column before sizing our workspace. */
+			grid-column: 1 / -1;
+			max-width: 95.25rem;
+		}
+		.workspace {
+			/* Keep the sticky boundary aligned with main's single bottom gutter. */
+			margin-block-end: 0;
+			display: grid;
+			grid-template-columns: minmax(30rem, 50rem) 42rem;
+			gap: 1.25rem;
+			align-items: start;
+		}
+		.event-details {
+			grid-column: 2;
+		}
+		.event-details > .event-field:first-child {
+			margin-block-start: 0;
+		}
+		.description-editor:not(.fullscreen) {
+			--editor-fill: 1;
+			position: sticky;
+			top: 1rem;
+			height: var(--editor-pane-height, calc(100dvh - 2rem));
+			display: flex;
+			flex-direction: column;
+			/* Let oversized status/selection controls remain reachable at large text sizes. */
+			overflow: auto;
+		}
+		.description-editor:not(.fullscreen) .editor-surface {
+			flex: 1 1 auto;
+			min-height: 8rem;
+		}
+		.description-editor:not(.fullscreen) textarea {
+			flex: 1 1 auto;
+			height: 0;
+			min-height: 3rem;
+		}
+		.description-editor:not(.fullscreen) > :not(.editor-surface) {
+			flex-shrink: 0;
+		}
 	}
 	.actions,
 	.field-heading {
