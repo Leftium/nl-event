@@ -223,11 +223,11 @@ type englishEvidence = {start: int, end: int, unit: string, offset: int, day: in
 external recognizeEnglishDates: (string, string, string) => array<englishEvidence> =
   "recognizeEnglishDates"
 
-type clock = {time: string, minutes: int, span: span, ambiguous: bool}
+type clock = {time: string, minutes: int, span: span, ambiguous: bool, ambiguousDate: bool}
 let clocks = (line: lexical, evening) => {
   let tokens = matches(
     line.text,
-    "(?<![\\d:/])(?:(오전|오후|저녁|아침)\\s*)?(\\d{1,2})(?::(\\d{2})(?![\\d:])|시(?:\\s*(반|\\d{1,2}분))?)\\s*([ap]m?\\b)?|(?<![\\d:/])(\\d{1,2})\\s*([ap]m?)\\b|\\bmidnight\\b",
+    "(?<![\\d:/])(?:(오전|오후|저녁|아침|밤|새벽)\\s*)?(\\d{1,2})(?::(\\d{2})(?![\\d:])|시(?:\\s*(반|\\d{1,2}분))?)\\s*([ap]m?\\b)?|(?<![\\d:/])(\\d{1,2})\\s*([ap]m?)\\b|\\bmidnight\\b",
   )
   // A bare first hour is meaningful only as part of an explicit range.
   let bare = matches(
@@ -235,9 +235,17 @@ let clocks = (line: lexical, evening) => {
     "(?<![\\d:])(\\d{1,2})\\s*(?=[~–-]\\s*\\d{1,2}(?::\\d{2})?\\s*(?:[ap]m?)\\b)",
   )
   let all = Array.concat(tokens, bare)->Array.toSorted((a, b) => Int.toFloat(a.start - b.start))
-  let sharedPM = has(line.text, "(?<=\\d)\\s*p(?:m)?\\b|오후|저녁") || evening
-  let sharedAM = has(line.text, "(?<=\\d)\\s*a(?:m)?\\b|오전|아침")
-  let parsed = all->Array.map(m => {
+  let qualifier = (m: lexical) =>
+    has(m.text, "밤")
+      ? 2
+      : has(m.text, "p(?:m)?\\b|오후|저녁")
+      ? 1
+      : has(m.text, "a(?:m)?\\b|오전|아침|새벽")
+      ? -1
+      : 0
+  let connected = (left: lexical, right: lexical) =>
+    has(slice(line.text, left.end, right.start), "^\\s*[~–-]\\s*$")
+  let parsed = all->Array.mapWithIndex((m, index) => {
     let hourText = group(m, 2) != "" ? group(m, 2) : group(m, 6) != "" ? group(m, 6) : group(m, 1)
     let midnight = lower(m.text) == "midnight"
     let h = midnight ? 0 : number(hourText)
@@ -247,12 +255,28 @@ let clocks = (line: lexical, evening) => {
         : group(m, 4) != ""
         ? number(replaceAll(group(m, 4), "분", ""))
         : number(group(m, 3))
-    let explicitPM = has(m.text, "p(?:m)?\\b|오후|저녁")
-    let explicitAM = has(m.text, "(?<=\\d)\\s*a(?:m)?\\b|오전|아침")
-    // 12:15 before a PM end means noon, rather than 00:15.
-    let pm = explicitPM || (!explicitAM && sharedPM)
-    let am = explicitAM || (!explicitPM && sharedAM && !sharedPM)
-    let hour = if midnight {
+    // An explicit local daypart wins. Only connected range endpoints share it.
+    let nearby =
+      [index - 1, index + 1]
+      ->Array.filterMap(i =>
+        all
+        ->Array.get(i)
+        ->Option.filter(
+          other => qualifier(other) != 0 && (i < index ? connected(other, m) : connected(m, other)),
+        )
+      )
+      ->Array.get(0)
+      ->Option.map(other =>
+        // A dawn endpoint does not establish the preceding hour as AM.
+        other.start > m.start && has(other.text, "새벽") ? -2 : qualifier(other)
+      )
+      ->Option.getOr(0)
+    let local = qualifier(m)
+    let period = local != 0 ? local : nearby != 0 ? nearby : evening ? 1 : 0
+    let pm = period == 1 || period == 2
+    let am = period == -1
+    let nightMidnight = period == 2 && h == 12
+    let hour = if midnight || nightMidnight {
       0
     } else if pm && h < 12 {
       h + 12
@@ -278,6 +302,8 @@ let clocks = (line: lexical, evening) => {
         : hour * 60 + minute,
       span: {start: line.start + m.start, end: line.start + m.end},
       ambiguous,
+      // Night midnight at the start could refer to either date boundary.
+      ambiguousDate: index == 0 && nightMidnight,
     }
   })
   parsed->Array.filterWithIndex((c, index) => {
@@ -395,7 +421,7 @@ let credibleVenue = text =>
   ) &&
   !has(
     text,
-    "^(?:안내|공지|없음|미정|추후|장소|주소|위치)(?:\\s|$)|(?:합니다|입니다|하세요|있습니다|없습니다|예정)|[!?]|^\\d|^[,;:：-]+$|^(?:TBD|TBA|none|unknown)\\b",
+    "^(?:계좌|입금|송금|결제|안내|공지|없음|미정|추후|장소|주소|위치)(?:\\s|$)|(?:합니다|입니다|하세요|있습니다|없습니다|예정)|[!?]|^\\d|^[,;:：-]+$|^(?:TBD|TBA|none|unknown)\\b",
   )
 
 @genType
@@ -498,7 +524,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     seasonWindows->Array.includes(line) ||
       has(
         line,
-        "운영기간|기간\\s*동안|season|registration|registrations|sign-ups|deadline|마감|참가비|파티비|입장료|입금|계좌|\\b(?:fee|price|admission)\\b|https?://",
+        "운영기간|기간\\s*동안|season|registration|registrations|sign-ups|deadline|(?:사전)?신청.*(?:까지|마감)|마감|참가비|파티비|입장료|입금|계좌|\\b(?:fee|price|admission)\\b|https?://",
       )
   let dateLines =
     lines->Array.filter(l =>
@@ -572,7 +598,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
               excluded(line.text) ||
               Array.length(times) != 2 ||
               Array.length(dateEvidence(line, reference, seasonYear)) > 0 ||
-              times->Array.some(c => c.ambiguous)
+              times->Array.some(c => c.ambiguous || c.ambiguousDate)
             ) {
               active := false
             } else {
@@ -596,6 +622,23 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     })
     ->Array.filter(slots => Array.length(slots) >= 2)
   let timelineSlots = timelines->Array.flatMap(slots => slots)
+
+  let overnight =
+    lines
+    ->Array.mapWithIndex((l, i) => (l, i))
+    ->Array.filter(((l, _)) => !excluded(l.text) && has(l.text, "^\\s*시간\\s*[:：]"))
+    ->Array.filterMap(((l, i)) => {
+      let times = clocks(l, evening)
+      switch (times->Array.get(0), times->Array.get(1)) {
+      | (Some(start), Some(ending))
+        if !start.ambiguous &&
+        !start.ambiguousDate &&
+        !ending.ambiguous &&
+        ending.minutes < start.minutes =>
+        Some((i, start, ending))
+      | _ => None
+      }
+    })
 
   let candidates = ref([])
   let add = (
@@ -662,6 +705,16 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     }
   })
   let addLocation = (line: lexical, venueAllowed, fallbackRank) => {
+    let map =
+      matches(
+        line.text,
+        "\\s+https?://(?:map\\.naver\\.com|naver\\.me|map\\.kakao\\.com|kko\\.kakao\\.com|maps\\.google\\.com|(?:www\\.)?google\\.com/maps|maps\\.app\\.goo\\.gl)(?:[/?#]\\S*)?\\s*$",
+      )->Array.get(0)
+    let line = switch map {
+    | None => line
+    | Some(m) =>
+      locationContent({...line, text: slice(line.text, 0, m.start), end: line.start + m.start})
+    }
     let addresses = locationAddresses(line.text)->Array.filter(address => {
       // Address-shaped text inside a directions/contact/prose line is not location evidence.
       let prefix = locationContent({...line, text: slice(line.text, 0, address.start)})
@@ -809,6 +862,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
                 minutes: number(slice(time, 0, 2)) * 60 + number(slice(time, 3, 5)),
                 span: {start: line.start + m.start, end: line.start + m.end},
                 ambiguous: false,
+                ambiguousDate: false,
               }
             })
       let allDay =
@@ -838,7 +892,23 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         : `activity-${Int.toString(index)}`
       let rank = overall ? 200 : activity == "practice" ? 180 : activity == "free-lesson" ? 70 : 100
       let label = trim(line.text)
-      let dateOptions = if Array.length(unresolvedMonth) > 0 {
+      let adjacentDate =
+        lines
+        ->Array.get(index - 1)
+        ->Option.filter(previous =>
+          !excluded(previous.text) &&
+          has(
+            previous.text,
+            "^\\s*(?:일자(?:\\s*및\\s*시간)?|일시|날짜|Date|When)\\s*[:：]",
+          )
+        )
+        ->Option.map(previous => dateEvidence(previous, reference, seasonYear))
+        ->Option.getOr([])
+      let dateOptions = if (
+        overall && Array.length(localDates) == 0 && Array.length(adjacentDate) == 1
+      ) {
+        adjacentDate
+      } else if Array.length(unresolvedMonth) > 0 {
         localDates
       } else if Array.length(localDates) > 0 {
         localDates
@@ -857,6 +927,25 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         dates
       } else {
         sharedDate->Option.map(d => [d])->Option.getOr([])
+      }
+      // Early secondary slots belong to the following day only inside a unique
+      // explicit overall overnight interval, with a single shared event date.
+      let dateOptions = switch (
+        sharedDate,
+        overnight->Array.get(0),
+        lineClocks->Array.get(0),
+        lineClocks->Array.get(1),
+      ) {
+      | (Some(_), Some((anchorIndex, _, ending)), Some(start), Some(slotEnd))
+        if index > anchorIndex &&
+        !overall &&
+        Array.length(localDates) == 0 &&
+        Array.length(overnight) == 1 &&
+        start.minutes <= ending.minutes &&
+        slotEnd.minutes >= start.minutes &&
+        slotEnd.minutes <= ending.minutes =>
+        dateOptions->Array.map(d => {...d, date: addDays(d.date, 1)})
+      | _ => dateOptions
       }
       let startClock = lineClocks->Array.get(0)->Option.filter(c => c.minutes < 1440)
       let endClock = lineClocks->Array.get(1)
@@ -896,10 +985,13 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
                 : [{date: "", span: start.span, inferred: [], mismatch: false}]
             applicableDates->Array.forEach(d => {
               let groupId = `${activity}:${d.date}`
-              let complete = d.date != "" && !start.ambiguous
+              let complete = d.date != "" && !start.ambiguous && !start.ambiguousDate
               let value = complete ? `${d.date} ${start.time}` : start.time
               let spans = d.date == "" ? [start.span] : [d.span, start.span]
-              let inferred = Array.concat(d.inferred, start.ambiguous ? ["ambiguous-am-pm"] : [])
+              let inferred = Array.concat(
+                Array.concat(d.inferred, start.ambiguous ? ["ambiguous-am-pm"] : []),
+                start.ambiguousDate ? ["ambiguous-midnight-date"] : [],
+              )
               add(
                 #start,
                 value,

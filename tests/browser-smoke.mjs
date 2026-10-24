@@ -1211,6 +1211,69 @@ async function checkFreeform(page) {
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 }
 
+async function checkOvernightParty(page) {
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
+	const text = await fs.readFile('tests/inputs/overnight-party-sanitized.txt', 'utf8');
+	await page.locator('#description').fill(text);
+	await page.waitForFunction(() => document.querySelector('#location').value === '봉천살롱댄스홀');
+	assert.equal(await page.locator('#title').inputValue(), 'Slow Drag Night 파티 안내!');
+	assert.match(await page.locator('#start-hint').textContent(), /2026-10-30 23:00/);
+	assert.match(await page.locator('#end-hint').textContent(), /2026-10-31 02:30/);
+	for (const field of ['Title', 'Start', 'End/Duration', 'Location'])
+		assert.equal(
+			await page.getByRole('switch', { name: `Auto ${field}`, exact: true }).isChecked(),
+			true
+		);
+	assert.equal(await page.locator('#description').inputValue(), text);
+	const params = new URL(
+		await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
+	).searchParams;
+	assert.equal(params.get('dates'), '20261030T140000Z/20261030T173000Z');
+	assert.equal(params.get('stz'), 'Asia/Seoul');
+	assert.equal(params.get('location'), '봉천살롱댄스홀');
+	assert.equal(params.get('details'), text);
+	const pending = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Download .ics', exact: true }).click();
+	const ics = (await fs.readFile(await (await pending).path(), 'utf8')).replace(/\r\n /g, '');
+	assert.ok(ics.includes('DTSTART:20261030T140000Z\r\n'));
+	assert.ok(ics.includes('DTEND:20261030T173000Z\r\n'));
+	assert.ok(ics.includes('LOCATION:봉천살롱댄스홀\r\n'));
+	assert.ok(ics.includes(`DESCRIPTION:${text.replace(/\n/g, '\\n')}\r\n`));
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+}
+
+async function checkReviewedMidnight(page) {
+	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
+	for (const range of ['밤 11시 - 밤 12시', '밤 11시 - 12시']) {
+		await page.getByRole('button', { name: 'Reset', exact: true }).click();
+		await page.locator('#description').fill(`Party\n일자 및 시간: 10월 30일 (금)\n시간: ${range}`);
+		await page.waitForFunction(() =>
+			document.querySelector('#end-hint')?.textContent.includes('2026-10-31 00:00')
+		);
+		const params = new URL(
+			await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
+		).searchParams;
+		assert.equal(params.get('dates'), '20261030T140000Z/20261030T150000Z');
+		const pending = page.waitForEvent('download');
+		await page.getByRole('button', { name: 'Download .ics', exact: true }).click();
+		const ics = (await fs.readFile(await (await pending).path(), 'utf8')).replace(/\r\n /g, '');
+		assert.ok(ics.includes('DTSTART:20261030T140000Z\r\n'));
+		assert.ok(ics.includes('DTEND:20261030T150000Z\r\n'));
+	}
+	for (const range of ['11시 - 새벽 2시', '밤 12시 - 새벽 1시']) {
+		await page.getByRole('button', { name: 'Reset', exact: true }).click();
+		await page.locator('#description').fill(`Party\n일자 및 시간: 10월 30일 (금)\n시간: ${range}`);
+		await page.waitForFunction(() => document.querySelector('#start-error'));
+		assert.equal(await page.locator('#start').inputValue(), '');
+		assert.equal(
+			await page.getByRole('button', { name: 'Download .ics', exact: true }).isDisabled(),
+			true
+		);
+	}
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+}
+
 async function checkMapLocations(page) {
 	const announcement = await fs.readFile('tests/inputs/multiline-location-user.txt', 'utf8');
 	const flattened = await fs.readFile(
@@ -1759,6 +1822,8 @@ for (const [name, engine] of [
 	await checkFreeform(page);
 	await checkSelectedTitle(page, name);
 	await checkMapLocations(page);
+	await checkOvernightParty(page);
+	await checkReviewedMidnight(page);
 	await checkSelectionActions(page);
 	await checkSelectOnFocus(page);
 	await checkLunch(page);
