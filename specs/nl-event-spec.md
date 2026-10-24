@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-24
 
-**Status:** Draft; behavior contracts and supplied fixtures integrated, implementation pending
+**Status:** Phase 1 manual draft and export foundation implemented; extraction and device verification remain pending
 
 **Repository / working product name:** `nl-event` / NL Event
 
@@ -10,32 +10,32 @@
 
 Build a browser-first event resolver that extracts Korean or English announcements into one editable draft and hands it to Google Calendar or an `.ics` file.
 
-The local checkout is a minimal SvelteKit skeleton. Inspection on 2026-10-24 confirmed that `package.json` declares SvelteKit `^3.0.0` and Svelte `^5.57.1`, with no ReScript or Nimble.css dependency yet. No Git remote is configured. Preserve the scaffold's existing settings where appropriate and follow the repository instructions supplied for the implementation session.
+The application preserves the SvelteKit 3 and Svelte 5 skeleton, with a ReScript 12 functional core and Nimble.css styling. The Git remote is `https://github.com/Leftium/nl-event`. PR #1 implements manual drafts, validation, and calendar exports; natural-language parsing and candidate extraction remain a subsequent milestone.
 
-The target is a candidate resolver. Google Calendar provides advanced editing and final saving. Completion requires the state transitions below, deterministic fixture results, equivalent normalized exports, and documented device handoff results. The fixture files are adopted; no parser, test runner, or app behavior is implemented by this document update.
+The target is a candidate resolver. Google Calendar provides advanced editing and final saving. Completion requires the state transitions below, deterministic fixture results, equivalent normalized exports, and documented device handoff results. The fixture files are adopted and remain unchanged. The manual foundation has focused unit tests; parser acceptance tests remain deferred.
 
 ## Product boundary
 
-| Concern | Decision |
-| --- | --- |
-| Framework | SvelteKit 3 + Svelte 5, adapting to the installed skeleton |
+| Concern               | Decision                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| Framework             | SvelteKit 3 + Svelte 5, adapting to the installed skeleton                            |
 | Domain implementation | ReScript 12, typed `@genType` boundaries, functional core / imperative shell as in pH |
-| Styling | `@leftium/nimble.css/core`, with essential layout and interaction CSS only |
-| UI / input languages | English UI; Korean and English parsing |
-| Parsing | Client-side deterministic rules with a replaceable English NLP adapter |
-| Handoff | Primary: **Open in Google Calendar**. Secondary: **Download .ics** |
-| Event count | One current draft and one exported event at a time |
-| Privacy | No login, backend, external LLM, or calendar-reading permission |
+| Styling               | `@leftium/nimble.css/core`, with essential layout and interaction CSS only            |
+| UI / input languages  | English UI; Korean and English parsing                                                |
+| Parsing               | Client-side deterministic rules with a replaceable English NLP adapter                |
+| Handoff               | Primary: **Open in Google Calendar**. Secondary: **Download .ics**                    |
+| Event count           | One current draft and one exported event at a time                                    |
+| Privacy               | No login, backend, external LLM, or calendar-reading permission                       |
 
 The interface has exactly five editable field groups, in this order:
 
-| Field | Editor | Suggestions |
-| --- | --- | --- |
-| Description | Textarea at top | Sole parsing source and exported description; no alternatives |
-| Title | Text input | Event headlines and activity headings |
-| Start | Text input | Complete timestamps, all-day dates, or visibly unresolved partial evidence |
-| End | Text input | Associated ends and labeled inferred duration |
-| Location | Text input | Venue/address alternatives |
+| Field       | Editor          | Suggestions                                                                |
+| ----------- | --------------- | -------------------------------------------------------------------------- |
+| Description | Textarea at top | Sole parsing source and exported description; no alternatives              |
+| Title       | Text input      | Event headlines and activity headings                                      |
+| Start       | Text input      | Complete timestamps, all-day dates, or visibly unresolved partial evidence |
+| End         | Text input      | Associated ends and labeled inferred duration                              |
+| Location    | Text input      | Venue/address alternatives                                                 |
 
 Description is one mutable value. Parse snapshots and revision IDs are internal evidence, not a second editable source. Parsing, selection, and export never rewrite it. Export its exact current contents, subject to transport escaping and line-ending encoding.
 
@@ -47,13 +47,13 @@ Render meaningful alternatives beneath their own fields; clicking one changes on
 
 A draft includes Description, four field states, time-zone state, parse revision/status, fixed reference context, and an optional export UID.
 
-| Action | Required transition |
-| --- | --- |
-| Initial load / New event | Empty all five fields and candidates; set the four extracted fields to Auto; clear zone override, DST choices, parse state, and UID; capture a new reference context |
-| Type, edit, or paste directly into Description | Edit the same draft; retain UID and Manual fields; refresh candidates and Auto fields from the latest revision |
-| Clear Description | Immediately remove candidates/evidence, clear Auto values and automatic zone inference, and cancel/invalidate pending parsing; retain Manual values, explicit zone override, and draft UID |
-| Nonempty Description yields no candidates | Leave Description and Manual fields usable; Auto fields without a supported suggestion become blank; show a useful parse status |
-| Open Google Calendar / download `.ics` | Retain the current draft; navigation or download does not clear it or establish that it was saved |
+| Action                                         | Required transition                                                                                                                                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Initial load / New event                       | Empty all five fields and candidates; set the four extracted fields to Auto; clear zone override, DST choices, parse state, and UID; capture a new reference context                       |
+| Type, edit, or paste directly into Description | Edit the same draft; retain UID and Manual fields; refresh candidates and Auto fields from the latest revision                                                                             |
+| Clear Description                              | Immediately remove candidates/evidence, clear Auto values and automatic zone inference, and cancel/invalidate pending parsing; retain Manual values, explicit zone override, and draft UID |
+| Nonempty Description yields no candidates      | Leave Description and Manual fields usable; Auto fields without a supported suggestion become blank; show a useful parse status                                                            |
+| Open Google Calendar / download `.ics`         | Retain the current draft; navigation or download does not clear it or establish that it was saved                                                                                          |
 
 **New event** is an explicit action. If there is any nonempty field, a Manual field/zone override, or an unresolved user choice, confirm before discarding the draft. Cancel leaves all state unchanged. No persistent history is required.
 
@@ -65,12 +65,12 @@ The shell allocates a unique UID on the first `.ics` export and reuses it on sub
 
 Title, Start, End, and Location each have `auto` or `manual` ownership, separate from their value and provenance. Auto/Manual are UI labels; selected-source and typed-text origins may be retained as evidence within Manual.
 
-| Event | Target field | Other fields |
-| --- | --- | --- |
-| Latest Description parse completes | Replace Auto values with the coherent latest suggestions or blank where unsupported; preserve Manual values | Apply the same ownership rule independently |
-| User types, including deleting a value | Store the exact edit and mark Manual, even when blank or equal to a suggestion | Values and ownership unchanged |
-| User clicks an alternative | Apply that candidate, including partial-resolution rules, and mark Manual | Values and ownership unchanged; related suggestions/warnings may refresh |
-| User clicks inline **Reset to suggested** | Mark Auto and immediately apply the latest best suggestion, or blank if none | Values and ownership unchanged |
+| Event                                     | Target field                                                                                                | Other fields                                                             |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Latest Description parse completes        | Replace Auto values with the coherent latest suggestions or blank where unsupported; preserve Manual values | Apply the same ownership rule independently                              |
+| User types, including deleting a value    | Store the exact edit and mark Manual, even when blank or equal to a suggestion                              | Values and ownership unchanged                                           |
+| User clicks an alternative                | Apply that candidate, including partial-resolution rules, and mark Manual                                   | Values and ownership unchanged; related suggestions/warnings may refresh |
+| User clicks inline **Reset to suggested** | Mark Auto and immediately apply the latest best suggestion, or blank if none                                | Values and ownership unchanged                                           |
 
 Show each field's ownership and offer Reset to suggested for Manual fields. Reset does not reuse a candidate from an older revision. If current suggestions are pending, clear the target and fill it only when the matching parse completes; indicate pending status.
 
@@ -115,15 +115,15 @@ Block both exports when either date/time is invalid or the fields mix timed and 
 
 The shell captures `referenceInstant` and browser IANA zone at draft creation. Keep that instant fixed for edits/reparses in the same draft; New event captures a new one. Tests inject these values. Interpret relative dates in the effective event zone, not UTC or the browser zone when those differ. Resolve source zone evidence before computing relative dates.
 
-| Expression / evidence | Policy |
-| --- | --- |
-| Today / tomorrow / day after tomorrow; Korean equivalents | Add 0 / 1 / 2 calendar days to the event-local reference date |
-| This weekday / 이번 주 weekday | That weekday in the current Monday-Sunday calendar week, even if already past |
-| Next weekday / 다음 주 weekday | That weekday in the following Monday-Sunday week |
-| Explicit year or related season year | Retain that year; do not change it to make an event future or repair its weekday |
-| Month/day without a year | Consider the reference year and its immediate neighbors; reject invalid dates, prefer candidates consistent with an explicit weekday, then choose the smallest absolute calendar-day distance from the event-local reference date; ties choose the earlier date |
-| No matching weekday in those candidate years | Retain the nearest valid date and warn about the weekday mismatch; do not search remote years merely to make the weekday fit |
-| Vague evening / 저녁 without a clock time | Preserve a date/period suggestion; no invented exact hour |
+| Expression / evidence                                     | Policy                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Today / tomorrow / day after tomorrow; Korean equivalents | Add 0 / 1 / 2 calendar days to the event-local reference date                                                                                                                                                                                                   |
+| This weekday / 이번 주 weekday                            | That weekday in the current Monday-Sunday calendar week, even if already past                                                                                                                                                                                   |
+| Next weekday / 다음 주 weekday                            | That weekday in the following Monday-Sunday week                                                                                                                                                                                                                |
+| Explicit year or related season year                      | Retain that year; do not change it to make an event future or repair its weekday                                                                                                                                                                                |
+| Month/day without a year                                  | Consider the reference year and its immediate neighbors; reject invalid dates, prefer candidates consistent with an explicit weekday, then choose the smallest absolute calendar-day distance from the event-local reference date; ties choose the earlier date |
+| No matching weekday in those candidate years              | Retain the nearest valid date and warn about the weekday mismatch; do not search remote years merely to make the weekday fit                                                                                                                                    |
+| Vague evening / 저녁 without a clock time                 | Preserve a date/period suggestion; no invented exact hour                                                                                                                                                                                                       |
 
 Mark missing-year choices `inferred-year`. An explicit related source year takes precedence over nearest-year inference. Multiple contradictory explicit dates/years remain distinct evidence with a warning, not a synthesized correction. Known past events retain their year and receive `past-event`; no automatic future rollover. Compare timed starts as instants and all-day starts as local dates.
 
@@ -191,22 +191,22 @@ The adopted bundle lives at [`tests/fixtures/nl-event/`](../tests/fixtures/nl-ev
 
 A parser test reads `inputs/<id>.txt` and injects only the paired expectation's `context` (`referenceInstant`, `browserTimeZone`, optional `eventTimeZoneOverride`). Compare output to `assertions` afterward. Never supply `source`, expected candidates, or calendar metadata to text parsing. Null assertions mean missing evidence; omitted assertions are not claims that other output must be empty.
 
-| Fixture ID | Provenance | Required result |
-| --- | --- | --- |
-| `k1-wine-excerpt` | Recoverable user-quoted excerpt | Exact quoted title/location; Oct 25, 2026, 17:00; inferred 18:00 End and year |
-| `k2-milonga-excerpt` | Recoverable user-quoted excerpt | Oct 18 social 18:30-22:30; related lesson 18:00 with inferred 19:00 End; past/year warnings; title unasserted |
-| `k3-slow-saturday-synthetic` | Synthetic reconstruction of discussed schedule facts | Ten practice Start alternatives from July 4 to Sept 19, 2026; associated End suggestions; exclude season bounds |
-| `e1-st-paul-houseparty-sanitized` | Sanitized calendar-derived test | Nov 14, 20:00 to Nov 15, 00:00 in America/Chicago; St Paul location, no private street address; no metadata-derived 23:55 End |
-| `e2-workshop-times-only-sanitized` | Sanitized calendar-derived test | Four related partial time ranges; no invented date/venue; export blocked |
-| `e3-series-deadline-synthetic` | Synthetic negative test from calendar context | Registration date is not a class date; no complete event; export blocked |
-| `k4-blues-jam-sanitized` | Sanitized calendar-derived excerpts | Apr 13, 2026, 20:00-22:30; workshop/social associations; deduplicate date mentions; ignore price |
-| `en-all-day-multiday-synthetic` | Synthetic | Inclusive Oct 25-26 UI dates; exclusive Oct 27 export end |
-| `en-next-friday-synthetic` | Synthetic | Oct 30, 2026, 19:00 under the fixed Oct 21 reference context |
-| `en-vague-evening-synthetic` | Synthetic | Oct 25 date evidence; no invented hour; export blocked |
-| `en-dst-fall-back-synthetic` | Synthetic | Chicago Nov 1, 01:30 needs an explicit offset choice |
-| `en-dst-spring-gap-synthetic` | Synthetic | Chicago Mar 8, 02:30 is nonexistent; export blocked |
-| `ko-tomorrow-synthetic` | Synthetic | Oct 25, 2026, 17:00 under the fixed reference context |
-| `ko-numeric-noise-synthetic` | Synthetic | Extract Oct 25, 17:00; ignore address, price, and dummy account digits |
+| Fixture ID                         | Provenance                                           | Required result                                                                                                               |
+| ---------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `k1-wine-excerpt`                  | Recoverable user-quoted excerpt                      | Exact quoted title/location; Oct 25, 2026, 17:00; inferred 18:00 End and year                                                 |
+| `k2-milonga-excerpt`               | Recoverable user-quoted excerpt                      | Oct 18 social 18:30-22:30; related lesson 18:00 with inferred 19:00 End; past/year warnings; title unasserted                 |
+| `k3-slow-saturday-synthetic`       | Synthetic reconstruction of discussed schedule facts | Ten practice Start alternatives from July 4 to Sept 19, 2026; associated End suggestions; exclude season bounds               |
+| `e1-st-paul-houseparty-sanitized`  | Sanitized calendar-derived test                      | Nov 14, 20:00 to Nov 15, 00:00 in America/Chicago; St Paul location, no private street address; no metadata-derived 23:55 End |
+| `e2-workshop-times-only-sanitized` | Sanitized calendar-derived test                      | Four related partial time ranges; no invented date/venue; export blocked                                                      |
+| `e3-series-deadline-synthetic`     | Synthetic negative test from calendar context        | Registration date is not a class date; no complete event; export blocked                                                      |
+| `k4-blues-jam-sanitized`           | Sanitized calendar-derived excerpts                  | Apr 13, 2026, 20:00-22:30; workshop/social associations; deduplicate date mentions; ignore price                              |
+| `en-all-day-multiday-synthetic`    | Synthetic                                            | Inclusive Oct 25-26 UI dates; exclusive Oct 27 export end                                                                     |
+| `en-next-friday-synthetic`         | Synthetic                                            | Oct 30, 2026, 19:00 under the fixed Oct 21 reference context                                                                  |
+| `en-vague-evening-synthetic`       | Synthetic                                            | Oct 25 date evidence; no invented hour; export blocked                                                                        |
+| `en-dst-fall-back-synthetic`       | Synthetic                                            | Chicago Nov 1, 01:30 needs an explicit offset choice                                                                          |
+| `en-dst-spring-gap-synthetic`      | Synthetic                                            | Chicago Mar 8, 02:30 is nonexistent; export blocked                                                                           |
+| `ko-tomorrow-synthetic`            | Synthetic                                            | Oct 25, 2026, 17:00 under the fixed reference context                                                                         |
+| `ko-numeric-noise-synthetic`       | Synthetic                                            | Extract Oct 25, 17:00; ignore address, price, and dummy account digits                                                        |
 
 `oracles/e3-series-calendar-metadata.json` independently checks America/Chicago occurrences at 19:30-20:30: Oct 20/27 use `-05:00`, Nov 3/10 use `-06:00`. It is serialization/time-zone evidence only, never a source of dates for E3 parsing.
 
@@ -260,6 +260,6 @@ Outside v1: OAuth/direct calendar writes, calendar reads/conflict checks/sync, p
 - [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545): iCalendar serialization semantics.
 - [`Leftium/FEHshing`](https://github.com/Leftium/FEHshing): prior `.ics` example, not the architecture template.
 - [`Leftium/veneer`](https://github.com/Leftium/veneer), `specs/completed/locale.md`: Paraglide/inlang direction if UI localization later enters scope.
-- [Continuum v0.6.2 protocol](https://github.com/Leftium/continuum/blob/9aea3336bb10037ad92eda836c8f59972cfbde7b/protocol/CONTINUUM.md) / [bootstrap guide](https://github.com/Leftium/continuum/blob/main/docs/client.md): optional future workflow once a remote/base exists; writer claims precede product writes and merge stays owner-controlled. No PR is required for local spec/fixture preparation.
+- [Continuum v0.6.2 protocol](https://github.com/Leftium/continuum/blob/9aea3336bb10037ad92eda836c8f59972cfbde7b/protocol/CONTINUUM.md) / [bootstrap guide](https://github.com/Leftium/continuum/blob/main/docs/client.md): adopted for PR #1; writer claims precede product writes and merge stays owner-controlled.
 
-**Implementation boundary:** This specification defines target behavior and adopted fixture evidence. It does not establish that feature code, CI, remote hosting, or device verification exists.
+**Implementation boundary:** This specification includes future parser behavior. See the README for the implemented manual foundation and actual verification limits. CI, remote hosting, and physical-device calendar handoffs have not been established.

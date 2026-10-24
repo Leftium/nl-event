@@ -21,3 +21,8 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# ReScript compiler artifacts (generated typed boundary is rebuilt before checks)
+/lib/
+*.res.js
+*.gen.ts

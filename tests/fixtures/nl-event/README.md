@@ -12,16 +12,16 @@ Each expectation names a fixed UTC `referenceInstant`, browser IANA time zone, a
 
 ## Provenance and limits
 
-| Fixture | Origin | Completeness |
-| --- | --- | --- |
-| `k1-wine-excerpt` | Exact quoted user-provided lines | Excerpt; full announcement unavailable |
-| `k2-milonga-excerpt` | Exact quoted user-provided lines | Excerpt; full announcement unavailable |
-| `k3-slow-saturday-synthetic` | Constructed from known user-mentioned dates and times | **Synthetic**, not recovered original |
-| `e1-st-paul-houseparty-sanitized` | Adapted from a stored calendar description | Sanitized; private residence address removed |
-| `e2-workshop-times-only-sanitized` | Adapted from a stored calendar description | Sanitized; original did not contain parent date |
-| `e3-series-deadline-synthetic` | Constructed from calendar context | **Synthetic**; calendar's recurrence dates omitted |
-| `k4-blues-jam-sanitized` | Selected calendar-description lines | Excerpt, excludes financial/personal information |
-| Other `*-synthetic` | Explicitly created regression cases | Synthetic |
+| Fixture                            | Origin                                                | Completeness                                       |
+| ---------------------------------- | ----------------------------------------------------- | -------------------------------------------------- |
+| `k1-wine-excerpt`                  | Exact quoted user-provided lines                      | Excerpt; full announcement unavailable             |
+| `k2-milonga-excerpt`               | Exact quoted user-provided lines                      | Excerpt; full announcement unavailable             |
+| `k3-slow-saturday-synthetic`       | Constructed from known user-mentioned dates and times | **Synthetic**, not recovered original              |
+| `e1-st-paul-houseparty-sanitized`  | Adapted from a stored calendar description            | Sanitized; private residence address removed       |
+| `e2-workshop-times-only-sanitized` | Adapted from a stored calendar description            | Sanitized; original did not contain parent date    |
+| `e3-series-deadline-synthetic`     | Constructed from calendar context                     | **Synthetic**; calendar's recurrence dates omitted |
+| `k4-blues-jam-sanitized`           | Selected calendar-description lines                   | Excerpt, excludes financial/personal information   |
+| Other `*-synthetic`                | Explicitly created regression cases                   | Synthetic                                          |
 
 Do **not** claim these inputs are the missing complete originals. In particular, K1/K2 represent quoted excerpts from the earlier conversation. K3 cannot be restored from a summary. If the owner finds the full announcements, add separate `*-original` cases with unchanged source text and explicit expectations; do not overwrite these regression examples.
 
@@ -30,7 +30,7 @@ The fixtures intentionally omit third-party account numbers, registration URLs, 
 ## Expected behavior / reviewing failures
 
 - Some fixtures intentionally have no complete event date/time. `exportable:false` means an export must be blocked until required information is provided. Time-only candidates must not silently acquire the parent date from a separate calendar record.
-- `preferred` is the best grounded initial interpretation where one is supported. A missing field is *not* permission to invent it. `candidateValues` and `partialCandidateValues` are alternatives the UI may offer under the corresponding field.
+- `preferred` is the best grounded initial interpretation where one is supported. A missing field is _not_ permission to invent it. `candidateValues` and `partialCandidateValues` are alternatives the UI may offer under the corresponding field.
 - `endInferred`, `inferred-year`, `past-event`, relationship group labels, and other prose rules capture behavior. T3 may adapt the assertion format to existing test conventions without weakening those semantics.
 - When multiple activities overlap, preserve relationships and show warnings; clicking one field's suggestion must not silently edit other fields.
 - All Day: user-visible End is inclusive; exporters use an exclusive ending date.

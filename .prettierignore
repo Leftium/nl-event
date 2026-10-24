@@ -7,3 +7,13 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+*.res
+*.res.js
+*.gen.ts
+/lib/
+
+# Adopted fixture bytes must remain unchanged.
+tests/fixtures/nl-event/inputs/
+tests/fixtures/nl-event/expected/
+tests/fixtures/nl-event/oracles/
