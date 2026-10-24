@@ -1243,6 +1243,58 @@ async function checkOvernightParty(page) {
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 }
 
+async function checkBulletedWorkshop(page) {
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
+	const text = await fs.readFile('tests/inputs/bulleted-workshop-sanitized.txt', 'utf8');
+	await page.locator('#description').fill(text);
+	await page.waitForFunction(() =>
+		document.querySelector('#end-hint')?.textContent.includes('2026-11-01 16:00')
+	);
+	assert.equal(await page.locator('#title').inputValue(), 'Blues Dance Workshop');
+	assert.equal(await page.locator('#location').inputValue(), '사당 연습실');
+	assert.match(await page.locator('#start-hint').textContent(), /2026-11-01 14:00/);
+	for (const field of ['Title', 'Start', 'End/Duration', 'Location'])
+		assert.equal(
+			await page.getByRole('switch', { name: `Auto ${field}`, exact: true }).isChecked(),
+			true
+		);
+	for (const field of ['Start', 'End/Duration']) {
+		for (const part of ['date', 'time']) {
+			const list = page.getByRole('list', { name: `${field} ${part} alternatives`, exact: true });
+			assert.equal(await list.isVisible(), true);
+			assert.ok((await list.getByRole('button').count()) > 0);
+		}
+	}
+	assert.equal(
+		await page.getByRole('list', { name: 'Location alternatives', exact: true }).isVisible(),
+		true
+	);
+	const duration = page
+		.getByRole('list', { name: 'End/Duration duration alternatives', exact: true })
+		.getByRole('button', { name: '2h', exact: true });
+	assert.equal(await duration.isEnabled(), true);
+	assert.equal(await duration.getAttribute('aria-pressed'), 'true');
+	const params = new URL(
+		await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
+	).searchParams;
+	assert.equal(params.get('dates'), '20261101T050000Z/20261101T070000Z');
+	assert.equal(params.get('stz'), 'Asia/Seoul');
+	assert.equal(params.get('location'), '사당 연습실');
+	assert.equal(params.get('details'), text);
+	assert.equal(await page.locator('#description').inputValue(), text);
+	const pending = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Download .ics', exact: true }).click();
+	const ics = (await fs.readFile(await (await pending).path(), 'utf8')).replace(/\r\n /g, '');
+	assert.ok(ics.includes('DTSTART:20261101T050000Z\r\n'));
+	assert.ok(ics.includes('DTEND:20261101T070000Z\r\n'));
+	assert.ok(ics.includes('LOCATION:사당 연습실\r\n'));
+	assert.ok(ics.includes(`DESCRIPTION:${text.replace(/,/g, '\\,').replace(/\n/g, '\\n')}\r\n`));
+	assert.equal(ics.includes('RRULE'), false);
+	assert.equal(ics.match(/BEGIN:VEVENT/g).length, 1);
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+}
+
 async function checkReviewedMidnight(page) {
 	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
 	for (const range of ['밤 11시 - 밤 12시', '밤 11시 - 12시']) {
@@ -1823,6 +1875,7 @@ for (const [name, engine] of [
 	await checkSelectedTitle(page, name);
 	await checkMapLocations(page);
 	await checkOvernightParty(page);
+	await checkBulletedWorkshop(page);
 	await checkReviewedMidnight(page);
 	await checkSelectionActions(page);
 	await checkSelectOnFocus(page);

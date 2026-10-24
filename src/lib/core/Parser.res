@@ -373,6 +373,28 @@ let headingTitle = (line: lexical, reference, seasonYear, evening, englishSpans:
   ->trim
 }
 
+// Decoration is presentation only when followed by a recognized section label.
+let sectionHeading = (line: lexical) =>
+  matches(
+    line.text,
+    "^[ \\t●•·*#>✓✔☑✅-]*(장소|주소|위치|기간|시간|날짜|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Location|Venue|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission)(?:\\*{1,2})?(?:[ \\t]*[:：][ \\t]*|[ \\t]+|$)(.*)$",
+  )->Array.get(0)
+let sectionLine = (line: lexical): lexical =>
+  switch sectionHeading(line) {
+  | None => line
+  | Some(heading) => {
+      let start = heading.end - String.length(group(heading, 2))
+      // Retain the label for existing rules, and preserve original UTF-16 offsets.
+      let label =
+        matches(slice(line.text, 0, start), group(heading, 1))->Array.get(0)->Option.getOrThrow
+      {
+        ...line,
+        text: slice(line.text, label.start, String.length(line.text)),
+        start: line.start + label.start,
+      }
+    }
+  }
+
 // Keep lexical offsets while removing presentation only at the edges.
 let locationContent = (line: lexical): lexical => {
   let leading = matches(line.text, "^[\\s~*#>•·✓✔☑✅-]+")->Array.get(0)
@@ -390,12 +412,12 @@ let locationLabel = (line: lexical) =>
 let locationSectionBoundary = text =>
   has(
     text,
-    "^(?:날짜|시간|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission)(?:\\s|[:：]|$)",
+    "^(?:기간|날짜|시간|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission)(?:\\s|[:：]|$)",
   )
 let locationBoundary = text =>
   has(
     text,
-    "^(?:(?:날짜|시간|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission|https?)(?:\\s|[:：]|$)|[♥❤])|https?://|www\\.|@|\\d+\\s*(?:시|원|번\\s*출구)|(?:역\\s*\\d*\\s*번?\\s*출구)|\\b(?:directions?|exit\\s+\\d+|walk(?:ing)?\\s+\\d+\\s*(?:minutes?|mins?)|(?:walk|turn)\\s+(?:left|right|straight|towards?|for|to|from)|(?:subway|station)\\s+(?:exit|directions?))\\b|^(?:Take\\s+(?:the\\s+)?(?:subway|train|bus)|(?:subway|station|exit)\\s*[:：])|(?:역에서|에서\\s*도보|도보\\s*\\d+\\s*분|(?:좌|우)회전)|^(?:B\\d+|지하\\s*\\d+층|\\d+층)(?:\\s|$)",
+    "^(?:(?:기간|날짜|시간|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission|https?)(?:\\s|[:：]|$)|[♥❤])|https?://|www\\.|@|\\d+\\s*(?:시|원|번\\s*출구)|(?:역\\s*\\d*\\s*번?\\s*출구)|\\b(?:directions?|exit\\s+\\d+|walk(?:ing)?\\s+\\d+\\s*(?:minutes?|mins?)|(?:walk|turn)\\s+(?:left|right|straight|towards?|for|to|from)|(?:subway|station)\\s+(?:exit|directions?))\\b|^(?:Take\\s+(?:the\\s+)?(?:subway|train|bus)|(?:subway|station|exit)\\s*[:：])|(?:역에서|에서\\s*도보|도보\\s*\\d+\\s*분|(?:좌|우)회전)|^(?:B\\d+|지하\\s*\\d+층|\\d+층)(?:\\s|$)",
   )
 let locationAddresses = text =>
   matches(
@@ -426,17 +448,39 @@ let credibleVenue = text =>
 
 @genType
 let parse = (text, referenceInstant, browserZone, override: option<string>): output => {
-  let lines = matches(text, "[^\\r\\n]+")->Array.map(line => {
-    let prefix = matches(line.text, "^\\s*[✔✓☑✅]\\s*")->Array.get(0)
-    switch prefix {
-    | None => line
-    | Some(m) => {
-        ...line,
-        text: slice(line.text, m.end, String.length(line.text)),
-        start: line.start + m.end,
+  let lines =
+    matches(text, "[^\\r\\n]+")
+    ->Array.map(sectionLine)
+    ->Array.map(line => {
+      let prefix = matches(line.text, "^\\s*[✔✓☑✅]\\s*")->Array.get(0)
+      switch prefix {
+      | None => line
+      | Some(m) => {
+          ...line,
+          text: slice(line.text, m.end, String.length(line.text)),
+          start: line.start + m.end,
+        }
       }
-    }
-  })
+    })
+  let headers =
+    lines
+    ->Array.mapWithIndex((line, index) => (
+      index,
+      sectionHeading(line)->Option.map(h => group(h, 1))->Option.getOr(""),
+    ))
+    ->Array.filter(((_, label)) => label != "")
+  let sectionAt = index =>
+    headers->Array.filter(((i, _)) => i <= index)->Array.toReversed->Array.get(0)
+  let sectionExcluded = index =>
+    headers->Array.some(((_, label)) => label == "기간") &&
+      sectionAt(index)
+      ->Option.map(((_, label)) =>
+        has(
+          label,
+          "^(?:장소|주소|위치|Location|Venue|신청|등록|마감|회비|비용|Registration|Deadline|Fee|Cost|Tickets?|Price|Admission)$",
+        )
+      )
+      ->Option.getOr(false)
   let ianas =
     matches(text, "\\b[A-Za-z_]+/[A-Za-z_]+(?:/[A-Za-z_]+)?\\b")
     ->Array.map(m => m.text)
@@ -527,10 +571,130 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         "운영기간|기간\\s*동안|season|registration|registrations|sign-ups|deadline|(?:사전)?신청.*(?:까지|마감)|마감|참가비|파티비|입장료|입금|계좌|\\b(?:fee|price|admission)\\b|https?://",
       )
   let dateLines =
-    lines->Array.filter(l =>
-      !excluded(l.text) && !has(l.text, "^(?:제목|Title|장소|주소|Location)\\s*[:：]?|^📍")
+    lines->Array.filterWithIndex((l, index) =>
+      !sectionExcluded(index) &&
+      !excluded(l.text) &&
+      !has(l.text, "^(?:제목|Title|장소|주소|Location)\\s*[:：]?|^📍")
     )
   let dates = dateLines->Array.flatMap(l => dateEvidence(l, reference, seasonYear))
+  // Only one adjacent period/time section pair can establish a first session.
+  // Arbitrary ranges, competing dates, prose and contradictory weekly counts stay partial.
+  let series = headers->Array.filterMap(((headerIndex, label)) => {
+    let next = headers->Array.find(((i, _)) => i > headerIndex)
+    switch next {
+    | Some((timeIndex, "시간")) if label == "기간" => {
+        let following =
+          headers
+          ->Array.find(((i, _)) => i > timeIndex)
+          ->Option.map(((i, _)) => i)
+          ->Option.getOr(Array.length(lines))
+        let values = (from, until) =>
+          lines->Array.filterMapWithIndex((line, i) => {
+            if i < from || i >= until {
+              None
+            } else {
+              let value = if i == from {
+                switch sectionHeading(line) {
+                | Some(h) => {
+                    let offset = h.end - String.length(group(h, 2))
+                    {...line, text: group(h, 2), start: line.start + offset}
+                  }
+                | None => line
+                }
+              } else {
+                line
+              }
+              trim(value.text) == "" ? None : Some((i, value))
+            }
+          })
+        switch (values(headerIndex, timeIndex), values(timeIndex, following)) {
+        | ([(periodIndex, period)], [(clockIndex, time)]) => {
+            let endpoints = dateEvidence(period, reference, seasonYear)
+            switch (endpoints->Array.get(0), endpoints->Array.get(1)) {
+            | (Some(first), Some(rawLast)) if Array.length(endpoints) == 2 => {
+                let firstParts = dateParts(first.date)
+                let lastParts = dateParts(rawLast.date)
+                let rollover =
+                  lastParts.month < firstParts.month ||
+                    (lastParts.month == firstParts.month && lastParts.day < firstParts.day)
+                let last =
+                  rawLast.inferred->Array.includes("inferred-year")
+                    ? {
+                        ...rawLast,
+                        date: makeDate(
+                          firstParts.year + (rollover ? 1 : 0),
+                          lastParts.month,
+                          lastParts.day,
+                        ),
+                      }
+                    : rawLast
+                let suffix = slice(
+                  period.text,
+                  last.span.end - period.start,
+                  String.length(period.text),
+                )
+                let cue =
+                  matches(
+                    suffix,
+                    "^\\s*(?:(\\d+)\\s*주간?\\s*)?매주\\s*([월화수목금토일])요일\\s*$",
+                  )->Array.get(0)
+                let count = cue->Option.map(c => number(group(c, 1)))->Option.getOr(0)
+                let weeklyDay = weekday(suffix)
+                let times = clocks(time, false)
+                let dateSpans = endpoints->Array.map(d => d.span)
+                let noOtherDates =
+                  dates->Array.every(d =>
+                    dateSpans->Array.some(s => s.start == d.span.start && s.end == d.span.end)
+                  )
+                let valid =
+                  cue->Option.isSome &&
+                  trim(slice(period.text, 0, first.span.start - period.start)) == "" &&
+                  has(
+                    slice(
+                      period.text,
+                      first.span.end - period.start,
+                      last.span.start - period.start,
+                    ),
+                    "^\\s*[~–-]\\s*$",
+                  ) &&
+                  last.date != "" &&
+                  first.date < last.date &&
+                  !first.mismatch &&
+                  dateParts(first.date).weekday == weeklyDay &&
+                  dateParts(last.date).weekday == weeklyDay &&
+                  (cue->Option.map(c => group(c, 1) == "")->Option.getOr(false) ||
+                    (count >= 2 &&
+                    count <= 53 &&
+                    addDays(first.date, (count - 1) * 7) == last.date)) &&
+                  noOtherDates &&
+                  Array.length(times) == 2 &&
+                  switch (times->Array.get(0), times->Array.get(1)) {
+                  | (Some(start), Some(ending)) =>
+                    trim(slice(time.text, 0, start.span.start - time.start)) == "" &&
+                    has(
+                      slice(time.text, start.span.end - time.start, ending.span.start - time.start),
+                      "^\\s*[~–-]\\s*$",
+                    ) &&
+                    trim(
+                      slice(time.text, ending.span.end - time.start, String.length(time.text)),
+                    ) == ""
+                  | _ => false
+                  } &&
+                  Array.length(dateEvidence(time, reference, seasonYear)) == 0 &&
+                  headers
+                  ->Array.filter(((_, label)) => label == "기간" || label == "시간")
+                  ->Array.length == 2
+                valid ? Some((periodIndex, clockIndex, first, last)) : None
+              }
+            | _ => None
+            }
+          }
+        | _ => None
+        }
+      }
+    | _ => None
+    }
+  })
   let distinctDates = dates->Array.map(d => d.date)->unique
   let explicitSchedule = has(text, "연습\\s*일정")
   let firstList = lines->Array.findIndex(l => monthList(l.text)->Option.isSome)
@@ -560,8 +724,12 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
   let sharedDate = Array.length(distinctDates) == 1 ? dates->Array.get(0) : None
   let evening = has(text, "저녁|오후")
   let hasClockEvidence =
-    lines->Array.some(l =>
-      !excluded(l.text) && has(l.text, "\\d{1,2}:\\d{2}|\\d{1,2}\\s*(?:시|[ap]m?\\b)|midnight")
+    lines
+    ->Array.mapWithIndex((l, index) => (l, index))
+    ->Array.some(((l, index)) =>
+      !sectionExcluded(index) &&
+      !excluded(l.text) &&
+      has(l.text, "\\d{1,2}:\\d{2}|\\d{1,2}\\s*(?:시|[ap]m?\\b)|midnight")
     )
   let mealTimes =
     [
@@ -807,6 +975,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
   })
   lines->Array.forEachWithIndex((line, index) => {
     if (
+      !sectionExcluded(index) &&
       !excluded(line.text) &&
       !has(line.text, "^(?:제목|Title|장소|주소|Location)\\s*[:：]?|^📍")
     ) {
@@ -851,7 +1020,18 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
           mismatch: false,
         }),
       )
-      let explicitClocks = clocks(line, evening)
+      let localDates = switch series->Array.find(((i, _, _, _)) => i == index) {
+      | Some((_, _, first, last)) => [first, last]
+      | None => localDates
+      }
+      let explicitClocks = clocks(
+        line,
+        sectionAt(index)
+        ->Option.map(((_, label)) => label == "시간" || label == "기간")
+        ->Option.getOr(false)
+          ? false
+          : evening,
+      )
       let lineClocks =
         Array.length(explicitClocks) > 0
           ? explicitClocks
@@ -873,7 +1053,9 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         Array.length(mealTimes) == 0 &&
         !has(text, "\\b(?:tonight|morning|afternoon|evening|night)\\b|저녁"))
       let labeled = has(line.text, "일시|날짜|시간|Date and time|When:|All day")
-      let overall = labeled && !has(line.text, "강습|워크샵|소셜")
+      let firstSession = series->Array.find(((_, i, _, _)) => i == index)
+      let overall =
+        firstSession->Option.isSome || (labeled && !has(line.text, "강습|워크샵|소셜"))
       let activity = has(line.text, "Class\\s*([1-4])")
         ? `class-${matches(line.text, "Class\\s*([1-4])")
             ->Array.get(0)
@@ -904,9 +1086,9 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         )
         ->Option.map(previous => dateEvidence(previous, reference, seasonYear))
         ->Option.getOr([])
-      let dateOptions = if (
-        overall && Array.length(localDates) == 0 && Array.length(adjacentDate) == 1
-      ) {
+      let dateOptions = if firstSession->Option.isSome {
+        [firstSession->Option.map(((_, _, first, _)) => first)->Option.getOrThrow]
+      } else if overall && Array.length(localDates) == 0 && Array.length(adjacentDate) == 1 {
         adjacentDate
       } else if Array.length(unresolvedMonth) > 0 {
         localDates
@@ -1245,6 +1427,14 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         label: line.text,
       })
     )
+  let contextDates = Array.concat(
+    contextDates,
+    series->Array.map(((_, _, _, last)) => {
+      value: last.date,
+      spans: [last.span],
+      label: "Final weekly occurrence",
+    }),
+  )
   let warnings = unique(
     [
       merged->Array.flatMap(c => c.inferred),
@@ -1252,7 +1442,10 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         ? ["unresolved-source-day"]
         : [],
       dates->Array.some(d => d.mismatch) ? ["weekday-mismatch"] : [],
-      Array.length(distinctDates) > 1 && !schedule && !has(text, "all[ -]day")
+      Array.length(distinctDates) > 1 &&
+      Array.length(series) == 0 &&
+      !schedule &&
+      !has(text, "all[ -]day")
         ? ["multiple-source-dates"]
         : [],
       merged->Array.some(c => c.field == #start && c.date != "" && c.date < reference)
