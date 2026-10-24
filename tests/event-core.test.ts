@@ -45,27 +45,26 @@ describe('manual draft lifecycle', () => {
 			expect(next.title.value).toBe('');
 		}
 	});
-	it('a manual blank or zone override requires replacement confirmation', () => {
+	it('counts a manual blank or zone override as populated for clipboard replacement', () => {
 		expect(Core.populated(Core.edit(Core.create(context), 'title', ''))).toBe(true);
 		expect(Core.populated(Core.setZone(Core.create(context), ''))).toBe(true);
 	});
-	it('clipboard empty and cancelled replacement preserve the exact draft', () => {
+	it('an empty clipboard preserves the exact draft', () => {
 		const draft = Core.withUid(make(), 'id');
-		expect(Core.replaceClipboard(draft, '', true, context)).toBe(draft);
-		expect(Core.replaceClipboard(draft, 'replacement', false, context)).toBe(draft);
+		expect(Core.replaceClipboard(draft, '', context)).toBe(draft);
 	});
 	it('clipboard fills an empty draft without recapturing its reference context', () => {
 		const empty = Core.create(context);
 		const later = { ...context, referenceInstant: '2026-12-01T00:00:00Z' };
-		const next = Core.replaceClipboard(empty, 'description', false, later);
+		const next = Core.replaceClipboard(empty, 'description', later);
 		expect(next.context).toEqual(context);
 		expect(next.description).toBe('description');
 		expect(next.parseStatus).toBe('pending');
 	});
-	it('confirmed replacement resets identity, fields, zone, context, and offsets', () => {
+	it('clipboard replacement resets identity, fields, zone, context, and offsets without confirmation', () => {
 		const draft = Core.withUid(Core.setZone(make(), 'America/Chicago'), 'id');
 		const nextContext = { ...context, referenceInstant: '2026-11-01T00:00:00Z' };
-		const next = Core.replaceClipboard(draft, 'new text', true, nextContext);
+		const next = Core.replaceClipboard(draft, 'new text', nextContext);
 		expect(next.context).toEqual(nextContext);
 		expect(next.uid).toBeUndefined();
 		expect(next.zoneOverride).toBeUndefined();
@@ -96,7 +95,6 @@ describe('validation and deterministic time conversion', () => {
 		'2026-04-31',
 		'2026-10-25 24:00',
 		'2026-10-25 17:60',
-		'2026-10-25T17:00',
 		'0000-10-25'
 	])('blocks incomplete/invalid Start %s', (start) => {
 		expect(Core.validate(make(start)).event).toBeUndefined();

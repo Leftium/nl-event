@@ -3,7 +3,13 @@ type fieldName = Parser.fieldName
 @genType
 type ownership = [#auto | #manual]
 @genType
-type field = {value: string, ownership: ownership, offset: string}
+type field = {
+  value: string,
+  ownership: ownership,
+  offset: string,
+  input?: string,
+  durationReference?: string,
+}
 @genType
 type context = {referenceInstant: string, browserTimeZone: string}
 @genType
@@ -21,6 +27,7 @@ type draft = {
   location: field,
   context: context,
   zoneOverride: option<string>,
+  allDayOverride: option<bool>,
   uid: option<string>,
   identity: identity,
   revision: int,
@@ -47,7 +54,10 @@ type normalized = {
 }
 @genType
 type validation = {
+  allDay: bool,
   event: option<normalized>,
+  startValue: string,
+  endValue: string,
   startError: string,
   endError: string,
   startChoices: array<instantChoice>,
@@ -73,6 +83,7 @@ let create = (context: context): draft => {
   location: emptyField,
   context,
   zoneOverride: None,
+  allDayOverride: None,
   uid: None,
   identity: {reference: context.referenceInstant},
   revision: 0,
@@ -81,6 +92,7 @@ let create = (context: context): draft => {
   parseError: "",
   suggestions: {
     candidates: [],
+    contextDates: [],
     zone: context.browserTimeZone,
     zoneProvenance: "Browser fallback",
     zoneWarning: "",
@@ -145,11 +157,63 @@ let best = (draft, name) => {
     complete && coherent
   })
 }
+// Keep extracted text separate from its resolved value. Source fragments may
+// need Description context (shared PM, year, next-day End) that a field alone
+// cannot safely reconstruct. Typing discards this display text and reinterprets
+// the exact edit through TimeInput instead.
+@genType
+let candidateInput = (draft: draft, candidate: Parser.candidate) => {
+  if (
+    (candidate.field != #start && candidate.field != #end) ||
+      candidate.inferred->Array.includes("assumed-end")
+  ) {
+    candidate.value
+  } else if candidate.date == "" {
+    let index = candidate.field == #end ? Array.length(candidate.spans) - 1 : 0
+    candidate.spans
+    ->Array.get(index)
+    ->Option.map(span => Parser.slice(draft.description, span.start, span.end))
+    ->Option.getOr(candidate.value)
+  } else {
+    let first = candidate.spans->Array.get(0)
+    let clock = candidate.spans->Array.get(candidate.field == #end ? 2 : 1)
+    switch (first, clock) {
+    | (Some(date), Some(time)) => {
+        let from = date.start < time.start ? date.start : time.start
+        let until = date.end > time.end ? date.end : time.end
+        let between = Parser.slice(draft.description, from, until)
+        Parser.has(between, "[\\r\\n]")
+          ? `${Parser.slice(draft.description, date.start, date.end)} ${Parser.slice(
+                draft.description,
+                time.start,
+                time.end,
+              )}`
+          : between
+      }
+    | (Some(source), None) => Parser.slice(draft.description, source.start, source.end)
+    | _ => candidate.value
+    }
+  }
+}
 let autoField = (draft, name) =>
-  best(draft, name)->Option.map(c => {...emptyField, value: c.value})->Option.getOr(emptyField)
+  best(draft, name)
+  ->Option.map(c => {
+    let field = {...emptyField, value: c.value}
+    name == #start || name == #end ? {...field, input: candidateInput(draft, c)} : field
+  })
+  ->Option.getOr(emptyField)
 @genType
 let edit = (draft, name, value) =>
   setField(removeSelection(draft, name), name, {value, ownership: #manual, offset: ""})
+// The shell captures "now" only when this field is edited. Pure callers may
+// use the draft's injected reference instant as a deterministic fallback.
+@genType
+let editAt = (draft, name, value, referenceInstant) => {
+  let next = edit(draft, name, value)
+  name == #start && TimeInput.duration(value)->Option.isSome
+    ? {...next, start: {...next.start, durationReference: referenceInstant}}
+    : next
+}
 @genType
 let reset = (draft, name) => {
   let next = setField(removeSelection(draft, name), name, autoField(draft, name))
@@ -158,6 +222,15 @@ let reset = (draft, name) => {
     pendingResets: draft.parseStatus == "pending"
       ? Array.concat(next.pendingResets, [name])
       : next.pendingResets,
+  }
+}
+@genType
+let setAutomatic = (draft, name, automatic) => {
+  if automatic {
+    reset(draft, name)
+  } else {
+    let next = {...draft, pendingResets: draft.pendingResets->Array.filter(n => n != name)}
+    setField(next, name, {...getField(next, name), ownership: #manual})
   }
 }
 @genType
@@ -181,6 +254,7 @@ let describe = (draft: draft, description) => {
     pendingResets: [],
     suggestions: {
       candidates: [],
+      contextDates: [],
       warnings: [],
       zone: clear ? draft.context.browserTimeZone : draft.suggestions.zone,
       zoneProvenance: clear ? "Browser fallback" : draft.suggestions.zoneProvenance,
@@ -244,7 +318,7 @@ let failParse = (draft: draft, ticket: ticket, error) => {
     let next = completeParse(
       draft,
       ticket,
-      {...draft.suggestions, candidates: [], warnings: []},
+      {...draft.suggestions, candidates: [], contextDates: [], warnings: []},
       true,
     )
     {...next, parseStatus: "failed", parseError: error}
@@ -257,7 +331,7 @@ let setZone = (draft: draft, zoneOverride) => {
   contextRevision: draft.contextRevision + 1,
   pendingResets: [],
   parseStatus: draft.description == "" ? "idle" : "pending",
-  suggestions: {...draft.suggestions, candidates: [], warnings: []},
+  suggestions: {...draft.suggestions, candidates: [], contextDates: [], warnings: []},
   start: {...draft.start, offset: ""},
   end: {...draft.end, offset: ""},
 }
@@ -309,6 +383,9 @@ let evidenceWarnings = (draft: draft, name) => {
   | Some(s) if s.revision != draft.revision => [
       "Selected evidence belongs to an earlier Description. Your Manual value is retained.",
     ]
+  | Some(s) if s.candidate.inferred->Array.includes("manual-combination") => [
+      "Not paired in source",
+    ]
   | _ =>
     switch (currentEvidence(draft, #start), currentEvidence(draft, name)) {
     | (Some(start), Some(value)) if name != #start && !associated(start, value) => [
@@ -327,12 +404,13 @@ let withUid = (draft: draft, uid) => {...draft, uid: Some(draft.uid->Option.getO
 let populated = (draft: draft) =>
   draft.description != "" ||
   draft.zoneOverride->Option.isSome ||
+  draft.allDayOverride->Option.isSome ||
   [draft.title, draft.start, draft.end, draft.location]->Array.some(f =>
     f.value != "" || f.ownership == #manual
   )
 @genType
-let replaceClipboard = (draft, text, confirmed, context) =>
-  if text == "" || (populated(draft) && !confirmed) {
+let replaceClipboard = (draft, text, context) =>
+  if text == "" {
     draft
   } else if populated(draft) {
     describe(create(context), text)
@@ -348,7 +426,7 @@ let fieldError = (field: field, resolution: resolution) => {
   if field.value == "" {
     "Enter a complete date or date and time."
   } else if resolution.kind == "invalid" {
-    "Use a valid YYYY-MM-DD or YYYY-MM-DD HH:mm value."
+    "Enter a valid date and time, or an all-day date (YYYY-MM-DD)."
   } else if resolution.kind == "zone" {
     "Choose a valid IANA time zone."
   } else if resolution.kind == "timed" && Array.length(resolution.choices) == 0 {
@@ -359,11 +437,66 @@ let fieldError = (field: field, resolution: resolution) => {
     ""
   }
 }
-@genType
-let validate = (draft: draft): validation => {
+type durationEnd = {value: string, offset: string}
+@module("./calendarAdapter.ts")
+external advanceInstant: (float, string, float) => durationEnd = "advanceInstant"
+let validateBase = (draft: draft): validation => {
   let zone = effectiveZone(draft)
-  let start = resolve(draft.start.value, zone)
-  let end = resolve(draft.end.value, zone)
+  let startDuration = TimeInput.duration(draft.start.value)
+  let (startInput: TimeInput.interpretation, startDurationOffset) = switch startDuration {
+  | None => (
+      TimeInput.interpret(draft.start.value, draft.context.referenceInstant, zone, false),
+      "",
+    )
+  | Some(d) if d.error != "" => ({value: "", error: d.error}, "")
+  | Some(_) if !validZone(zone) => ({value: "", error: "Choose a valid IANA time zone."}, "")
+  | Some(d) => {
+      let reference = draft.start.durationReference->Option.getOr(draft.context.referenceInstant)
+      let result = advanceInstant(parseInstant(reference), zone, d.minutes)
+      (
+        {
+          value: result.value,
+          error: result.value == "" ? "This duration exceeds the supported date range." : "",
+        },
+        result.offset,
+      )
+    }
+  }
+  let startField = {
+    ...draft.start,
+    value: startInput.value,
+    offset: startDuration->Option.isSome ? startDurationOffset : draft.start.offset,
+  }
+  let start = resolve(startField.value, zone)
+  let startInstant = selected(startField, start)
+  let duration = TimeInput.duration(draft.end.value)
+  let (endInput: TimeInput.interpretation, durationOffset) = switch duration {
+  | None => (TimeInput.interpret(draft.end.value, draft.context.referenceInstant, zone, true), "")
+  | Some(d) if d.error != "" => ({value: "", error: d.error}, "")
+  | Some(d) =>
+    switch startInstant {
+    | Some(instant) if startInput.error == "" && start.kind == "timed" => {
+        let end = advanceInstant(instant.epoch, zone, d.minutes)
+        (
+          {
+            value: end.value,
+            error: end.value == "" ? "This duration exceeds the supported date range." : "",
+          },
+          end.offset,
+        )
+      }
+    | _ => (
+        {value: "", error: "Complete a timed Start, including any DST choice, to use a duration."},
+        "",
+      )
+    }
+  }
+  let endField = {
+    ...draft.end,
+    value: endInput.value,
+    offset: duration->Option.isSome ? durationOffset : draft.end.offset,
+  }
+  let end = resolve(endField.value, zone)
   let partialError = (name, field, resolution) => {
     switch selection(draft, name) {
     | Some(s)
@@ -372,8 +505,9 @@ let validate = (draft: draft): validation => {
     | _ => fieldError(field, resolution)
     }
   }
-  let startError = partialError(#start, draft.start, start)
-  let endError = partialError(#end, draft.end, end)
+  let startError =
+    startInput.error != "" ? startInput.error : partialError(#start, startField, start)
+  let endError = endInput.error != "" ? endInput.error : partialError(#end, endField, end)
   let startError = draft.parseStatus == "pending" ? "Parsing current Description..." : startError
   let startError =
     start.kind == "timed" &&
@@ -382,8 +516,7 @@ let validate = (draft: draft): validation => {
       ? draft.suggestions.zoneWarning
       : startError
   let allDay = start.kind == "date"
-  let startInstant = selected(draft.start, start)
-  let endInstant = selected(draft.end, end)
+  let endInstant = selected(endField, end)
   let endError = if startError == "" && endError == "" {
     if start.kind != end.kind {
       "Start and End must both be dates or both include times."
@@ -443,7 +576,414 @@ let validate = (draft: draft): validation => {
     }
   | None => []
   }
-  {event, startError, endError, startChoices: start.choices, endChoices: end.choices, warnings}
+  {
+    allDay,
+    event,
+    startValue: startInput.value,
+    endValue: endInput.value,
+    startError,
+    endError,
+    startChoices: startDuration->Option.isSome ? [] : start.choices,
+    endChoices: duration->Option.isSome ? [] : end.choices,
+    warnings,
+  }
+}
+
+@genType
+let setAllDay = (draft: draft, allDay) => {...draft, allDayOverride: Some(allDay)}
+
+let fieldDate = (draft, name, interpreted) => {
+  if Parser.has(interpreted, "^\\d{4}-\\d{2}-\\d{2}(?:$| )") {
+    Parser.slice(interpreted, 0, 10)
+  } else {
+    let field = getField(draft, name)
+    let zone = effectiveZone(draft)
+    let zone = validZone(zone) ? zone : draft.context.browserTimeZone
+    let candidates = if field.value == "" && field.ownership == #auto {
+      alternatives(draft, name)
+    } else {
+      let parsed = Parser.parse(field.value, draft.context.referenceInstant, zone, Some(zone))
+      let ends =
+        parsed.candidates->Array.filter(c =>
+          c.field == #end && !(c.inferred->Array.includes("assumed-end"))
+        )
+      name == #end && Array.length(ends) > 0
+        ? ends
+        : parsed.candidates->Array.filter(c => c.field == #start)
+    }
+    let dates = candidates->Array.map(c => c.date)->Array.filter(date => date != "")->Parser.unique
+    Array.length(dates) == 1 ? dates->Array.get(0)->Option.getOr("") : ""
+  }
+}
+
+@genType
+let validate = (draft: draft): validation => {
+  let base = validateBase(draft)
+  let mode =
+    draft.allDayOverride->Option.orElse(
+      base.allDay && base.startError == "" && TimeInput.calendarDays(draft.end.value)->Option.isSome
+        ? Some(true)
+        : None,
+    )
+  switch mode {
+  | None => {...base, allDay: base.allDay && base.startError == ""}
+  | Some(false) => {
+      let startDateOnly = String.length(base.startValue) == 10
+      let endDateOnly = String.length(base.endValue) == 10
+      {
+        ...base,
+        allDay: false,
+        event: startDateOnly || endDateOnly ? None : base.event,
+        startError: startDateOnly ? "Add a time to Start, or turn on All day." : base.startError,
+        endError: endDateOnly ? "Add a time to End, or turn on All day." : base.endError,
+      }
+    }
+  | Some(true) => {
+      let startDate = fieldDate(draft, #start, base.startValue)
+      let endDuration = TimeInput.duration(draft.end.value)
+      let durationOnly = endDuration->Option.map(d => d.error == "")->Option.getOr(false)
+      // A duration is retained for timed mode; All day uses an inclusive date.
+      let defaultEnd =
+        (durationOnly && base.endValue == "") ||
+          (draft.end.value == "" && draft.end.ownership == #auto)
+      let calendarDays = TimeInput.calendarDays(draft.end.value)
+      let endDate = switch calendarDays {
+      | Some(days) if startDate != "" => Parser.addDays(startDate, days - 1)
+      | _ => defaultEnd ? startDate : fieldDate(draft, #end, base.endValue)
+      }
+      // A timed midnight end is exclusive. Cover only the days it occupied.
+      let endDate =
+        calendarDays->Option.isNone &&
+        !defaultEnd &&
+        Parser.slice(base.endValue, 11, 16) == "00:00" &&
+        endDate > startDate
+          ? Parser.addDays(endDate, -1)
+          : endDate
+      let asDates = {
+        ...draft,
+        start: {...draft.start, value: startDate, offset: ""},
+        end: {...draft.end, value: endDate, offset: ""},
+        selections: draft.selections->Array.filter(s => s.name != #start && s.name != #end),
+      }
+      let result = validateBase(asDates)
+      {...result, allDay: true}
+    }
+  }
+}
+
+@module("./calendarAdapter.ts")
+external rangeDuration: (string, string, bool) => int = "rangeDuration"
+@genType
+let durationLabel = (amount, allDay) => {
+  if amount <= 0 {
+    ""
+  } else if allDay {
+    amount == 7 ? "1 week" : `${Int.toString(amount)} ${amount == 1 ? "day" : "days"}`
+  } else {
+    let hours = amount / 60
+    let minutes = mod(amount, 60)
+    hours == 0
+      ? `${Int.toString(minutes)}m`
+      : minutes == 0
+      ? `${Int.toString(hours)}h`
+      : `${Int.toString(hours)}h ${Int.toString(minutes)}m`
+  }
+}
+let durationValueFrom = (result: validation) =>
+  switch result.event {
+  | Some(event) => rangeDuration(event.start, event.end, event.allDay)
+  | None => 0
+  }
+@genType
+let durationValue = (draft: draft) => durationValueFrom(validate(draft))
+@genType
+type durationOption = {amount: int, label: string, selected: bool, source: string, custom: bool}
+@genType
+let durationOptions = (draft: draft): array<durationOption> => {
+  let result = validate(draft)
+  let actual = durationValueFrom(result)
+  let presets = result.allDay ? [1, 2, 3, 7] : [15, 30, 60, 90, 120, 180, 240]
+  let starts = resolve(result.startValue, effectiveZone(draft))
+  let start = selected(draft.start, starts)
+  let derived = alternatives(draft, #end)->Array.filterMap(c => {
+    let complete = c.completeness == "complete" || c.completeness == "all-day"
+    let amount = if result.startError != "" || !complete {
+      0
+    } else if result.allDay && c.date != "" {
+      let endDate =
+        c.time == "00:00" && c.date > result.startValue ? Parser.addDays(c.date, -1) : c.date
+      rangeDuration(
+        replaceAll(result.startValue, "-", ""),
+        replaceAll(Parser.addDays(endDate, 1), "-", ""),
+        true,
+      )
+    } else if c.completeness == "complete" {
+      let ends = resolve(c.value, effectiveZone(draft))
+      switch (start, ends.choices) {
+      | (Some(start), [end]) => rangeDuration(start.instant, end.instant, false)
+      | _ => 0
+      }
+    } else {
+      0
+    }
+    amount > 0 && amount <= (result.allDay ? 1 : 1440)
+      ? Some((amount, candidateInput(draft, c)))
+      : None
+  })
+  let amounts = Array.concat(presets, derived->Array.map(((amount, _)) => amount))
+  let amounts = actual > 0 ? Array.concat(amounts, [actual]) : amounts
+  amounts
+  ->Array.toSorted((a, b) => a < b ? -1. : a == b ? 0. : 1.)
+  ->Array.reduce([], (options: array<durationOption>, amount) => {
+    if options->Array.some(o => o.amount == amount) {
+      options
+    } else {
+      let source =
+        derived
+        ->Array.find(((value, _)) => value == amount)
+        ->Option.map(((_, source)) => source)
+        ->Option.getOr("")
+      Array.concat(
+        options,
+        [
+          {
+            amount,
+            label: durationLabel(amount, result.allDay),
+            selected: actual == amount,
+            source,
+            custom: !(presets->Array.includes(amount)) && source == "",
+          },
+        ],
+      )
+    }
+  })
+}
+@genType
+let selectDuration = (draft: draft, amount) => {
+  let result = validate(draft)
+  if result.startError != "" || !(durationOptions(draft)->Array.some(o => o.amount == amount)) {
+    draft
+  } else {
+    let text = result.allDay ? `${Int.toString(amount)} days` : durationLabel(amount, false)
+    setAllDay(edit(draft, #end, text), result.allDay)
+  }
+}
+
+@genType
+type temporalPart = [#date | #time]
+@genType
+type temporalParts = {date: string, time: string}
+@genType
+type temporalOption = {
+  value: string,
+  selected: bool,
+  source: string,
+  note: string,
+  paired: option<bool>,
+}
+@genType
+let temporalParts = (draft: draft, name): temporalParts => {
+  let evidence = selection(draft, name)
+  switch evidence {
+  | Some(s)
+    if s.revision == draft.revision &&
+      (s.candidate.completeness == "date-only" || s.candidate.completeness == "time-only") => {
+      date: s.candidate.date,
+      time: s.candidate.time,
+    }
+  | _ => {
+      let result = validate(draft)
+      let value = name == #start ? result.startValue : result.endValue
+      {
+        date: Parser.has(value, "^\\d{4}-\\d{2}-\\d{2}") ? Parser.slice(value, 0, 10) : "",
+        time: Parser.has(value, "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$")
+          ? Parser.slice(value, 11, 16)
+          : "",
+      }
+    }
+  }
+}
+// Context dates remain selectable without participating in Auto ranking.
+let temporalCandidates = (draft, name): array<Parser.candidate> =>
+  Array.concat(
+    Array.concat(
+      alternatives(draft, name),
+      draft.suggestions.candidates
+      ->Array.filter(c => (c.field == #start || c.field == #end) && c.field != name && c.date != "")
+      ->Array.map(c => {
+        ...c,
+        id: `date:${c.id}`,
+        field: name,
+        value: c.date,
+        time: "",
+        completeness: "date-only",
+      }),
+    ),
+    draft.suggestions.contextDates->Array.map(d => {
+      let candidate: Parser.candidate = {
+        id: `context:${name == #start ? "start" : "end"}:${d.value}`,
+        field: name,
+        value: d.value,
+        date: d.value,
+        time: "",
+        completeness: "date-only",
+        spans: d.spans,
+        inferred: [],
+        rank: 0,
+        groups: [`context:${d.value}`],
+        label: d.label,
+      }
+      candidate
+    }),
+  )
+@genType
+let temporalOptions = (draft: draft, name, part: temporalPart): array<temporalOption> => {
+  let current = temporalParts(draft, name)
+  let options = temporalCandidates(draft, name)
+  let values =
+    options
+    ->Array.map(c => part == #date ? c.date : c.time)
+    ->Array.filter(v => v != "")
+    ->Parser.unique
+  let values = values->Array.toSorted((a, b) => a == b ? 0. : a < b ? -1. : 1.)
+  values->Array.map(value => {
+    let matching =
+      part == #time && current.date != ""
+        ? options->Array.find(c => c.date == current.date && c.time == value)
+        : None
+    let c =
+      matching
+      ->Option.orElse(options->Array.find(c => (part == #date ? c.date : c.time) == value))
+      ->Option.getOrThrow
+    let note =
+      part == #date
+        ? ""
+        : c.inferred->Array.includes("ambiguous-am-pm")
+        ? "AM/PM unresolved"
+        : c.inferred->Array.includes("assumed-end")
+        ? "inferred 60 min"
+        : c.inferred->Array.includes("inferred-time")
+        ? "inferred time"
+        : ""
+    {
+      value,
+      selected: (part == #date ? current.date : current.time) == value,
+      paired: part == #time && current.date != "" ? Some(matching->Option.isSome) : None,
+      source: c.groups->Array.some(g => Parser.has(g, "^context:"))
+        ? c.label
+        : candidateInput(draft, c),
+      note,
+    }
+  })
+}
+@genType
+let selectTemporalPart = (draft: draft, name, part: temporalPart, value) => {
+  if name != #start && name != #end {
+    draft
+  } else {
+    let options = temporalCandidates(draft, name)
+    let current = temporalParts(draft, name)
+    switch options->Array.find(c => (part == #date ? c.date : c.time) == value) {
+    | None => draft
+    | Some(chosen) => {
+        let natural =
+          part == #date
+            ? options->Array.find(c =>
+                c.date == value && (c.completeness == "complete" || c.completeness == "all-day")
+              )
+            : None
+        let useAllDay =
+          part == #date && natural->Option.map(c => c.completeness == "all-day")->Option.getOr(true)
+        let draft = setAllDay(draft, useAllDay)
+        let allDay = useAllDay
+        let date = part == #date ? value : current.date
+        let time = part == #time ? value : natural->Option.map(c => c.time)->Option.getOr("")
+        let date =
+          date != ""
+            ? date
+            : options
+              ->Array.find(c => c.date != "" && c.time == time)
+              ->Option.orElse(options->Array.find(c => c.date != ""))
+              ->Option.map(c => c.date)
+              ->Option.getOr("")
+        let time = allDay
+          ? ""
+          : time != ""
+          ? time
+          : options
+            ->Array.find(c => c.time != "" && c.date == date)
+            ->Option.orElse(options->Array.find(c => c.time != ""))
+            ->Option.map(c => c.time)
+            ->Option.getOr("")
+        let exact =
+          options->Array.find(c => c.date == date && c.time == time && c.completeness == "complete")
+        let clock =
+          options
+          ->Array.find(c => c.time == time && c.date == date)
+          ->Option.orElse(options->Array.find(c => c.time == time && time != ""))
+        let ambiguous =
+          clock->Option.map(c => c.inferred->Array.includes("ambiguous-am-pm"))->Option.getOr(false)
+        let complete = date != "" && time != "" && !ambiguous
+        let mixed = complete && exact->Option.isNone
+        let candidate: Parser.candidate = {
+          ...chosen,
+          id: `manual:${date}:${time}`,
+          value: date != "" && time != "" ? `${date} ${time}` : date != "" ? date : time,
+          date,
+          time,
+          completeness: allDay && date != ""
+            ? "all-day"
+            : complete
+            ? "complete"
+            : time != ""
+            ? "time-only"
+            : "date-only",
+          groups: exact->Option.map(c => c.groups)->Option.getOr(chosen.groups),
+          inferred: mixed ? ["manual-combination"] : ambiguous ? ["ambiguous-am-pm"] : [],
+        }
+        let sourcePart = (c: Parser.candidate, part: temporalPart) => {
+          if (
+            part == #time &&
+              (c.inferred->Array.includes("assumed-end") ||
+                c.inferred->Array.includes("inferred-time"))
+          ) {
+            c.time
+          } else {
+            let index =
+              part == #date
+                ? 0
+                : c.date == ""
+                ? name == #end ? Array.length(c.spans) - 1 : 0
+                : name == #end
+                ? 2
+                : 1
+            c.spans
+            ->Array.get(index)
+            ->Option.map(span => Parser.slice(draft.description, span.start, span.end))
+            ->Option.getOr(part == #date ? c.date : c.time)
+          }
+        }
+        let input = switch exact {
+        | Some(c) => candidateInput(draft, c)
+        | None => {
+            let dateSource =
+              options
+              ->Array.find(c => c.date == date)
+              ->Option.map(c => sourcePart(c, #date))
+              ->Option.getOr(date)
+            let timeSource = clock->Option.map(c => sourcePart(c, #time))->Option.getOr(time)
+            date == "" ? timeSource : time == "" ? dateSource : `${dateSource} ${timeSource}`
+          }
+        }
+        let next = edit(draft, name, candidate.value)
+        let next = setField(next, name, {...getField(next, name), input: input->String.trim})
+        {
+          ...next,
+          selections: Array.concat(next.selections, [{name, candidate, revision: draft.revision}]),
+        }
+      }
+    }
+  }
 }
 
 @genType
