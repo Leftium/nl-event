@@ -272,7 +272,13 @@ async function checkStickyDescription(page) {
 	const textarea = page.locator('#description');
 	const reset = page.getByRole('button', { name: 'Reset', exact: true });
 	await reset.click();
-	await textarea.fill('Title: Sticky source\nTomorrow at 7pm\n' + 'Source line\n'.repeat(150));
+	await textarea.fill(
+		'Title: Sticky source\nTomorrow at 7pm\n' +
+			'Source line '.repeat(80) +
+			'\n' +
+			'Source line\n'.repeat(150)
+	);
+	await page.getByRole('button', { name: 'Word wrap', exact: true }).click();
 	await page.waitForFunction(
 		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
 	);
@@ -314,21 +320,39 @@ async function checkStickyDescription(page) {
 			const source = document.querySelector('.description-editor').getBoundingClientRect();
 			const fields = document.querySelector('.event-details').getBoundingClientRect();
 			return {
-				left: source.width,
-				right: fields.width,
-				split: fields.left >= source.right,
+				sourceWidth: source.width,
+				formWidth: fields.width,
+				split: source.left >= fields.right,
+				stacked: source.bottom <= fields.top,
 				overflow: document.documentElement.scrollWidth > innerWidth
 			};
 		});
 		assert.equal(layout.split, split);
 		assert.equal(layout.overflow, false, JSON.stringify({ width, ...layout }));
 		if (split) {
-			assert.ok(Math.abs(layout.right - 672) <= 1);
-			assert.ok(layout.left >= 480 && layout.left <= 800);
-		}
+			assert.ok(Math.abs(layout.formWidth - 672) <= 1);
+			assert.ok(layout.sourceWidth >= 480 && layout.sourceWidth <= 800);
+		} else assert.equal(layout.stacked, true);
+		assert.equal(await textarea.getAttribute('wrap'), 'off');
+		assert.ok(await textarea.evaluate((node) => node.scrollWidth > node.clientWidth));
 	}
 	assert.deepEqual(await fieldState(), before);
 	assert.equal(await page.evaluate(() => window.stickyInputs), 0);
+	// The chosen visual order keeps source-first DOM order: Tab crosses right to left.
+	await page.getByRole('button', { name: 'Fullscreen editor', exact: true }).focus();
+	await page.keyboard.press(
+		page.context().browser().browserType().name() === 'webkit' ? 'Alt+Tab' : 'Tab'
+	);
+	const autoTitle = page.getByRole('switch', { name: 'Auto Title', exact: true });
+	assert.equal(await autoTitle.evaluate((node) => node === document.activeElement), true);
+	assert.ok(
+		await autoTitle.evaluate(
+			(node) =>
+				node.getBoundingClientRect().right <
+				document.querySelector('#description').getBoundingClientRect().left
+		)
+	);
+	await textarea.focus();
 	// The header still occupies space at scroll zero; the editor footer must fit then too.
 	await page.evaluate(() => window.scrollTo(0, 0));
 	await page.waitForFunction(() => {

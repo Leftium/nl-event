@@ -879,17 +879,20 @@
 			/* Keep the sticky boundary aligned with main's single bottom gutter. */
 			margin-block-end: 0;
 			display: grid;
-			grid-template-columns: minmax(30rem, 50rem) 42rem;
+			grid-template-columns: 42rem minmax(30rem, 50rem);
 			gap: 1.25rem;
 			align-items: start;
 		}
 		.event-details {
-			grid-column: 2;
+			grid-column: 1;
+			grid-row: 1;
 		}
 		.event-details > .event-field:first-child {
 			margin-block-start: 0;
 		}
 		.description-editor:not(.fullscreen) {
+			grid-column: 2;
+			grid-row: 1;
 			--editor-fill: 1;
 			position: sticky;
 			top: 1rem;
