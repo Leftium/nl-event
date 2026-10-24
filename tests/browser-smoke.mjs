@@ -682,6 +682,62 @@ async function checkSelectedTitle(page, engine) {
 	assert.equal(await page.locator('#title').inputValue(), '');
 }
 
+async function checkFallbacks(page) {
+	const reset = () => page.getByRole('button', { name: 'Reset', exact: true }).click();
+	const describe = async (text) => {
+		await reset();
+		await page.locator('#description').fill(text);
+		await page.waitForFunction(
+			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+		);
+	};
+	const row = (field, part) =>
+		page.getByRole('list', { name: `${field} ${part} alternatives`, exact: true });
+	const chip = (field, part, label) =>
+		row(field, part).getByRole('button', { name: label, exact: true });
+	const download = page.getByRole('button', { name: 'Download .ics', exact: true });
+	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
+	await page.setViewportSize({ width: 390, height: 844 });
+	await describe('cancel netflix');
+	assert.equal(await chip('Start', 'time', 'All day').getAttribute('aria-pressed'), 'true');
+	assert.equal(await download.isDisabled(), true);
+	for (const label of ['Today', 'Tomorrow', 'In 7 days'])
+		await chip('Start', 'date', label).waitFor();
+	await chip('Start', 'date', 'Tomorrow').focus();
+	assert.match(
+		await chip('Start', 'date', 'Tomorrow').getAttribute('data-tooltip'),
+		/not extracted/
+	);
+	await page.keyboard.press('Space');
+	assert.equal(await download.isEnabled(), true);
+	const file = page.waitForEvent('download');
+	await download.click();
+	const ics = await fs.readFile(await (await file).path(), 'utf8');
+	assert.match(ics, /DTSTART;VALUE=DATE:20261025/);
+	assert.match(ics, /DTEND;VALUE=DATE:20261026/);
+	await describe('workout tomorrow');
+	assert.match(await page.locator('#start-hint').textContent(), /09:00.*inferred time/);
+	for (const label of ['07:00', '09:00', '12:00', '18:00', '19:00'])
+		await chip('Start', 'time', label).waitFor();
+	await chip('Start', 'time', '18:00').click();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 19:00');
+	assert.equal(
+		await page.getByRole('switch', { name: 'Auto End/Duration', exact: true }).isChecked(),
+		true
+	);
+	assert.equal(await download.isEnabled(), true);
+	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+	await describe('Registration deadline: October 20, 2026\nClass 1: 12:15 - 1:15 pm');
+	assert.equal(await chip('Start', 'time', 'All day').getAttribute('aria-pressed'), 'true');
+	assert.equal(await download.isEnabled(), true);
+	await chip('Start', 'time', '12:15').click();
+	await chip('End/Duration', 'time', '13:15').click();
+	assert.equal(await download.isEnabled(), true);
+	assert.equal(await page.getByText('Not paired in source', { exact: true }).count(), 2);
+	await reset();
+	await page.setViewportSize({ width: 1280, height: 900 });
+}
+
 async function checkLunch(page) {
 	await page.locator('#description').fill('lunch tomorrow');
 	await page.waitForFunction(
@@ -913,6 +969,7 @@ for (const [name, engine] of [
 	await checkSelectedTitle(page, name);
 	await checkSelectOnFocus(page);
 	await checkLunch(page);
+	await checkFallbacks(page);
 	await page.locator('#description').fill('unsubscribe netflix in 30 days');
 	await page.waitForFunction(
 		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')

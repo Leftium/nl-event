@@ -808,6 +808,58 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
       "Full listed schedule",
     )
   })
+  // A labeled deadline is actionable on its own. Keep undated activity clocks
+  // separate, and refuse to choose among conflicting/contextual dates.
+  let deadlineLines =
+    lines->Array.filter(l =>
+      has(
+        l.text,
+        "^\\s*(?:registration\\s+deadline|deadline|등록\\s*마감|신청\\s*마감)\\s*[:：]",
+      )
+    )
+  let contextualDates =
+    lines
+    ->Array.filter(l => excluded(l.text))
+    ->Array.flatMap(l => dateEvidence(l, reference, seasonYear))
+  switch deadlineLines->Array.get(0) {
+  | Some(line) if Array.length(deadlineLines) == 1 && Array.length(distinctDates) == 0 => {
+      let deadlineDates = dateEvidence(line, reference, seasonYear)
+      if (
+        Array.length(deadlineDates) == 1 &&
+        Array.length(contextualDates) == 1 &&
+        Array.length(clocks(line, false)) == 0
+      ) {
+        let d = deadlineDates->Array.get(0)->Option.getOrThrow
+        [#start, #end]->Array.forEach(field =>
+          add(
+            field,
+            d.date,
+            d.date,
+            "",
+            "all-day",
+            [d.span],
+            d.inferred,
+            210,
+            ["deadline"],
+            line.text,
+          )
+        )
+        add(
+          #title,
+          trim(slice(line.text, 0, d.span.start - line.start)),
+          "",
+          "",
+          "text",
+          [{start: line.start, end: line.end}],
+          [],
+          190,
+          ["deadline"],
+          line.text,
+        )
+      }
+    }
+  | _ => ()
+  }
   // Merge duplicate values while preserving every association and source span.
   let ranked = candidates.contents->Array.toSorted((a, b) => {
     let rank = b.rank - a.rank

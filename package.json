@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "rescript && concurrently -k \"rescript watch\" \"vite dev\"",
+		"dev": "rescript && sh scripts/dev.sh",
 		"build": "rescript && vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
