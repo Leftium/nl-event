@@ -65,3 +65,47 @@ export function localDate(instant: string, zone: string): string {
 		.toString()
 		.replaceAll('-', '');
 }
+
+export function referenceDate(instant: string, zone: string): string {
+	try {
+		return Temporal.Instant.from(instant).toZonedDateTimeISO(zone).toPlainDate().toString();
+	} catch {
+		return '';
+	}
+}
+export function dateParts(date: string): {
+	year: number;
+	month: number;
+	day: number;
+	weekday: number;
+} {
+	const value = Temporal.PlainDate.from(date);
+	return { year: value.year, month: value.month, day: value.day, weekday: value.dayOfWeek };
+}
+export function makeDate(year: number, month: number, day: number): string {
+	try {
+		return Temporal.PlainDate.from({ year, month, day }, { overflow: 'reject' }).toString();
+	} catch {
+		return '';
+	}
+}
+export function addDays(date: string, days: number): string {
+	try {
+		return Temporal.PlainDate.from(date).add({ days }).toString();
+	} catch {
+		return '';
+	}
+}
+export function distance(a: string, b: string): number {
+	return Math.abs(Temporal.PlainDate.from(a).until(Temporal.PlainDate.from(b)).days);
+}
+export function elapsedEnd(value: string, zone: string, minutes: number): string {
+	const resolution = resolve(value, zone);
+	if (resolution.choices.length !== 1) return '';
+	return Temporal.Instant.fromEpochMilliseconds(resolution.choices[0].epoch)
+		.add({ minutes })
+		.toZonedDateTimeISO(zone)
+		.toPlainDateTime()
+		.toString({ smallestUnit: 'minute' })
+		.replace('T', ' ');
+}

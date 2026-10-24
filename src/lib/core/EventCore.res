@@ -1,11 +1,17 @@
 @genType
-type fieldName = [#title | #start | #end | #location]
+type fieldName = Parser.fieldName
 @genType
 type ownership = [#auto | #manual]
 @genType
 type field = {value: string, ownership: ownership, offset: string}
 @genType
 type context = {referenceInstant: string, browserTimeZone: string}
+@genType
+type identity = {reference: string}
+@genType
+type ticket = {identity: identity, revision: int, contextRevision: int}
+@genType
+type selection = {name: fieldName, candidate: Parser.candidate, revision: int}
 @genType
 type draft = {
   description: string,
@@ -16,6 +22,14 @@ type draft = {
   context: context,
   zoneOverride: option<string>,
   uid: option<string>,
+  identity: identity,
+  revision: int,
+  contextRevision: int,
+  parseStatus: string,
+  parseError: string,
+  suggestions: Parser.output,
+  selections: array<selection>,
+  pendingResets: array<fieldName>,
 }
 @genType
 type instantChoice = {offset: string, instant: string, epoch: float}
@@ -60,6 +74,20 @@ let create = (context: context): draft => {
   context,
   zoneOverride: None,
   uid: None,
+  identity: {reference: context.referenceInstant},
+  revision: 0,
+  contextRevision: 0,
+  parseStatus: "idle",
+  parseError: "",
+  suggestions: {
+    candidates: [],
+    zone: context.browserTimeZone,
+    zoneProvenance: "Browser fallback",
+    zoneWarning: "",
+    warnings: [],
+  },
+  selections: [],
+  pendingResets: [],
 }
 @genType
 let getField = (draft: draft, name: fieldName): field =>
@@ -76,30 +104,219 @@ let setField = (draft: draft, name: fieldName, field: field): draft =>
   | #end => {...draft, end: field}
   | #location => {...draft, location: field}
   }
+let removeSelection = (draft: draft, name) => {
+  ...draft,
+  selections: draft.selections->Array.filter(s => s.name != name),
+  pendingResets: draft.pendingResets->Array.filter(n => n != name),
+}
+let selection = (draft: draft, name) => draft.selections->Array.find(s => s.name == name)
+let associated = (a: Parser.candidate, b: Parser.candidate) =>
+  a.groups->Array.includes("overall") ||
+  b.groups->Array.includes("overall") ||
+  a.groups->Array.some(g => b.groups->Array.includes(g))
 @genType
-let edit = (draft, name, value) => setField(draft, name, {value, ownership: #manual, offset: ""})
+let alternatives = (draft: draft, name): array<Parser.candidate> => {
+  let values = draft.suggestions.candidates->Array.filter(c => c.field == name)
+  switch (name, selection(draft, #start)) {
+  | (#end, Some(start)) if start.revision == draft.revision =>
+    values->Array.toSorted((a, b) => {
+      let aRelated = associated(start.candidate, a)
+      let bRelated = associated(start.candidate, b)
+      aRelated == bRelated ? 0. : aRelated ? -1. : 1.
+    })
+  | _ => values
+  }
+}
+let best = (draft, name) => {
+  let chosenStart = switch selection(draft, #start) {
+  | Some(s) if s.revision == draft.revision => Some(s.candidate)
+  | _ =>
+    draft.suggestions.candidates->Array.find(c =>
+      c.field == #start && (c.completeness == "complete" || c.completeness == "all-day")
+    )
+  }
+  alternatives(draft, name)->Array.find(c => {
+    let complete =
+      c.completeness == "text" || c.completeness == "complete" || c.completeness == "all-day"
+    let coherent = switch chosenStart {
+    | Some(start) if name == #title || name == #end => associated(start, c)
+    | _ => true
+    }
+    complete && coherent
+  })
+}
+let autoField = (draft, name) =>
+  best(draft, name)->Option.map(c => {...emptyField, value: c.value})->Option.getOr(emptyField)
 @genType
-let reset = (draft, name) => setField(draft, name, emptyField)
+let edit = (draft, name, value) =>
+  setField(removeSelection(draft, name), name, {value, ownership: #manual, offset: ""})
+@genType
+let reset = (draft, name) => {
+  let next = setField(removeSelection(draft, name), name, autoField(draft, name))
+  {
+    ...next,
+    pendingResets: draft.parseStatus == "pending"
+      ? Array.concat(next.pendingResets, [name])
+      : next.pendingResets,
+  }
+}
 @genType
 let describe = (draft: draft, description) => {
-  let clearAuto = field => field.ownership == #auto ? emptyField : field
+  let clear = description == ""
+  let clearAuto = field => clear && field.ownership == #auto ? emptyField : field
+  let clearTimed = field => {
+    let field = clearAuto(field)
+    clear &&
+    draft.zoneOverride->Option.isNone &&
+    draft.suggestions.zone != draft.context.browserTimeZone
+      ? {...field, offset: ""}
+      : field
+  }
   {
     ...draft,
     description,
+    revision: draft.revision + 1,
+    parseStatus: clear ? "idle" : "pending",
+    parseError: "",
+    pendingResets: [],
+    suggestions: {
+      candidates: [],
+      warnings: [],
+      zone: clear ? draft.context.browserTimeZone : draft.suggestions.zone,
+      zoneProvenance: clear ? "Browser fallback" : draft.suggestions.zoneProvenance,
+      zoneWarning: clear ? "" : draft.suggestions.zoneWarning,
+    },
     title: clearAuto(draft.title),
-    start: clearAuto(draft.start),
-    end: clearAuto(draft.end),
+    start: clearTimed(draft.start),
+    end: clearTimed(draft.end),
     location: clearAuto(draft.location),
   }
 }
 @genType
-let effectiveZone = draft => draft.zoneOverride->Option.getOr(draft.context.browserTimeZone)
+let effectiveZone = draft => draft.zoneOverride->Option.getOr(draft.suggestions.zone)
+@genType
+let parseTicket = (draft: draft): ticket => {
+  identity: draft.identity,
+  revision: draft.revision,
+  contextRevision: draft.contextRevision,
+}
+let current = (draft: draft, ticket: ticket) =>
+  draft.identity === ticket.identity &&
+  draft.revision == ticket.revision &&
+  draft.contextRevision == ticket.contextRevision
+@genType
+let extract = (draft: draft) =>
+  Parser.parse(
+    draft.description,
+    draft.context.referenceInstant,
+    draft.context.browserTimeZone,
+    draft.zoneOverride,
+  )
+@genType
+let completeParse = (draft: draft, ticket: ticket, output: Parser.output, applyValues: bool) => {
+  if !current(draft, ticket) || draft.parseStatus != "pending" {
+    draft
+  } else {
+    let next = {...draft, parseStatus: "ready", parseError: "", suggestions: output}
+    let zoneChanged = effectiveZone(next) != effectiveZone(draft)
+    let apply = name => {
+      let field = getField(next, name)
+      let field = (name == #start || name == #end) && zoneChanged ? {...field, offset: ""} : field
+      (applyValues || draft.pendingResets->Array.includes(name)) && field.ownership == #auto
+        ? autoField(next, name)
+        : field
+    }
+    {
+      ...next,
+      pendingResets: [],
+      title: apply(#title),
+      start: apply(#start),
+      end: apply(#end),
+      location: apply(#location),
+    }
+  }
+}
+@genType
+let failParse = (draft: draft, ticket: ticket, error) => {
+  if !current(draft, ticket) || draft.parseStatus != "pending" {
+    draft
+  } else {
+    let next = completeParse(
+      draft,
+      ticket,
+      {...draft.suggestions, candidates: [], warnings: []},
+      true,
+    )
+    {...next, parseStatus: "failed", parseError: error}
+  }
+}
 @genType
 let setZone = (draft: draft, zoneOverride) => {
   ...draft,
   zoneOverride,
+  contextRevision: draft.contextRevision + 1,
+  pendingResets: [],
+  parseStatus: draft.description == "" ? "idle" : "pending",
+  suggestions: {...draft.suggestions, candidates: [], warnings: []},
   start: {...draft.start, offset: ""},
   end: {...draft.end, offset: ""},
+}
+@genType
+let selectCandidate = (draft: draft, name, id) => {
+  switch alternatives(draft, name)->Array.find(c => c.id == id) {
+  | None => draft
+  | Some(c) => {
+      let old = getField(draft, name)
+      // A time-only option can use this field's own manually supplied date,
+      // unless explicit source dates conflict. Sibling dates are never borrowed.
+      let ownDate = Parser.slice(old.value, 0, 10)
+      let dates =
+        draft.suggestions.candidates
+        ->Array.filter(v => v.field == name && associated(c, v) && v.date != "")
+        ->Array.map(v => v.date)
+        ->Parser.unique
+      let compatible =
+        c.completeness == "time-only" &&
+        old.ownership == #manual &&
+        Parser.has(ownDate, "^\\d{4}-\\d{2}-\\d{2}$") &&
+        !(c.inferred->Array.includes("ambiguous-am-pm")) &&
+        (Array.length(dates) == 0 || (Array.length(dates) == 1 && dates->Array.includes(ownDate)))
+      let value = compatible ? `${ownDate} ${c.time}` : c.value
+      let chosen = compatible ? {...c, value, date: ownDate, completeness: "complete"} : c
+      let next = edit(draft, name, value)
+      {
+        ...next,
+        selections: Array.concat(
+          next.selections,
+          [{name, candidate: chosen, revision: draft.revision}],
+        ),
+      }
+    }
+  }
+}
+let currentEvidence = (draft, name) => {
+  switch selection(draft, name) {
+  | Some(s) if s.revision == draft.revision => Some(s.candidate)
+  | _ =>
+    draft.suggestions.candidates->Array.find(c =>
+      c.field == name && c.value == getField(draft, name).value
+    )
+  }
+}
+@genType
+let evidenceWarnings = (draft: draft, name) => {
+  switch selection(draft, name) {
+  | Some(s) if s.revision != draft.revision => [
+      "Selected evidence belongs to an earlier Description. Your Manual value is retained.",
+    ]
+  | _ =>
+    switch (currentEvidence(draft, #start), currentEvidence(draft, name)) {
+    | (Some(start), Some(value)) if name != #start && !associated(start, value) => [
+        "Selected fields refer to different activities or occurrences.",
+      ]
+    | _ => []
+    }
+  }
 }
 @genType
 let chooseOffset = (draft, name, offset) =>
@@ -147,8 +364,23 @@ let validate = (draft: draft): validation => {
   let zone = effectiveZone(draft)
   let start = resolve(draft.start.value, zone)
   let end = resolve(draft.end.value, zone)
-  let startError = fieldError(draft.start, start)
-  let endError = fieldError(draft.end, end)
+  let partialError = (name, field, resolution) => {
+    switch selection(draft, name) {
+    | Some(s)
+      if s.candidate.completeness == "date-only" ||
+        s.candidate.completeness == "time-only" => "Complete the missing date/time components, or type an explicit all-day date."
+    | _ => fieldError(field, resolution)
+    }
+  }
+  let startError = partialError(#start, draft.start, start)
+  let endError = partialError(#end, draft.end, end)
+  let startError = draft.parseStatus == "pending" ? "Parsing current Description..." : startError
+  let startError =
+    start.kind == "timed" &&
+    draft.zoneOverride->Option.isNone &&
+    draft.suggestions.zoneWarning != ""
+      ? draft.suggestions.zoneWarning
+      : startError
   let allDay = start.kind == "date"
   let startInstant = selected(draft.start, start)
   let endInstant = selected(draft.end, end)

@@ -85,6 +85,134 @@ async function checkPendingClipboard(page) {
 	await newEvent.click();
 }
 
+async function checkCandidates(page) {
+	const settled = () =>
+		page.waitForFunction(
+			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+		);
+	const reset = async () => {
+		const accept = (dialog) => dialog.accept();
+		page.once('dialog', accept);
+		await page.getByRole('button', { name: 'New event', exact: true }).click();
+		page.off('dialog', accept);
+	};
+	await page.clock.install({ time: new Date('2026-10-24T03:00:00Z') });
+	// All 14 source inputs are also exercised through the actual UI. Only context
+	// enters the draft; expectation assertions are evaluated by the driver afterward.
+	for (const file of await fs.readdir('tests/fixtures/nl-event/expected')) {
+		const fixture = JSON.parse(
+			await fs.readFile(`tests/fixtures/nl-event/expected/${file}`, 'utf8')
+		);
+		await page.clock.setFixedTime(new Date(fixture.context.referenceInstant));
+		await reset();
+		const text = await fs.readFile(`tests/fixtures/nl-event/inputs/${fixture.id}.txt`, 'utf8');
+		await page.locator('#description').fill(text);
+		await settled();
+		for (const [field, expected] of Object.entries(fixture.assertions.preferred ?? {})) {
+			if (field.endsWith('Contains'))
+				assert.ok(
+					(await page.locator(`#${field.replace('Contains', '')}`).inputValue()).includes(expected)
+				);
+			else assert.equal(await page.locator(`#${field}`).inputValue(), expected ?? '');
+		}
+		assert.equal(await page.locator('#description').inputValue(), text);
+		if (
+			fixture.assertions.exportable === false ||
+			fixture.assertions.exportableBeforeChoice === false
+		)
+			assert.equal(
+				await page.getByRole('button', { name: 'Download .ics', exact: true }).isDisabled(),
+				true
+			);
+	}
+	await reset();
+	await page
+		.locator('#description')
+		.fill(
+			await fs.readFile('tests/fixtures/nl-event/inputs/k3-slow-saturday-synthetic.txt', 'utf8')
+		);
+	await settled();
+	const end = await page.locator('#end').inputValue();
+	const alternative = page
+		.getByRole('list', { name: 'Start alternatives', exact: true })
+		.getByRole('button', { name: '2026-07-11 16:30', exact: true });
+	await alternative.click();
+	assert.equal(await page.locator('#start').inputValue(), '2026-07-11 16:30');
+	assert.equal(await page.locator('#end').inputValue(), end);
+	await page
+		.getByRole('list', { name: 'End alternatives', exact: true })
+		.getByRole('button', { name: '2026-07-11 18:00', exact: true })
+		.click();
+	await page.getByRole('button', { name: 'Reset End to suggested', exact: true }).click();
+	assert.equal(await page.locator('#end').inputValue(), '2026-07-11 18:00');
+	const selectedGoogle = new URL(
+		await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
+	);
+	assert.equal(selectedGoogle.searchParams.get('dates'), '20260711T073000Z/20260711T090000Z');
+	const download = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Download .ics', exact: true }).click();
+	const selectedIcs = await fs.readFile(await (await download).path(), 'utf8');
+	assert.ok(selectedIcs.includes('DTSTART:20260711T073000Z\r\nDTEND:20260711T090000Z'));
+	await page.setViewportSize({ width: 390, height: 844 });
+	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-candidates-${page.context().browser().browserType().name()}.png`
+		),
+		fullPage: true
+	});
+	await page.setViewportSize({ width: 1280, height: 900 });
+
+	// Typing during debounce wins; clearing invalidates evidence and retains Manual.
+	await page.locator('#description').fill('Title: Replacement\nTomorrow at 7pm');
+	await page.locator('#title').fill('My title');
+	assert.equal(
+		await page.getByRole('list', { name: 'Start alternatives', exact: true }).count(),
+		0
+	);
+	await settled();
+	assert.equal(await page.locator('#title').inputValue(), 'My title');
+	await page.locator('#description').fill('');
+	assert.equal(await page.locator('#start').inputValue(), '2026-07-11 16:30');
+	assert.equal(await page.locator('#end').inputValue(), '');
+	assert.equal(
+		await page.getByRole('list', { name: 'Start alternatives', exact: true }).count(),
+		0
+	);
+	await reset();
+	await page.locator('#description').fill('Class 1: Example: 12:15 - 1:15 pm');
+	await settled();
+	await page
+		.getByRole('list', { name: 'Start alternatives', exact: true })
+		.getByRole('button', { name: '12:15', exact: true })
+		.click();
+	assert.equal(await page.locator('#start').inputValue(), '12:15');
+	assert.equal(
+		await page.getByRole('button', { name: 'Download .ics', exact: true }).isDisabled(),
+		true
+	);
+	await page.locator('#start').fill('2026-05-16');
+	await page
+		.getByRole('list', { name: 'Start alternatives', exact: true })
+		.getByRole('button', { name: '12:15', exact: true })
+		.click();
+	assert.equal(await page.locator('#start').inputValue(), '2026-05-16 12:15');
+	await page.locator('#end').fill('2026-05-16 13:15');
+	await page.getByRole('link', { name: 'Open in Google Calendar' }).waitFor();
+	await reset();
+	// Pending work from a discarded draft cannot repopulate the replacement.
+	await page.locator('#description').fill('Tomorrow at 7pm');
+	await reset();
+	await page.waitForTimeout(350);
+	assert.deepEqual(
+		await page
+			.locator('textarea, input[type=text]')
+			.evaluateAll((nodes) => nodes.map((n) => n.value)),
+		['', '', '', '', '']
+	);
+}
+
 for (const [name, engine] of [
 	['chromium', chromium],
 	['webkit', webkit]
@@ -110,6 +238,7 @@ for (const [name, engine] of [
 		true
 	);
 	await checkPendingClipboard(page);
+	await checkCandidates(page);
 	await page.locator('#description').fill('Original 한글🙂\nDescription; comma, slash\\');
 	await page.locator('#title').fill('Manual title');
 	await page.locator('#start').fill('2026-10-25 17:00');
@@ -131,7 +260,7 @@ for (const [name, engine] of [
 	await page.locator('#title').fill('Edited title');
 	assert.equal(uid(await download()), uid(first));
 	await page.getByRole('button', { name: 'Reset Title to suggested', exact: true }).click();
-	assert.equal(await page.locator('#title').inputValue(), '');
+	assert.equal(await page.locator('#title').inputValue(), 'Original 한글🙂');
 	assert.equal(uid(await download()), uid(first));
 	await page.locator('#description').fill('');
 	assert.equal(await page.locator('#start').inputValue(), '2026-10-25 17:00');
@@ -268,7 +397,7 @@ for (const [name, engine] of [
 	await touchContext.close();
 	assert.deepEqual(errors, []);
 	console.log(
-		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, ownership/reset, confirmation cancellation, clipboard failure/empty/cancel/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets; no page errors`
+		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, confirmation cancellation, clipboard failure/empty/cancel/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets; no page errors`
 	);
 	await browser.close();
 }

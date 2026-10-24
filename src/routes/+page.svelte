@@ -24,10 +24,38 @@
 	let readingClipboard = $state(false);
 	let clipboardOperation = 0;
 	let descriptionInput: HTMLTextAreaElement;
+	let parseTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function scheduleParse(immediate = false, applyValues = true) {
+		clearTimeout(parseTimer);
+		if (draft.parseStatus !== 'pending') return;
+		const snapshot = draft;
+		const ticket = Core.parseTicket(snapshot);
+		const run = async () => {
+			try {
+				const output = await Promise.resolve().then(() => Core.extract(snapshot));
+				draft = Core.completeParse(draft, ticket, output, applyValues);
+			} catch {
+				draft = Core.failParse(
+					draft,
+					ticket,
+					'Could not parse this Description. You can enter fields manually.'
+				);
+			}
+		};
+		if (immediate) void run();
+		else parseTimer = setTimeout(run, 250);
+	}
+
+	function changeZone(value: string | undefined) {
+		draft = Core.setZone(draft, value);
+		scheduleParse(false, false);
+	}
 
 	onMount(() => {
 		draft = Core.create(captureContext());
 		ready = true;
+		return () => clearTimeout(parseTimer);
 	});
 
 	function newEvent() {
@@ -36,6 +64,7 @@
 		// Ignore every completion from the discarded draft, including errors and cleanup.
 		clipboardOperation += 1;
 		readingClipboard = false;
+		clearTimeout(parseTimer);
 		draft = Core.create(captureContext());
 		zoneEditor = false;
 		message = '';
@@ -55,8 +84,9 @@
 			if (Core.populated(draft) && !window.confirm('Replace this draft with the clipboard text?'))
 				return;
 			draft = Core.replaceClipboard(draft, text, true, captureContext());
+			scheduleParse(true);
 			zoneEditor = false;
-			message = 'Clipboard text added. Enter the event fields below.';
+			message = 'Clipboard text added. Review the suggested fields below.';
 			descriptionInput.focus();
 		} catch {
 			if (operation === clipboardOperation) {
@@ -120,13 +150,22 @@
 			value={draft.description}
 			oninput={(event) => {
 				draft = Core.describe(draft, event.currentTarget.value);
+				scheduleParse(event instanceof InputEvent && event.inputType === 'insertFromPaste');
 			}}
 			rows="7"
 			aria-describedby="parse-status"
 			disabled={!ready}></textarea>
 		<p id="parse-status">
-			Manual entry is available. Language parsing and suggestions are not available yet. Description
-			is exported as entered.
+			{#if draft.parseStatus === 'pending'}
+				Parsing current Description...
+			{:else if draft.parseStatus === 'failed'}
+				{draft.parseError}
+			{:else if draft.suggestions.candidates.length}
+				Review alternatives under each field. Selecting one changes only that field.
+			{:else}
+				No supported suggestions. Enter the fields manually, or add event details to Description.
+			{/if}
+			Description is exported as entered.
 		</p>
 		{#each fields as { name, label, hint } (name)}
 			{@const field = Core.getField(draft, name)}
@@ -162,6 +201,47 @@
 			/>
 			<p id={`${name}-hint`}>{hint}</p>
 			{#if error}<p class="error" id={`${name}-error`}>{error}</p>{/if}
+			{#if Core.alternatives(draft, name).length}
+				<ul class="suggestions" aria-label={`${label} alternatives`}>
+					{#each Core.alternatives(draft, name) as candidate (candidate.id)}
+						<li>
+							<button
+								type="button"
+								class="outline"
+								aria-pressed={field.value === candidate.value ||
+									draft.selections.some(
+										(s) =>
+											s.name === name &&
+											s.revision === draft.revision &&
+											s.candidate.id === candidate.id
+									)}
+								onclick={() => {
+									draft = Core.selectCandidate(draft, name, candidate.id);
+								}}
+							>
+								{candidate.value}
+							</button>
+							<small
+								>{candidate.completeness === 'time-only'
+									? 'Date missing or AM/PM unresolved'
+									: candidate.completeness === 'date-only'
+										? 'Time missing'
+										: candidate.label}
+								{#if candidate.inferred.length}
+									({candidate.inferred.join(', ')}){/if}
+							</small>
+							<details>
+								<summary>Source and activity</summary>
+								<p>{candidate.groups.join(', ')}</p>
+								{#each candidate.spans as span, i (i)}<blockquote>
+										{draft.description.slice(span.start, span.end)}
+									</blockquote>{/each}
+							</details>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+			{#each Core.evidenceWarnings(draft, name) as warning (warning)}<p>{warning}</p>{/each}
 			{#if choices.length > 1}
 				<fieldset>
 					<legend>{label} occurs twice in {zone}. Choose an offset.</legend>
@@ -186,7 +266,7 @@
 					<span
 						>Time zone: {zone || '(empty)'} ({draft.zoneOverride !== undefined
 							? 'Manual override'
-							: 'Browser fallback'}).</span
+							: draft.suggestions.zoneProvenance}).</span
 					>
 					<button
 						class="inline outline"
@@ -206,7 +286,7 @@
 						aria-invalid={!validZone(zone)}
 						aria-describedby="zone-hint"
 						oninput={(event) => {
-							draft = Core.setZone(draft, event.currentTarget.value);
+							changeZone(event.currentTarget.value);
 						}}
 					/>
 					<p id="zone-hint">
@@ -217,13 +297,17 @@
 						type="button"
 						class="inline outline"
 						onclick={() => {
-							draft = Core.setZone(draft, undefined);
+							changeZone(undefined);
 						}}>Use suggested zone</button
 					>
 				{/if}
 			{/if}
 		{/each}
 	</form>
+	{#if draft.suggestions.zoneWarning && draft.zoneOverride === undefined}<p class="error">
+			{draft.suggestions.zoneWarning}
+		</p>{/if}
+	{#each draft.suggestions.warnings as warning (warning)}<p>{warning}</p>{/each}
 	{#each result.warnings as warning (warning)}<p>{warning}</p>{/each}
 	<div class="actions">
 		{#if ready && result.event}
@@ -304,6 +388,30 @@
 		}
 	}
 	p {
+		overflow-wrap: anywhere;
+	}
+	.suggestions {
+		padding-left: 1.25rem;
+		max-height: 18rem;
+		overflow-y: auto;
+	}
+	.suggestions li {
+		margin-block: 0.5rem;
+	}
+	.suggestions small {
+		margin-inline: 0.5rem;
+	}
+	.suggestions button {
+		min-height: 2.75rem;
+		max-width: 100%;
+		overflow-wrap: anywhere;
+	}
+	.suggestions [aria-pressed='true'] {
+		font-weight: 700;
+		border-width: 2px;
+	}
+	.suggestions blockquote {
+		white-space: pre-wrap;
 		overflow-wrap: anywhere;
 	}
 	.error {

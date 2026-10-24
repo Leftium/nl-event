@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-24
 
-**Status:** Phase 1 manual draft and export foundation implemented; extraction and device verification remain pending
+**Status:** Phase 2 deterministic extraction and field alternatives implemented; physical-device handoff verification remains pending
 
 **Repository / working product name:** `nl-event` / NL Event
 
@@ -10,9 +10,9 @@
 
 Build a browser-first event resolver that extracts Korean or English announcements into one editable draft and hands it to Google Calendar or an `.ics` file.
 
-The application preserves the SvelteKit 3 and Svelte 5 skeleton, with a ReScript 12 functional core and Nimble.css styling. The Git remote is `https://github.com/Leftium/nl-event`. PR #1 implements manual drafts, validation, and calendar exports; natural-language parsing and candidate extraction remain a subsequent milestone.
+The application preserves the SvelteKit 3 and Svelte 5 skeleton, with a ReScript 12 functional core and Nimble.css styling. The Git remote is `https://github.com/Leftium/nl-event`. PR #1 implements manual drafts, validation, and calendar exports; PR #2 adds deterministic parsing, candidate extraction, and per-field alternatives.
 
-The target is a candidate resolver. Google Calendar provides advanced editing and final saving. Completion requires the state transitions below, deterministic fixture results, equivalent normalized exports, and documented device handoff results. The fixture files are adopted and remain unchanged. The manual foundation has focused unit tests; parser acceptance tests remain deferred.
+The target is a candidate resolver. Google Calendar provides advanced editing and final saving. Completion requires the state transitions below, deterministic fixture results, equivalent normalized exports, and documented device handoff results. The fixture files are adopted and remain unchanged. Unit and Chromium/WebKit tests cover the manual foundation and all 14 adopted parser fixture inputs.
 
 ## Product boundary
 
@@ -262,4 +262,4 @@ Outside v1: OAuth/direct calendar writes, calendar reads/conflict checks/sync, p
 - [`Leftium/veneer`](https://github.com/Leftium/veneer), `specs/completed/locale.md`: Paraglide/inlang direction if UI localization later enters scope.
 - [Continuum v0.6.2 protocol](https://github.com/Leftium/continuum/blob/9aea3336bb10037ad92eda836c8f59972cfbde7b/protocol/CONTINUUM.md) / [bootstrap guide](https://github.com/Leftium/continuum/blob/main/docs/client.md): adopted for PR #1; writer claims precede product writes and merge stays owner-controlled.
 
-**Implementation boundary:** This specification includes future parser behavior. See the README for the implemented manual foundation and actual verification limits. CI, remote hosting, and physical-device calendar handoffs have not been established.
+**Implementation boundary:** See the README for the implemented parsing rules and actual verification limits. CI, remote hosting, and physical-device calendar handoffs have not been established.
