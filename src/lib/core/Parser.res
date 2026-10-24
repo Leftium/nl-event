@@ -113,7 +113,7 @@ let dateEvidence = (line: lexical, reference, seasonYear) => {
   let text = line.text
   let explicit = matches(
     text,
-    "(?<![\\d\\p{L}./-])(?:(\\d{4}|\\d{2})[./-])?(\\d{1,2})[./-](\\d{1,2})(?![\\d]|[./-]\\d)|(?:(\\d{4})년\\s*)?(\\d{1,2})월\\s*(\\d{1,2})일",
+    "(?<![\\d\\p{L}./-])(?:(\\d{4}|\\d{2})(?:[ \\t]*\\.[ \\t]*|[/-]))?(\\d{1,2})(?:[ \\t]*\\.[ \\t]*|[/-])(\\d{1,2})(?![\\d:]|[ \\t]*[./-][ \\t]*\\d)|(?:(\\d{4})년\\s*)?(\\d{1,2})월\\s*(\\d{1,2})일",
   )
   let english = matches(
     text,
@@ -122,6 +122,11 @@ let dateEvidence = (line: lexical, reference, seasonYear) => {
   let numeric =
     explicit
     ->Array.filter(m =>
+      // Spacing is supported only for explicit four-digit dates. A numeric
+      // predecessor across whitespace still makes this a suffix, not a date.
+      (group(m, 5) != "" ||
+        ((!has(m.text, "[ \\t]") || String.length(group(m, 1)) == 4) &&
+          !has(slice(text, 0, m.start), "\\d[ \\t]*[./-][ \\t]*$"))) &&
       !has(
         slice(text, m.end, String.length(text)),
         "^\\s*(?:(?:days?|weeks?|hours?|hrs?|minutes?|mins?|KRW|USD)\\b|(?:만|천)(?:원|(?![가-힣]))|(?:원|달러)(?![가-힣])|[₩$€])",

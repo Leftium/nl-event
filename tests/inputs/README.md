@@ -10,3 +10,5 @@ Payment account numbers and payee names have been replaced with explicit redacti
 `multiline-location-user.txt` preserves the formatted Korean announcement from PR #8, including Markdown, floor and subway-exit details. It is a separate regression source; the flattened adopted K2 input remains unchanged.
 
 `blues-jam-october-sanitized.txt` is the sanitized PR #10 reproduction excerpt, not the complete original announcement. It omits payment accounts, personal details, and unrelated content; the adopted April K4 fixture remains unchanged.
+
+`november-spaced-date-sanitized.txt` is the second sanitized PR #10 reproduction excerpt. Only the reported date, clock, and fee lines are included; payment, personal, contact, and unrelated details are omitted. Its segment range does not supply an explicit overall End.
