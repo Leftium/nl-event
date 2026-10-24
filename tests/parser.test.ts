@@ -1014,3 +1014,58 @@ describe('Korean overnight party', () => {
 		expect(parse(`Party\n장소: ${venue}`).location.value).toBe('');
 	});
 });
+
+describe('reviewed Korean midnight and backward dawn inheritance', () => {
+	it.each(['밤 11시 - 밤 12시', '밤 11시 - 12시'])('%s ends at next-day midnight', (range) => {
+		const text = `Party\n일자 및 시간: 10월 30일 (금)\n시간: ${range}`;
+		const d = parse(text);
+		expect(d.start.value).toBe('2026-10-30 23:00');
+		expect(d.end.value).toBe('2026-10-31 00:00');
+		expect(Core.validate(d).event).toBeDefined();
+	});
+	it('preserves noon, explicit midnight starts and backward night inheritance', () => {
+		for (const [range, start, end] of [
+			['오전 11시 - 오후 12시', '11:00', '12:00'],
+			['오전 12시 - 새벽 1시', '00:00', '01:00'],
+			['00:00 - 01:00', '00:00', '01:00'],
+			['11시 - 밤 11시 30분', '23:00', '23:30']
+		]) {
+			const d = parse(`Party\n일자 및 시간: 10월 30일 (금)\n시간: ${range}`);
+			expect(d.start.value).toBe(`2026-10-30 ${start}`);
+			expect(d.end.value).toBe(`2026-10-30 ${end}`);
+		}
+	});
+	it.each(['밤 12시 - 새벽 1시', '12시 - 밤 1시'])(
+		'requires a date choice for midnight start %s',
+		(range) => {
+			const d = parse(`Party\n일자 및 시간: 10월 30일 (금)\n시간: ${range}`);
+			expect(d.start.value).toBe('');
+			expect(Core.validate(d).event).toBeUndefined();
+			expect(Core.alternatives(d, 'start')).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						time: '00:00',
+						completeness: 'time-only',
+						inferred: expect.arrayContaining(['ambiguous-midnight-date'])
+					})
+				])
+			);
+		}
+	);
+	it.each(['', '\n메모: 오후'])(
+		'does not infer AM backward from dawn, even with global PM%s',
+		(note) => {
+			const d = parse(`Party\n일자 및 시간: 10월 30일 (금)\n시간: 11시 - 새벽 2시${note}`);
+			expect(d.start.value).toBe('');
+			expect(Core.validate(d).event).toBeUndefined();
+			expect(
+				Core.alternatives(d, 'start').some(
+					(c) =>
+						c.time === '11:00' &&
+						c.completeness === 'time-only' &&
+						c.inferred.includes('ambiguous-am-pm')
+				)
+			).toBe(true);
+		}
+	);
+});

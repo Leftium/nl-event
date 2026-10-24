@@ -223,7 +223,7 @@ type englishEvidence = {start: int, end: int, unit: string, offset: int, day: in
 external recognizeEnglishDates: (string, string, string) => array<englishEvidence> =
   "recognizeEnglishDates"
 
-type clock = {time: string, minutes: int, span: span, ambiguous: bool}
+type clock = {time: string, minutes: int, span: span, ambiguous: bool, ambiguousDate: bool}
 let clocks = (line: lexical, evening) => {
   let tokens = matches(
     line.text,
@@ -236,7 +236,9 @@ let clocks = (line: lexical, evening) => {
   )
   let all = Array.concat(tokens, bare)->Array.toSorted((a, b) => Int.toFloat(a.start - b.start))
   let qualifier = (m: lexical) =>
-    has(m.text, "p(?:m)?\\b|오후|저녁|밤")
+    has(m.text, "밤")
+      ? 2
+      : has(m.text, "p(?:m)?\\b|오후|저녁")
       ? 1
       : has(m.text, "a(?:m)?\\b|오전|아침|새벽")
       ? -1
@@ -264,13 +266,17 @@ let clocks = (line: lexical, evening) => {
         )
       )
       ->Array.get(0)
-      ->Option.map(qualifier)
+      ->Option.map(other =>
+        // A dawn endpoint does not establish the preceding hour as AM.
+        other.start > m.start && has(other.text, "새벽") ? -2 : qualifier(other)
+      )
       ->Option.getOr(0)
     let local = qualifier(m)
     let period = local != 0 ? local : nearby != 0 ? nearby : evening ? 1 : 0
-    let pm = period == 1
+    let pm = period == 1 || period == 2
     let am = period == -1
-    let hour = if midnight {
+    let nightMidnight = period == 2 && h == 12
+    let hour = if midnight || nightMidnight {
       0
     } else if pm && h < 12 {
       h + 12
@@ -296,6 +302,8 @@ let clocks = (line: lexical, evening) => {
         : hour * 60 + minute,
       span: {start: line.start + m.start, end: line.start + m.end},
       ambiguous,
+      // Night midnight at the start could refer to either date boundary.
+      ambiguousDate: index == 0 && nightMidnight,
     }
   })
   parsed->Array.filterWithIndex((c, index) => {
@@ -590,7 +598,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
               excluded(line.text) ||
               Array.length(times) != 2 ||
               Array.length(dateEvidence(line, reference, seasonYear)) > 0 ||
-              times->Array.some(c => c.ambiguous)
+              times->Array.some(c => c.ambiguous || c.ambiguousDate)
             ) {
               active := false
             } else {
@@ -623,7 +631,10 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
       let times = clocks(l, evening)
       switch (times->Array.get(0), times->Array.get(1)) {
       | (Some(start), Some(ending))
-        if !start.ambiguous && !ending.ambiguous && ending.minutes < start.minutes =>
+        if !start.ambiguous &&
+        !start.ambiguousDate &&
+        !ending.ambiguous &&
+        ending.minutes < start.minutes =>
         Some((i, start, ending))
       | _ => None
       }
@@ -851,6 +862,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
                 minutes: number(slice(time, 0, 2)) * 60 + number(slice(time, 3, 5)),
                 span: {start: line.start + m.start, end: line.start + m.end},
                 ambiguous: false,
+                ambiguousDate: false,
               }
             })
       let allDay =
@@ -973,10 +985,13 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
                 : [{date: "", span: start.span, inferred: [], mismatch: false}]
             applicableDates->Array.forEach(d => {
               let groupId = `${activity}:${d.date}`
-              let complete = d.date != "" && !start.ambiguous
+              let complete = d.date != "" && !start.ambiguous && !start.ambiguousDate
               let value = complete ? `${d.date} ${start.time}` : start.time
               let spans = d.date == "" ? [start.span] : [d.span, start.span]
-              let inferred = Array.concat(d.inferred, start.ambiguous ? ["ambiguous-am-pm"] : [])
+              let inferred = Array.concat(
+                Array.concat(d.inferred, start.ambiguous ? ["ambiguous-am-pm"] : []),
+                start.ambiguousDate ? ["ambiguous-midnight-date"] : [],
+              )
               add(
                 #start,
                 value,

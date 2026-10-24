@@ -303,3 +303,20 @@ describe('overnight Auto completion and exports', () => {
 		expect(completed.description).toBe(text);
 	});
 });
+
+it.each(['밤 11시 - 밤 12시', '밤 11시 - 12시'])(
+	'exports a one-hour midnight party: %s',
+	(range) => {
+		const text = `Party\n일자 및 시간: 10월 30일 (금)\n시간: ${range}`;
+		const pending = Core.describe(Core.create(context), text);
+		const d = Core.completeParse(pending, Core.parseTicket(pending), Core.extract(pending), true);
+		const event = normalized(d);
+		expect(new URL(Core.googleUrl(event)).searchParams.get('dates')).toBe(
+			'20261030T140000Z/20261030T150000Z'
+		);
+		const ics = unfold(Core.ics(event, 'midnight', '20261024T030000Z'));
+		expect(ics).toContain('DTSTART:20261030T140000Z\r\n');
+		expect(ics).toContain('DTEND:20261030T150000Z\r\n');
+		expect(d.description).toBe(text);
+	}
+);
