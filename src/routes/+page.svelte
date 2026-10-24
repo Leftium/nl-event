@@ -22,6 +22,7 @@
 	let zoneEditor = $state(false);
 	let message = $state('');
 	let readingClipboard = $state(false);
+	let clipboardOperation = 0;
 	let descriptionInput: HTMLTextAreaElement;
 
 	onMount(() => {
@@ -32,6 +33,9 @@
 	function newEvent() {
 		if (Core.populated(draft) && !window.confirm('Discard this draft and start a new event?'))
 			return;
+		// Ignore every completion from the discarded draft, including errors and cleanup.
+		clipboardOperation += 1;
+		readingClipboard = false;
 		draft = Core.create(captureContext());
 		zoneEditor = false;
 		message = '';
@@ -39,9 +43,11 @@
 	}
 
 	async function pasteClipboard() {
+		const operation = ++clipboardOperation;
 		readingClipboard = true;
 		try {
 			const text = await navigator.clipboard.readText();
+			if (operation !== clipboardOperation) return;
 			if (!text) {
 				message = 'Clipboard is empty. Your draft is unchanged.';
 				return;
@@ -53,9 +59,11 @@
 			message = 'Clipboard text added. Enter the event fields below.';
 			descriptionInput.focus();
 		} catch {
-			message = 'Clipboard could not be read. Paste directly into Description instead.';
+			if (operation === clipboardOperation) {
+				message = 'Clipboard could not be read. Paste directly into Description instead.';
+			}
 		} finally {
-			readingClipboard = false;
+			if (operation === clipboardOperation) readingClipboard = false;
 		}
 	}
 
@@ -94,8 +102,13 @@
 		<p>Prepare an event, then finish in your calendar.</p>
 	</header>
 	<div class="actions">
-		<button type="button" onclick={newEvent} disabled={!ready}>New event</button>
-		<button type="button" onclick={pasteClipboard} disabled={!ready || readingClipboard}>
+		<button class="outline" type="button" onclick={newEvent} disabled={!ready}>New event</button>
+		<button
+			class="outline"
+			type="button"
+			onclick={pasteClipboard}
+			disabled={!ready || readingClipboard}
+		>
 			{readingClipboard ? 'Reading clipboard...' : 'Paste from clipboard'}
 		</button>
 	</div>
@@ -123,16 +136,19 @@
 				name === 'start' ? result.startChoices : name === 'end' ? result.endChoices : []}
 			<div class="field-heading">
 				<label for={name}>{label}</label>
-				<span>{field.ownership === 'auto' ? 'Auto' : 'Manual'}</span>
-				{#if field.ownership === 'manual'}
-					<button
-						type="button"
-						aria-label={`Reset ${label} to suggested`}
-						onclick={() => {
-							draft = Core.reset(draft, name);
-						}}>Reset to suggested</button
-					>
-				{/if}
+				<span class="ownership">
+					<span>{field.ownership === 'auto' ? 'Auto' : 'Manual'}</span>
+					{#if field.ownership === 'manual'}
+						<button
+							class="inline outline"
+							type="button"
+							aria-label={`Reset ${label} to suggested`}
+							onclick={() => {
+								draft = Core.reset(draft, name);
+							}}>Reset to suggested</button
+						>
+					{/if}
+				</span>
 			</div>
 			<input
 				id={name}
@@ -167,11 +183,14 @@
 				</fieldset>
 			{/if}
 			{#if name === 'start'}
-				<p>
-					Time zone: {zone || '(empty)'} ({draft.zoneOverride !== undefined
-						? 'Manual override'
-						: 'Browser fallback'}).
+				<p class="zone-context">
+					<span
+						>Time zone: {zone || '(empty)'} ({draft.zoneOverride !== undefined
+							? 'Manual override'
+							: 'Browser fallback'}).</span
+					>
 					<button
+						class="inline outline"
 						type="button"
 						onclick={() => {
 							zoneEditor = !zoneEditor;
@@ -197,6 +216,7 @@
 					</p>
 					<button
 						type="button"
+						class="inline outline"
 						onclick={() => {
 							draft = Core.setZone(draft, undefined);
 						}}>Use suggested zone</button
@@ -209,14 +229,18 @@
 	<div class="actions">
 		{#if ready && result.event}
 			<!-- External calendar URL; this is not a SvelteKit route. -->
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<a href={Core.googleUrl(result.event)} target="_blank" rel="noopener noreferrer"
-				>Open in Google Calendar</a
+			<!-- eslint-disable svelte/no-navigation-without-resolve -->
+			<a
+				class="nc-button"
+				href={Core.googleUrl(result.event)}
+				target="_blank"
+				rel="noopener noreferrer">Open in Google Calendar</a
 			>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{:else}
 			<button type="button" disabled>Open in Google Calendar</button>
 		{/if}
-		<button type="button" onclick={download} disabled={!ready || !result.event}
+		<button class="secondary" type="button" onclick={download} disabled={!ready || !result.event}
 			>Download .ics</button
 		>
 	</div>
@@ -251,9 +275,27 @@
 		width: 100%;
 		box-sizing: border-box;
 	}
-	button,
+	.actions button,
 	.actions a {
 		min-height: 2.75rem;
+	}
+	.ownership,
+	.zone-context {
+		display: inline-flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+	.inline {
+		min-height: 1.75rem;
+		border-color: transparent;
+		text-decoration: underline;
+		text-underline-offset: 0.15em;
+	}
+	@media (any-pointer: coarse) {
+		.inline {
+			min-height: 2.75rem;
+		}
 	}
 	p {
 		overflow-wrap: anywhere;
