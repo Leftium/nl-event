@@ -99,7 +99,6 @@
 <main>
 	<header>
 		<h1>NL Event</h1>
-		<p>Prepare an event, then finish in your calendar.</p>
 	</header>
 	<div class="actions">
 		<button class="outline" type="button" onclick={newEvent} disabled={!ready}>New event</button>
@@ -269,6 +268,13 @@
 	}
 	.field-heading label {
 		margin: 0;
+	}
+	form > label,
+	.field-heading label {
+		font-weight: 700;
+	}
+	.field-heading + input {
+		margin-block-start: 0.25rem;
 	}
 	input[type='text'],
 	textarea {
