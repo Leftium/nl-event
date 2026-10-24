@@ -682,6 +682,78 @@ async function checkSelectedTitle(page, engine) {
 	assert.equal(await page.locator('#title').inputValue(), '');
 }
 
+async function checkFallbacks(page) {
+	const reset = () => page.getByRole('button', { name: 'Reset', exact: true }).click();
+	const describe = async (text) => {
+		await reset();
+		await page.locator('#description').fill(text);
+		await page.waitForFunction(
+			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+		);
+	};
+	const row = (field, part) =>
+		page.getByRole('list', { name: `${field} ${part} alternatives`, exact: true });
+	const chip = (field, part, label) =>
+		row(field, part).getByRole('button', { name: label, exact: true });
+	const download = page.getByRole('button', { name: 'Download .ics', exact: true });
+	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
+	await page.setViewportSize({ width: 390, height: 844 });
+	await describe('cancel netflix');
+	assert.equal(await chip('Start', 'time', 'All day').getAttribute('aria-pressed'), 'true');
+	assert.equal(await download.isEnabled(), true);
+	assert.equal(await page.locator('#start').inputValue(), 'Tomorrow');
+	assert.equal(await chip('Start', 'date', 'Tomorrow').getAttribute('aria-pressed'), 'true');
+	for (const label of ['Today', 'Tomorrow', 'In 7 days', 'In 30 days'])
+		await chip('Start', 'date', label).waitFor();
+	await chip('Start', 'date', 'Tomorrow').focus();
+	assert.match(
+		await chip('Start', 'date', 'Tomorrow').getAttribute('data-tooltip'),
+		/not extracted/
+	);
+	await page.keyboard.press('Space');
+	assert.equal(await download.isEnabled(), true);
+	const file = page.waitForEvent('download');
+	await download.click();
+	const ics = await fs.readFile(await (await file).path(), 'utf8');
+	assert.match(ics, /DTSTART;VALUE=DATE:20261025/);
+	assert.match(ics, /DTEND;VALUE=DATE:20261026/);
+	await chip('Start', 'date', 'In 30 days').click();
+	assert.equal(await page.locator('#start').inputValue(), 'In 30 days');
+	assert.match(await page.locator('#start-hint').textContent(), /2026-11-23/);
+	await chip('Start', 'date', 'Tomorrow').click();
+	assert.equal(await page.locator('#start').inputValue(), 'Tomorrow');
+	await describe('workout tomorrow');
+	assert.match(await page.locator('#start-hint').textContent(), /09:00.*inferred time/);
+	for (const label of ['07:00', '09:00', '12:00', '18:00', '19:00'])
+		await chip('Start', 'time', label).waitFor();
+	await chip('Start', 'time', '18:00').click();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 19:00');
+	assert.equal(
+		await page.getByRole('switch', { name: 'Auto End/Duration', exact: true }).isChecked(),
+		true
+	);
+	const autoEnd = page.getByRole('switch', { name: 'Auto End/Duration', exact: true });
+	await autoEnd.uncheck();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 19:00');
+	await chip('Start', 'time', '12:00').click();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 19:00');
+	await autoEnd.check();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 13:00');
+	await chip('Start', 'time', '18:00').click();
+	assert.equal(await page.locator('#end').inputValue(), '2026-10-25 19:00');
+	assert.equal(await download.isEnabled(), true);
+	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+	await describe('Registration deadline: October 20, 2026\nClass 1: 12:15 - 1:15 pm');
+	assert.equal(await chip('Start', 'time', 'All day').getAttribute('aria-pressed'), 'true');
+	assert.equal(await download.isEnabled(), true);
+	await chip('Start', 'time', '12:15').click();
+	await chip('End/Duration', 'time', '13:15').click();
+	assert.equal(await download.isEnabled(), true);
+	assert.equal(await page.getByText('Not paired in source', { exact: true }).count(), 2);
+	await reset();
+	await page.setViewportSize({ width: 1280, height: 900 });
+}
+
 async function checkLunch(page) {
 	await page.locator('#description').fill('lunch tomorrow');
 	await page.waitForFunction(
@@ -913,6 +985,7 @@ for (const [name, engine] of [
 	await checkSelectedTitle(page, name);
 	await checkSelectOnFocus(page);
 	await checkLunch(page);
+	await checkFallbacks(page);
 	await page.locator('#description').fill('unsubscribe netflix in 30 days');
 	await page.waitForFunction(
 		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
@@ -1020,7 +1093,10 @@ for (const [name, engine] of [
 	await clipboard('replacement text');
 	await page.getByRole('button', { name: 'Paste from clipboard', exact: true }).click();
 	assert.equal(await page.locator('#description').inputValue(), 'replacement text');
-	assert.equal(await page.locator('#start').inputValue(), '');
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	assert.equal(await page.locator('#start').inputValue(), 'Tomorrow');
 	await page.locator('#start').fill('2026-10-25');
 	await page.locator('#end').fill('2026-10-26');
 	assert.notEqual(uid(await download()), uid(first));
@@ -1055,11 +1131,15 @@ for (const [name, engine] of [
 		new URL(await google.getAttribute('href')).searchParams.get('dates'),
 		'20261101T073000Z/20261101T083000Z'
 	);
-	// Compact actions remain keyboard accessible with Nimble's visible focus treatment.
+	// Settle scrolling before focus, since scrolling dismisses tooltips.
+	const resetStart = page.getByRole('switch', { name: 'Auto Start', exact: true });
+	await resetStart.evaluate(async (node) => {
+		node.scrollIntoView({ block: 'center' });
+		await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+	});
 	await page.locator('#start').focus();
 	// WebKit on macOS uses Option+Tab to include form controls in keyboard navigation.
 	await page.keyboard.press(name === 'webkit' ? 'Alt+Shift+Tab' : 'Shift+Tab');
-	const resetStart = page.getByRole('switch', { name: 'Auto Start', exact: true });
 	await page.getByRole('tooltip').waitFor({ timeout: 750 });
 	assert.match(await resetStart.getAttribute('aria-describedby'), /field-tooltip/);
 	assert.equal(await resetStart.evaluate((node) => node === document.activeElement), true);
@@ -1071,7 +1151,7 @@ for (const [name, engine] of [
 		true
 	);
 	await page.keyboard.press('Space');
-	assert.equal(await page.locator('#start').inputValue(), '');
+	assert.equal(await page.locator('#start').inputValue(), 'Tomorrow');
 	await page.locator('#start').fill('2026-11-01 01:30');
 	await page.getByRole('radio', { name: 'Later (UTC-06:00)', exact: true }).check();
 	for (const [layout, width, height] of [

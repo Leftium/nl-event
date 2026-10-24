@@ -472,8 +472,8 @@ it('does not infer English dates or weekdays from fragments inside names or ordi
 	};
 	const named = parseText('Tomorrowland');
 	expect(named.title.value).toBe('Tomorrowland');
-	expect(named.start.value).toBe('');
-	expect(Core.validate(named).event).toBeUndefined();
+	expect(values(named, 'start')).toEqual([]);
+	expect(named.start).toMatchObject({ value: '2026-10-25', input: 'Tomorrow', ownership: 'auto' });
 	expect(parseText('Money talk 10/25 at 7pm').start.value).toBe('2026-10-25 19:00');
 	expect(parseText('Sunset meetup 10/26 at 7pm').start.value).toBe('2026-10-26 19:00');
 });

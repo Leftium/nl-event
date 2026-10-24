@@ -333,7 +333,9 @@
 						: name === 'end'
 							? 'e.g. 4hr or tomorrow at 8pm'
 							: undefined}
-					value={field.input ?? field.value}
+					value={name === 'end' && Core.inferredEndFollowsStart(draft)
+						? result.endValue
+						: (field.input ?? field.value)}
 					disabled={!ready}
 					oninput={(event) => {
 						const now = new SvelteDate(Math.floor(Date.now() / 60000) * 60000);
@@ -432,7 +434,7 @@
 												type="button"
 												class="suggestion part-option"
 												class:unpaired={option.paired === false}
-												aria-label={option.value}
+												aria-label={option.label}
 												aria-pressed={option.selected && (part !== 'time' || !result.allDay)}
 												data-tooltip={`${option.paired === undefined ? '' : option.paired ? 'Paired with this date - ' : 'Not paired with this date - '}${option.source}${option.note ? ` - ${option.note}` : ''}`}
 												onclick={() => {
@@ -446,7 +448,11 @@
 											>
 												<span class="selection-mark" aria-hidden="true"></span>
 												<span
-													>{part === 'date' ? displayDateOption(option.value) : option.value}</span
+													>{option.generated
+														? option.label
+														: part === 'date'
+															? displayDateOption(option.value)
+															: option.value}</span
 												>
 												{#if option.note}<span class="note">({option.note})</span>{/if}
 											</button>

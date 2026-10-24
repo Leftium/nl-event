@@ -153,3 +153,164 @@ it('sorts date chips chronologically including secondary source dates', () => {
 	}
 	expect(d.start.value).toBe('2026-08-14 23:00');
 });
+
+// These regressions protect generated/source provenance and ownership boundaries.
+it('defaults to Tomorrow without inventing source evidence and retains suggestion text', () => {
+	let d = parse('cancel netflix');
+	expect(Core.validate(d).allDay).toBe(true);
+	expect(Core.validate(d).event?.start).toBe('20261025');
+	expect(d.start).toMatchObject({ value: '2026-10-25', input: 'Tomorrow', ownership: 'auto' });
+	expect(d.suggestions.candidates.every((c) => !c.inferred.includes('generated-suggestion'))).toBe(
+		true
+	);
+	expect(
+		Core.temporalOptions(d, 'start', 'date').map((o) => [o.label, o.value, o.generated])
+	).toEqual([
+		['Today', '2026-10-24', true],
+		['Tomorrow', '2026-10-25', true],
+		['In 7 days', '2026-10-31', true],
+		['In 30 days', '2026-11-23', true]
+	]);
+	const end = d.end;
+	d = Core.selectTemporalPart(d, 'start', 'date', '2026-10-25');
+	expect(d.end).toBe(end);
+	expect(d.start.ownership).toBe('manual');
+	expect(d.start.input).toBe('Tomorrow');
+	expect(d.selections[0].candidate.spans).toEqual([]);
+	expect(Core.validate(d).event).toMatchObject({
+		allDay: true,
+		start: '20261025',
+		end: '20261026'
+	});
+	expect(Core.googleUrl(Core.validate(d).event!)).toContain('20261025%2F20261026');
+	expect(Core.ics(Core.validate(d).event!, 'test', '20261024T030000Z')).toContain(
+		'DTEND;VALUE=DATE:20261026'
+	);
+	d = Core.selectDuration(d, 3);
+	expect(Core.validate(d).event?.end).toBe('20261028');
+	d = settle(Core.describe(d, 'cancel subscription'));
+	expect(Core.validate(d).event?.start).toBe('20261025');
+	d = Core.reset(d, 'start');
+	expect(d.start.input).toBe('Tomorrow');
+	expect(d.start.ownership).toBe('auto');
+	d = Core.selectTemporalPart(d, 'start', 'date', '2026-11-23');
+	expect(d.start.input).toBe('In 30 days');
+	d = Core.selectTemporalPart(d, 'start', 'time', '19:00');
+	expect(d.start.input).toBe('In 30 days 19:00');
+	expect(Core.validate(d).startValue).toBe('2026-11-23 19:00');
+	expect(Core.temporalOptions(Core.create(context), 'start', 'date')).toEqual([]);
+	expect(Core.validate(parse('tomorrow evening')).allDay).toBe(false);
+});
+
+it('keeps inferred 09:00 and offers common clocks with a relative inferred End', () => {
+	let d = parse('workout tomorrow');
+	expect(d.start.value).toBe('2026-10-25 09:00');
+	const clocks = Core.temporalOptions(d, 'start', 'time');
+	expect(clocks.map((o) => o.value)).toEqual(['07:00', '09:00', '12:00', '18:00', '19:00']);
+	expect(clocks.find((o) => o.value === '09:00')?.note).toBe('inferred time');
+	const end = d.end;
+	d = Core.selectTemporalPart(d, 'start', 'time', '18:00');
+	expect(d.end).toBe(end);
+	expect(d.end.ownership).toBe('auto');
+	expect(Core.validate(d).event).toMatchObject({
+		start: '20261025T090000Z',
+		end: '20261025T100000Z'
+	});
+	expect(Core.evidenceWarnings(d, 'start')).toEqual([]);
+	d = Core.edit(d, 'end', '2026-10-25 20:00');
+	const manualEnd = d.end;
+	d = Core.selectTemporalPart(d, 'start', 'time', '19:00');
+	expect(d.end).toBe(manualEnd);
+	expect(Core.validate(d).endValue).toBe('2026-10-25 20:00');
+	expect(
+		Core.temporalOptions(parse('workout tomorrow at 8pm'), 'start', 'time').map((o) => o.value)
+	).toEqual(['20:00']);
+	let undated = Core.edit(parse('cancel netflix'), 'start', '');
+	undated = Core.selectTemporalPart(undated, 'start', 'time', '19:00');
+	expect(Core.temporalParts(undated, 'start')).toEqual({ date: '', time: '19:00' });
+	expect(Core.validate(undated).event).toBeUndefined();
+});
+
+it('freezes the resolved Auto End when switching to Manual and restores following on Auto', () => {
+	let d = parse('workout tomorrow');
+	const originalEnd = d.end;
+	d = Core.selectTemporalPart(d, 'start', 'time', '18:00');
+	expect(d.end).toBe(originalEnd);
+	expect(Core.validate(d).endValue).toBe('2026-10-25 19:00');
+	const event = Core.validate(d).event;
+	d = Core.setAutomatic(d, 'end', false);
+	expect(d.end).toMatchObject({ value: '2026-10-25 19:00', ownership: 'manual', offset: '+09:00' });
+	expect(d.end.input ?? d.end.value).toBe('2026-10-25 19:00');
+	expect(Core.validate(d).event).toEqual(event);
+	const manualEnd = d.end;
+	d = Core.selectTemporalPart(d, 'start', 'time', '12:00');
+	expect(d.end).toBe(manualEnd);
+	expect(Core.validate(d).endValue).toBe('2026-10-25 19:00');
+	d = Core.setAutomatic(d, 'end', true);
+	expect(d.end.ownership).toBe('auto');
+	expect(Core.inferredEndFollowsStart(d)).toBe(true);
+	expect(Core.validate(d).endValue).toBe('2026-10-25 13:00');
+	d = Core.selectTemporalPart(d, 'start', 'time', '07:00');
+	expect(Core.validate(d).endValue).toBe('2026-10-25 08:00');
+});
+
+it('retains the derived End offset inside a DST overlap when freezing Auto', () => {
+	const ctx = { referenceInstant: '2026-10-31T16:00:00Z', browserTimeZone: 'America/Chicago' };
+	let d = settle(Core.describe(Core.create(ctx), 'cancel netflix'));
+	d = Core.selectTemporalPart(d, 'start', 'date', '2026-11-01');
+	// Retain the generated Manual date while adding a source clock to Description.
+	d = settle(Core.describe(d, 'workout November 1, 2026 at 00:30'));
+	d = Core.selectTemporalPart(d, 'start', 'time', '00:30');
+	expect(Core.inferredEndFollowsStart(d)).toBe(true);
+	expect(Core.validate(d).endValue).toBe('2026-11-01 01:30');
+	const event = Core.validate(d).event;
+	expect(event?.end).toBe('20261101T063000Z');
+	d = Core.setAutomatic(d, 'end', false);
+	expect(d.end.offset).toBe('-05:00');
+	expect(Core.validate(d).event).toEqual(event);
+	expect(Core.validate(d).endChoices).toHaveLength(2);
+	d = Core.setAutomatic(d, 'end', true);
+	expect(Core.validate(d).event).toEqual(event);
+});
+
+it('defaults a single labeled deadline separately from undated class clocks', () => {
+	let d = parse('Registration deadline: October 20, 2026\nClass 1: 12:15 - 1:15 pm');
+	expect(Core.validate(d).event).toMatchObject({
+		allDay: true,
+		start: '20261020',
+		end: '20261021'
+	});
+	expect(Core.validate(d).warnings).toContain('Start is in the past.');
+	expect(d.title.value).toContain('Registration deadline');
+	expect(Core.temporalOptions(d, 'start', 'time').map((o) => o.value)).toEqual(['12:15']);
+	expect(Core.temporalOptions(d, 'end', 'time').map((o) => o.value)).toEqual(['13:15']);
+	expect(Core.alternatives(d, 'start').find((c) => c.time === '12:15')?.date).toBe('');
+	d = Core.selectTemporalPart(d, 'start', 'time', '12:15');
+	expect(d.start.value).toBe('2026-10-20 12:15');
+	expect(Core.evidenceWarnings(d, 'start')).toContain('Not paired in source');
+	d = Core.selectTemporalPart(d, 'end', 'time', '13:15');
+	expect(Core.validate(d).event?.allDay).toBe(false);
+	for (const text of [
+		'Registration deadline: October 20, 2026\nDeadline: October 21, 2026',
+		'Registration deadline: October 20, 2026\nSeason: October 1, 2026 - October 31, 2026',
+		'Registration deadline: October 20, 2026 at 5pm',
+		'Fee: October 20, 2026'
+	])
+		expect(Core.validate(parse(text)).event).toBeUndefined();
+});
+
+it('anchors generated dates in the effective zone and revalidates generated clocks at DST', () => {
+	const ctx = { ...context, referenceInstant: '2026-03-08T00:30:00Z' };
+	let d = settle(Core.describe(Core.create(ctx), 'cancel netflix'));
+	d = settle(Core.setZone(d, 'America/Chicago'));
+	expect(Core.temporalOptions(d, 'start', 'date')[0].value).toBe('2026-03-07');
+	d = Core.selectTemporalPart(d, 'start', 'date', '2026-03-08');
+	d = Core.selectTemporalPart(d, 'start', 'time', '07:00');
+	expect(Core.validate(d).startValue).toBe('2026-03-08 07:00');
+	const start = d.start;
+	d = settle(Core.setZone(d, 'Asia/Seoul'));
+	expect(d.start).toEqual(start);
+	expect(Core.temporalOptions(d, 'start', 'date')[0].value).toBe('2026-03-08');
+	d = Core.selectTemporalPart(d, 'start', 'time', '09:00');
+	expect(Core.temporalParts(d, 'start')).toEqual({ date: '2026-03-08', time: '09:00' });
+});
