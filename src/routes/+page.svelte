@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import { descriptionEditor } from '#lib/descriptionEditor.ts';
 	import { SvelteDate } from 'svelte/reactivity';
 	import { Temporal } from '@js-temporal/polyfill';
 	import * as Core from '#lib/core/EventCore.gen.ts';
@@ -32,6 +33,23 @@
 	let readingClipboard = $state(false);
 	let clipboardOperation = 0;
 	let descriptionInput: HTMLTextAreaElement;
+	let descriptionFullscreen = $state(false);
+	let descriptionWrap = $state(true);
+	let descriptionLines = $derived(draft.description.split('\n').length);
+	let descriptionWords = $derived(
+		draft.description.trim() ? draft.description.trim().split(/\s+/u).length : 0
+	);
+	let descriptionCharacters = $derived(Array.from(draft.description).length);
+	async function toggleDescriptionFullscreen() {
+		const { selectionStart, selectionEnd, selectionDirection, scrollTop, scrollLeft } =
+			descriptionInput;
+		descriptionFullscreen = !descriptionFullscreen;
+		await tick();
+		descriptionInput.focus({ preventScroll: true });
+		descriptionInput.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+		descriptionInput.scrollTop = scrollTop;
+		descriptionInput.scrollLeft = scrollLeft;
+	}
 	let titleSelection = $state('');
 	let selectionDescription = '';
 	let selectionIdentity: Core.identity | undefined;
@@ -81,7 +99,7 @@
 		selectionIdentity = draft.identity;
 	}
 
-	function useSelectionAsTitle() {
+	async function useSelectionAsTitle() {
 		if (
 			!titleSelection.trim() ||
 			selectionDescription !== draft.description ||
@@ -90,6 +108,8 @@
 			return;
 		draft = Core.edit(draft, 'title', titleSelection);
 		titleSelection = '';
+		descriptionFullscreen = false;
+		await tick();
 		document.getElementById('title')?.focus();
 	}
 	let parseTimer: ReturnType<typeof setTimeout> | undefined;
@@ -224,56 +244,141 @@
 </svelte:head>
 
 <main use:fastTooltips>
-	<header>
+	<header inert={descriptionFullscreen}>
 		<h1>NL Event</h1>
 	</header>
 	<form onsubmit={(event) => event.preventDefault()}>
-		<div class="description-heading">
-			<label for="description">Description</label>
-			<div class="description-actions">
-				<button class="quiet-action" type="button" onclick={resetDraft} disabled={!ready}
-					>Reset</button
-				>
-				<button
-					class="quiet-action"
-					type="button"
-					onclick={pasteClipboard}
-					disabled={!ready || readingClipboard}
-				>
-					{readingClipboard ? 'Reading clipboard...' : 'Paste from clipboard'}
-				</button>
-			</div>
-		</div>
-		<textarea
-			id="description"
-			bind:this={descriptionInput}
-			value={draft.description}
-			onselect={captureTitleSelection}
-			oninput={(event) => {
-				titleSelection = '';
-				draft = Core.describe(draft, event.currentTarget.value);
-				scheduleParse(event instanceof InputEvent && event.inputType === 'insertFromPaste');
+		<section
+			class="description-editor"
+			class:fullscreen={descriptionFullscreen}
+			role={descriptionFullscreen ? 'dialog' : 'region'}
+			aria-modal={descriptionFullscreen ? true : undefined}
+			aria-label="Description editor"
+			use:descriptionEditor={{
+				value: draft.description,
+				fullscreen: descriptionFullscreen,
+				wrap: descriptionWrap,
+				close: () => {
+					void toggleDescriptionFullscreen();
+				}
 			}}
-			rows="7"
-			aria-describedby="parse-status"
-			disabled={!ready}></textarea>
-		{#if titleSelection.trim()}
-			<button class="inline outline" type="button" onclick={useSelectionAsTitle}>
-				Use selection as Title
-			</button>
-		{/if}
-		<p role="status" class:status-empty={!message}>{message}</p>
-		<p
-			id="parse-status"
-			aria-live="polite"
-			class:status-empty={draft.parseStatus !== 'pending' && draft.parseStatus !== 'failed'}
 		>
-			{#if draft.parseStatus === 'pending'}
-				Parsing current Description...
-			{:else if draft.parseStatus === 'failed'}
-				{draft.parseError}
-			{/if}
-		</p>
+			<div class="description-heading">
+				<label for="description">Description</label>
+				<div class="description-actions">
+					<button class="quiet-action" type="button" onclick={resetDraft} disabled={!ready}
+						>Reset</button
+					>
+					<button
+						class="quiet-action"
+						type="button"
+						onclick={pasteClipboard}
+						disabled={!ready || readingClipboard}
+					>
+						{readingClipboard ? 'Reading clipboard...' : 'Paste from clipboard'}
+					</button>
+				</div>
+			</div>
+			<div class="editor-surface">
+				<textarea
+					id="description"
+					bind:this={descriptionInput}
+					value={draft.description}
+					onselect={captureTitleSelection}
+					oninput={(event) => {
+						titleSelection = '';
+						draft = Core.describe(draft, event.currentTarget.value);
+						scheduleParse(event instanceof InputEvent && event.inputType === 'insertFromPaste');
+					}}
+					rows="1"
+					wrap={descriptionWrap ? 'soft' : 'off'}
+					aria-describedby="parse-status"
+					disabled={!ready}></textarea>
+				{#if titleSelection.trim()}
+					<button
+						class="inline outline selection-title"
+						type="button"
+						onpointerdown={(event) => {
+							if (event.pointerType === 'mouse') event.preventDefault();
+						}}
+						onclick={useSelectionAsTitle}
+					>
+						Use selection as Title
+					</button>
+				{/if}
+				<div class="editor-tools">
+					<small class="editor-counts" data-tooltip="Lines, words, characters (including spaces)">
+						<span class="sr-only"
+							>{descriptionLines} lines, {descriptionWords} words, {descriptionCharacters} characters</span
+						>
+						<span aria-hidden="true"
+							>{descriptionLines > 1 ? `${descriptionLines}L ` : ''}{descriptionWords}w {descriptionCharacters}c</span
+						>
+					</small>
+					<button
+						type="button"
+						class="quiet-action editor-icon"
+						aria-label="Word wrap"
+						data-tooltip={`Word wrap: ${descriptionWrap ? 'on' : 'off'}`}
+						aria-pressed={descriptionWrap}
+						disabled={!ready}
+						onclick={() => {
+							descriptionWrap = !descriptionWrap;
+						}}
+					>
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.7"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<path d="M4 6h16M4 11h12a4 4 0 0 1 0 8h-5m3-3-3 3 3 3M4 16h3" />
+						</svg>
+					</button>
+					<button
+						type="button"
+						class="quiet-action editor-icon"
+						aria-label={descriptionFullscreen ? 'Restore editor' : 'Fullscreen editor'}
+						data-tooltip={descriptionFullscreen ? 'Restore editor (Escape)' : 'Fullscreen editor'}
+						aria-expanded={descriptionFullscreen}
+						aria-controls="description"
+						disabled={!ready}
+						onclick={toggleDescriptionFullscreen}
+					>
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.7"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							{#if descriptionFullscreen}
+								<path d="M9 3v6H3m12-6v6h6M9 21v-6H3m12 6v-6h6" />
+							{:else}
+								<path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6" />
+							{/if}
+						</svg>
+					</button>
+				</div>
+			</div>
+			<p role="status" class:status-empty={!message}>{message}</p>
+			<p
+				id="parse-status"
+				aria-live="polite"
+				class:status-empty={draft.parseStatus !== 'pending' && draft.parseStatus !== 'failed'}
+			>
+				{#if draft.parseStatus === 'pending'}
+					Parsing current Description...
+				{:else if draft.parseStatus === 'failed'}
+					{draft.parseError}
+				{/if}
+			</p>
+		</section>
 		{#each fields as { name, label, hint } (name)}
 			{@const field = Core.getField(draft, name)}
 			{@const hasInput = !!draft.description.trim() || !!(field.input ?? field.value).trim()}
@@ -288,7 +393,7 @@
 			{@const pairingWarning = !result.allDay && warnings.includes('Not paired in source')}
 			{@const choices =
 				name === 'start' ? result.startChoices : name === 'end' ? result.endChoices : []}
-			<fieldset class="event-field" aria-label={label}>
+			<fieldset class="event-field" aria-label={label} inert={descriptionFullscreen}>
 				<legend class="field-heading">
 					<span class="field-label">
 						<label for={name}>{label}</label>
@@ -518,80 +623,203 @@
 			</fieldset>
 		{/each}
 	</form>
-	<dialog
-		bind:this={zoneDialog}
-		aria-labelledby="zone-dialog-title"
-		onclose={() => {
-			if (document.activeElement === document.body || zoneDialog.contains(document.activeElement)) {
-				document.querySelector<HTMLButtonElement>('.zone-token')?.focus();
-			}
-		}}
-	>
-		<h2 id="zone-dialog-title">Choose time zone</h2>
-		<p class="zone-provenance">
-			{draft.zoneOverride !== undefined ? 'Manual override' : draft.suggestions.zoneProvenance}
-		</p>
-		<label for="zone">IANA time zone</label>
-		<input
-			id="zone"
-			type="text"
-			onfocus={(event) => event.currentTarget.select()}
-			onpointerdown={(event) => prepareInputSelection(event.currentTarget)}
-			onclick={(event) => finishInputSelection(event.currentTarget)}
-			value={zone}
-			placeholder="America/Chicago"
-			aria-invalid={!validZone(zone)}
-			aria-describedby="zone-hint"
-			oninput={(event) => changeZone(event.currentTarget.value)}
-		/>
-		<p id="zone-hint">Changing zone preserves entered wall times and clears offset choices.</p>
-		{#if !validZone(zone)}<p class="error">Enter a valid IANA time zone.</p>{/if}
-		{#if draft.suggestions.zoneWarning && draft.zoneOverride === undefined}
-			<p class="error">{draft.suggestions.zoneWarning}</p>
-		{/if}
-		<div class="actions">
-			<button type="button" class="inline outline" onclick={() => changeZone(undefined)}
-				>Use suggested zone</button
-			>
-			<button type="button" onclick={() => zoneDialog.close()}>Done</button>
-		</div>
-	</dialog>
-	{#if draft.suggestions.warnings.includes('weekday-mismatch')}
-		<p>The written weekday does not match the date. Check the suggested date.</p>
-	{/if}
-	{#if draft.suggestions.warnings.includes('multiple-source-dates')}
-		<p>Description contains several dates. Review the alternatives above.</p>
-	{/if}
-	{#if draft.suggestions.warnings.includes('Inferred lesson end may overlap the social.')}
-		<p>Inferred lesson end may overlap the social.</p>
-	{/if}
-	{#each result.warnings as warning (warning)}<p>{warning}</p>{/each}
-	<div class="actions">
-		{#if ready && result.event}
-			<!-- External calendar URL; this is not a SvelteKit route. -->
-			<!-- eslint-disable svelte/no-navigation-without-resolve -->
-			<a
-				class="nc-button"
-				href={Core.googleUrl(result.event)}
-				target="_blank"
-				rel="noopener noreferrer">Open in Google Calendar</a
-			>
-			<!-- eslint-enable svelte/no-navigation-without-resolve -->
-		{:else}
-			<button type="button" disabled>Open in Google Calendar</button>
-		{/if}
-		<button class="secondary" type="button" onclick={download} disabled={!ready || !result.event}
-			>Download .ics</button
+	<div inert={descriptionFullscreen}>
+		<dialog
+			bind:this={zoneDialog}
+			aria-labelledby="zone-dialog-title"
+			onclose={() => {
+				if (
+					document.activeElement === document.body ||
+					zoneDialog.contains(document.activeElement)
+				) {
+					document.querySelector<HTMLButtonElement>('.zone-token')?.focus();
+				}
+			}}
 		>
+			<h2 id="zone-dialog-title">Choose time zone</h2>
+			<p class="zone-provenance">
+				{draft.zoneOverride !== undefined ? 'Manual override' : draft.suggestions.zoneProvenance}
+			</p>
+			<label for="zone">IANA time zone</label>
+			<input
+				id="zone"
+				type="text"
+				onfocus={(event) => event.currentTarget.select()}
+				onpointerdown={(event) => prepareInputSelection(event.currentTarget)}
+				onclick={(event) => finishInputSelection(event.currentTarget)}
+				value={zone}
+				placeholder="America/Chicago"
+				aria-invalid={!validZone(zone)}
+				aria-describedby="zone-hint"
+				oninput={(event) => changeZone(event.currentTarget.value)}
+			/>
+			<p id="zone-hint">Changing zone preserves entered wall times and clears offset choices.</p>
+			{#if !validZone(zone)}<p class="error">Enter a valid IANA time zone.</p>{/if}
+			{#if draft.suggestions.zoneWarning && draft.zoneOverride === undefined}
+				<p class="error">{draft.suggestions.zoneWarning}</p>
+			{/if}
+			<div class="actions">
+				<button type="button" class="inline outline" onclick={() => changeZone(undefined)}
+					>Use suggested zone</button
+				>
+				<button type="button" onclick={() => zoneDialog.close()}>Done</button>
+			</div>
+		</dialog>
+		{#if draft.suggestions.warnings.includes('weekday-mismatch')}
+			<p>The written weekday does not match the date. Check the suggested date.</p>
+		{/if}
+		{#if draft.suggestions.warnings.includes('multiple-source-dates')}
+			<p>Description contains several dates. Review the alternatives above.</p>
+		{/if}
+		{#if draft.suggestions.warnings.includes('Inferred lesson end may overlap the social.')}
+			<p>Inferred lesson end may overlap the social.</p>
+		{/if}
+		{#each result.warnings as warning (warning)}<p>{warning}</p>{/each}
+		<div class="actions">
+			{#if ready && result.event}
+				<!-- External calendar URL; this is not a SvelteKit route. -->
+				<!-- eslint-disable svelte/no-navigation-without-resolve -->
+				<a
+					class="nc-button"
+					href={Core.googleUrl(result.event)}
+					target="_blank"
+					rel="noopener noreferrer">Open in Google Calendar</a
+				>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
+			{:else}
+				<button type="button" disabled>Open in Google Calendar</button>
+			{/if}
+			<button class="secondary" type="button" onclick={download} disabled={!ready || !result.event}
+				>Download .ics</button
+			>
+		</div>
+		<p>Google Calendar opens an editable form. Finish saving there. Exporting keeps this draft.</p>
+		<p>
+			Long descriptions can exceed browser URL limits and appear in browser history. Download .ics
+			to keep the full text in a file.
+		</p>
 	</div>
-	<p>Google Calendar opens an editable form. Finish saving there. Exporting keeps this draft.</p>
-	<p>
-		Long descriptions can exceed browser URL limits and appear in browser history. Download .ics to
-		keep the full text in a file.
-	</p>
 </main>
 
 <style>
+	.description-editor {
+		min-width: 0;
+	}
+	.editor-surface {
+		min-width: 0;
+		margin-block: 0.5rem;
+		border: 1px solid var(--nc-border);
+		border-radius: var(--nc-radius);
+		background: var(--nc-surface-1);
+		display: flex;
+		flex-direction: column;
+	}
+	.editor-surface:focus-within {
+		border-color: var(--nc-primary);
+		box-shadow: 0 0 0 2px var(--nc-primary-focus);
+	}
+	.description-editor textarea {
+		display: block;
+		min-height: 0;
+		margin: 0;
+		border: 0;
+		border-radius: inherit;
+		background: transparent;
+		resize: none;
+		line-height: 1.5;
+		overflow: auto;
+	}
+	.description-editor textarea:focus {
+		box-shadow: none;
+		outline: none;
+	}
+	.editor-tools {
+		display: flex;
+		align-items: center;
+		gap: 0.125rem;
+		padding: 0.125rem 0.375rem;
+		border-top: 1px solid color-mix(in srgb, var(--nc-border) 45%, transparent);
+		flex-shrink: 0;
+	}
+	.editor-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		padding: 0.25rem;
+		border-radius: 0.25rem;
+		flex-shrink: 0;
+	}
+	.editor-icon svg {
+		width: 1rem;
+		height: 1rem;
+	}
+	.editor-icon[aria-pressed='true'] {
+		opacity: 1;
+		color: var(--nc-primary);
+		background: var(--nc-surface-2);
+	}
+	.editor-counts {
+		margin-inline-end: auto;
+		padding-inline: 0.25rem;
+		opacity: 0.65;
+		font-size: 0.7rem;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+	.selection-title {
+		align-self: flex-start;
+		flex-shrink: 0;
+		margin: 0.25rem 0.75rem;
+	}
+	@media (any-pointer: coarse) {
+		.editor-icon {
+			width: 2.75rem;
+			height: 2.75rem;
+		}
+	}
+	.fullscreen .editor-surface {
+		flex: 1 1 auto;
+		min-height: 5rem;
+	}
+	.description-editor.fullscreen {
+		position: fixed;
+		z-index: 100;
+		top: var(--editor-top, 0px);
+		left: var(--editor-left, 0px);
+		width: var(--editor-width, 100%);
+		height: var(--editor-height, 100dvh);
+		box-sizing: border-box;
+		padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+			max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+		background: Canvas;
+		color: CanvasText;
+		display: flex;
+		flex-direction: column;
+		overflow: auto;
+		overscroll-behavior: contain;
+	}
+	.fullscreen textarea {
+		flex: 1 1 auto;
+		height: 0;
+		min-height: 3rem;
+	}
+	.fullscreen .description-heading,
+	.fullscreen .editor-tools {
+		flex-shrink: 0;
+	}
+
 	:global(html) {
 		scrollbar-gutter: stable;
 	}
