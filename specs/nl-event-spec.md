@@ -1,8 +1,8 @@
 # NL Event - Product and Implementation Specification
 
-**Date:** 2026-10-24
+**Date:** 2026-10-25
 
-**Status:** Phase 2 deterministic extraction and field alternatives implemented; physical-device handoff verification remains pending
+**Status:** Phase 2 extraction, English adapter and field alternatives implemented; physical-device handoff verification remains pending
 
 **Repository / working product name:** `nl-event` / NL Event
 
@@ -161,7 +161,13 @@ Unlabeled heading titles strip extracted date/time phrases and dangling connecto
 
 ### Extraction and association
 
-English examples include `Saturday, November 14th, 2026, 8 pm - midnight`, `May 16, 12:15 - 1:15 pm`, `next Friday at 7pm`, and `Location: St Paul, MN`. English extraction currently uses deterministic rules in the same core as Korean extraction. A future `compromise` + `compromise-dates` adapter is optional and must pass the same fixtures with injected reference/zone context; its output must obey these policies.
+English examples include `Saturday, November 14th, 2026, 8 pm - midnight`, `May 16, 12:15 - 1:15 pm`, `next Friday at 7pm`, and `Location: St Paul, MN`. English extraction combines existing ReScript rules with a narrow `compromise` + `compromise-dates` recognizer in `englishDatesAdapter.ts`. The adapter receives the fixed draft reference instant and effective IANA zone, requests original UTF-16 offsets, and emits relative day/month and period evidence. Its precision gate currently admits `tonight`, `tomorrow night/morning/afternoon/evening`, `next month`, and an ordinal day of next month, including phrases with explicit clocks. Unsupported expressions stay with the existing parser. Recognition failures return no external evidence and preserve the deterministic path.
+
+ReScript computes dates, ranks and deduplicates candidates, retains source associations, and pairs explicit clock ranges. Never promote library-normalized range bounds or default hours to source evidence. In the installed versions, `tonight` starts at midnight, `tomorrow night` at 20:00, and `next month` at the first; an invalid ordinal can be clamped, and a DST-gap clock can shift. These results do not establish explicit source precision.
+
+`sleep tonight` and `sleep tomorrow night` expose the event-local date and a visible night period without an exact hour. Auto Start stays blank; generated Time choices remain labeled generic. `cancel netflix next month` exposes `YYYY-MM: day unresolved`, including December/January rollover. The month has no resolved day or clock and suppresses the missing-date Tomorrow default. Generic Date/Time choices can complete it only through explicit Manual selection. Contextual partial months also suppress that fallback without becoming Auto boundaries.
+
+`cancel netflix on the 5th of next month` resolves the fifth in the next calendar month, independent of nearest-year inference. The existing labeled 09:00 time and elapsed-hour End defaults apply. Invalid specified days remain unresolved rather than clamping. `tonight from 11pm to 1am` uses the explicit source clocks and rolls End into the next calendar day; existing DST gap/overlap validation remains authoritative. Original English spans survive mixed Korean/emoji prefixes and repeated occurrences. Complete, trusted paired evidence retains preference over partial evidence; contextual, fee, deadline and season dates do not become unrelated event bounds.
 
 Korean rules support numeric dates (`10/25(일)`, `10월 18일(SUN)`, `2026.07.04`), relative dates, clock/range phrases (`오후 5시`, `저녁 6:30~10:30`, `16:30~18:00`, `6시 반`), and labels such as `제목`, `일시`, `날짜`, `시간`, `장소`, and `주소`. Shared AM/PM context applies when the source supports it; in K2 the evening context supports the related `6시` lesson at 18:00. Unresolved AM/PM ambiguity must remain visible.
 
@@ -193,7 +199,7 @@ Follow [`Leftium/pH`](https://github.com/Leftium/pH) for ReScript domain modules
 
 The **ReScript core** owns draft transitions, Auto/Manual policy, partial evidence, Korean extraction, ranking/associations, deterministic date policies, validation, normalization, Google query preparation, and iCalendar serialization. Inject reference context, UID, and DTSTAMP; keep inference and default-duration policies explicit in the core. No I/O, random generation, current-time reads, or browser state in the core.
 
-The **Svelte/TS shell** owns browser/clipboard access, debounce and parse scheduling, zone discovery, UID generation, navigation, file download, and focus. A deterministic date/time adapter may supply IANA conversion and valid-instant alternatives; its output must not silently resolve DST ambiguity. Keep any future English NLP adapter behind a normalized candidate boundary.
+The **Svelte/TS shell** owns browser/clipboard access, debounce and parse scheduling, zone discovery, UID generation, navigation, file download, and focus. A deterministic date/time adapter may supply IANA conversion and valid-instant alternatives; its output must not silently resolve DST ambiguity. Keep the English NLP adapter behind its typed evidence boundary; the core decides candidate precision and eligibility.
 
 The data flow is Description snapshot/context -> extraction -> associated candidates -> draft transitions -> validation/resolved instants -> pure exporters -> browser handoff. Manual edits enter at draft transitions. Validation and both exporters consume the same normalized draft.
 
@@ -281,12 +287,21 @@ The implementation must cover these scenarios in addition to the supplied parser
 
 Run the repository's applicable tests, check, lint, build, and focused browser smoke checks during implementation, subject to repository approval policy. Extend existing regression paths for new behavior rather than duplicating fixture coverage. For development tooling, require initial ReScript compilation, a background watcher and foreground Vite. Verify `u`, `r`, `q`, recompilation, normal-exit and Ctrl-C watcher cleanup in an interactive terminal.
 
+## PR #6 verification evidence
+
+Verified on the implementation branch on 2026-10-25 with Node 24.16.0 and pnpm 12.5.1:
+
+- `pnpm test`: 204 tests in six files pass, including all 14 unchanged adopted fixtures and 24 focused English tests. The focused coverage includes all five acceptance phrases, vague morning/afternoon/evening, month/year rollover, event-local midnight, source/override zones, repeated UTF-16 spans with Korean/emoji prefixes, punctuation, context isolation, invalid day clamping, complete paired preference, Manual/UID/stale-context retention, bounded dependency failure, overnight Google/ICS parity, and Chicago DST gap/overlap.
+- `pnpm check`: zero errors and zero warnings. `pnpm lint` and `pnpm build` pass. Vite reports its chunk-size warning: the page entry is approximately 718 kB minified / 257 kB gzip after adding the NLP dependencies. No bundler target or top-level-await exception was introduced.
+- Chromium and WebKit `pnpm test:browser` pass against the local Vite server. Existing fixture, ownership, fallback, inferred-End, export, DST and clipboard checks remain. The focused extension verifies the five phrases, blocked vague/month exports, generic month-completion chips, explicit overnight rollover, 390px layout, and the changed uncertainty text under a coarse pointer, with no page errors. Reviewed WebKit screenshots of month uncertainty at 390px and with a coarse pointer; no horizontal overflow or clipped controls.
+- The collaborative preview's snapshot automation timed out twice; repository Playwright smoke and screenshots supplied browser evidence. Signed-in Google prefill, physical macOS import, iPhone Safari and Android Chrome app/browser combinations remain unverified. Issue #5's Whiz textarea integration remains deferred.
+
 ## Deferred work and references
 
 Outside v1: OAuth/direct calendar writes, calendar reads/conflict checks/sync, persistent history, batch creation/recurrence generation, imported-event updates, geocoding, multilingual UI, native share targets/extensions, screenshot/PDF/OCR input, and Outlook-specific links. Explicit reminder extraction/export is deferred because export formats differ.
 
 - [`Leftium/pH`](https://github.com/Leftium/pH): ReScript/Svelte boundaries, `@genType`, Nimble; see `src/routes/+layout.svelte`, `src/routes/GeneratorForm.res`, `src/routes/+page.svelte`, and `docs/rescript-for-typescript-devs.md`.
-- [`compromise-dates`](https://www.npmjs.com/package/compromise-dates): optional future English extraction adapter to verify against fixtures.
+- [`compromise-dates`](https://www.npmjs.com/package/compromise-dates): English recognition dependency, isolated by `englishDatesAdapter.ts` and verified against the unchanged fixtures.
 - [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545): iCalendar serialization semantics.
 - [`Leftium/FEHshing`](https://github.com/Leftium/FEHshing): prior `.ics` example, not the architecture template.
 - [`Leftium/veneer`](https://github.com/Leftium/veneer), `specs/completed/locale.md`: Paraglide/inlang direction if UI localization later enters scope.

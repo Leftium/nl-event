@@ -364,6 +364,9 @@
 							(inferred time){/if}
 					{:else}{hint}{/if}
 				</small>
+				{#each Core.partialLabels(draft, name) as label (label)}
+					<small class="partial-evidence">{label}</small>
+				{/each}
 				{#if name === 'end'}
 					{@const duration = Core.durationValue(draft)}
 					<div class="temporal-options">

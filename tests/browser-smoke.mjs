@@ -79,6 +79,66 @@ async function checkPendingClipboard(page) {
 	await newEvent.click();
 }
 
+async function checkEnglishDates(page) {
+	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
+	await page.setViewportSize({ width: 390, height: 844 });
+	const download = page.getByRole('button', { name: 'Download .ics', exact: true });
+	for (const [text, label] of [
+		['sleep tonight', '2026-10-24: Date known; night has no exact time'],
+		['sleep tomorrow night', '2026-10-25: Date known; night has no exact time'],
+		['cancel netflix next month', '2026-11: day unresolved']
+	]) {
+		await page.getByRole('button', { name: 'Reset', exact: true }).click();
+		await page.locator('#description').fill(text);
+		await page.getByText(label, { exact: true }).waitFor();
+		assert.equal(await page.locator('#start').inputValue(), '');
+		assert.equal(await download.isDisabled(), true);
+		assert.equal(
+			await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+			true
+		);
+	}
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-english-month-${page.context().browser().browserType().name()}.png`
+		),
+		fullPage: true
+	});
+	const dates = page.getByRole('list', { name: 'Start date alternatives', exact: true });
+	assert.deepEqual(
+		(await dates.getByRole('button').allTextContents()).map((text) => text.trim()),
+		['Today', 'Tomorrow', 'In 7 days', 'In 30 days']
+	);
+	await dates.getByRole('button', { name: 'Tomorrow', exact: true }).hover();
+	await page.getByRole('tooltip').waitFor();
+	assert.match(await page.getByRole('tooltip').textContent(), /not extracted/);
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	await page.locator('#description').fill('cancel netflix on the 5th of next month');
+	await page.waitForFunction(
+		() => document.querySelector('#start').value === 'on the 5th of next month'
+	);
+	assert.match(await page.locator('#start-hint').textContent(), /2026-11-05 09:00/);
+	assert.equal(await download.isEnabled(), true);
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	await page.locator('#description').fill('tonight from 11pm to 1am');
+	await page.waitForFunction(
+		() => document.querySelector('#end').value === 'tonight from 11pm to 1am'
+	);
+	assert.match(await page.locator('#start-hint').textContent(), /2026-10-24 23:00/);
+	assert.match(await page.locator('#end-hint').textContent(), /2026-10-25 01:00/);
+	assert.equal(await download.isEnabled(), true);
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-english-${page.context().browser().browserType().name()}.png`
+		),
+		fullPage: true
+	});
+	await page.setViewportSize({ width: 1280, height: 900 });
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+}
+
 async function checkCandidates(page) {
 	const settled = () =>
 		page.waitForFunction(
@@ -977,6 +1037,7 @@ for (const [name, engine] of [
 	assert.equal(await page.locator('#start-error, #end-error').count(), 0);
 	await checkPendingClipboard(page);
 	await checkCandidates(page);
+	await checkEnglishDates(page);
 	await checkSlowSaturday(page);
 	await checkRhythmParty(page);
 	await checkTemporalParts(page);
@@ -1239,6 +1300,22 @@ for (const [name, engine] of [
 	assert.equal(await touchPage.locator('#title').inputValue(), '');
 	await touchPage.screenshot({
 		path: path.join(os.tmpdir(), `nl-event-${name}-touch.png`),
+		fullPage: true
+	});
+	await touchPage.getByRole('button', { name: 'Reset', exact: true }).tap();
+	await touchPage.locator('#description').fill('cancel netflix next month');
+	await touchPage.getByText(/day unresolved/).waitFor();
+	assert.equal(await touchPage.locator('#start').inputValue(), '');
+	assert.equal(
+		await touchPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+		true
+	);
+	assert.equal(
+		await touchPage.getByRole('button', { name: 'Download .ics', exact: true }).isDisabled(),
+		true
+	);
+	await touchPage.screenshot({
+		path: path.join(os.tmpdir(), `nl-event-english-${name}-touch.png`),
 		fullPage: true
 	});
 	await touchContext.close();
