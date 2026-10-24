@@ -1,0 +1,29 @@
+{
+  "id": "en-vague-evening-synthetic",
+  "source": {
+    "kind": "synthetic",
+    "completeness": "complete-synthetic-input",
+    "notes": []
+  },
+  "context": {
+    "referenceInstant": "2026-10-24T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "partialCandidateValues": {
+      "startDate": "2026-10-25",
+      "startTime": null
+    },
+    "exportable": false,
+    "blockedBy": [
+      "missing-start-time"
+    ],
+    "rule": "Evening alone must not generate a made-up 19:00 or another exact time."
+  },
+  "tags": [
+    "english",
+    "vague-time",
+    "blocked-export"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "e1-st-paul-houseparty-sanitized",
+  "source": {
+    "kind": "calendar-derived-sanitized",
+    "completeness": "complete-sanitized-test-input",
+    "notes": [
+      "Adapted from a calendar event; street address and private-home details removed. Not a verbatim original.",
+      "The calendar metadata ends at 23:55, but the text clearly says midnight."
+    ]
+  },
+  "context": {
+    "referenceInstant": "2026-10-24T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "title": "Community house party",
+      "start": "2026-11-14 20:00",
+      "end": "2026-11-15 00:00",
+      "location": "St Paul, MN"
+    },
+    "expectedZone": "America/Chicago",
+    "timezoneProvenance": "inferred-from-recognized-city",
+    "warningIfZoneUnknown": "Ask for zone confirmation; do not silently interpret in Asia/Seoul.",
+    "notExpected": "23:55 end from separately stored calendar metadata"
+  },
+  "tags": [
+    "english",
+    "overnight",
+    "timezone-inference"
+  ]
+}

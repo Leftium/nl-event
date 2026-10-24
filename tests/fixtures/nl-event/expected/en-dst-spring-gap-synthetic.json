@@ -1,0 +1,30 @@
+{
+  "id": "en-dst-spring-gap-synthetic",
+  "source": {
+    "kind": "synthetic",
+    "completeness": "complete-synthetic-input",
+    "notes": []
+  },
+  "context": {
+    "referenceInstant": "2026-03-01T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": "America/Chicago"
+  },
+  "assertions": {
+    "preferred": {
+      "start": "2026-03-08 02:30",
+      "end": "2026-03-08 03:30"
+    },
+    "expectedZone": "America/Chicago",
+    "exportable": false,
+    "blockedBy": [
+      "nonexistent-local-start-time"
+    ],
+    "rule": "Do not silently shift invalid wall clock time into 03:30."
+  },
+  "tags": [
+    "english",
+    "dst-gap",
+    "blocked-export"
+  ]
+}

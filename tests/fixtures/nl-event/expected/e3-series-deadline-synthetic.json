@@ -1,0 +1,40 @@
+{
+  "id": "e3-series-deadline-synthetic",
+  "source": {
+    "kind": "synthetic-from-calendar-context",
+    "completeness": "complete-synthetic-input",
+    "notes": [
+      "The original calendar description mentioned only the registration deadline, not all four class dates; this is a constructed minimal negative fixture."
+    ]
+  },
+  "context": {
+    "referenceInstant": "2026-10-24T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "title": "Funky Blues - four-week lesson series",
+      "start": null,
+      "end": null
+    },
+    "candidateValues": {
+      "start": []
+    },
+    "ignoredAsEventDates": [
+      "October 20th: registration deadline only"
+    ],
+    "exportable": false,
+    "blockedBy": [
+      "missing-event-date",
+      "missing-start-time"
+    ],
+    "rule": "Do not infer October 20/27 and November 3/10 class dates from calendar metadata that is absent from this pasted input."
+  },
+  "tags": [
+    "english",
+    "deadline",
+    "unresolvable-event",
+    "no-metadata-leak"
+  ]
+}

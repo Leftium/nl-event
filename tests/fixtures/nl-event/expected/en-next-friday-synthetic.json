@@ -1,0 +1,25 @@
+{
+  "id": "en-next-friday-synthetic",
+  "source": {
+    "kind": "synthetic",
+    "completeness": "complete-synthetic-input",
+    "notes": []
+  },
+  "context": {
+    "referenceInstant": "2026-10-21T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "title": "Friday meetup",
+      "start": "2026-10-30 19:00"
+    },
+    "rule": "Weeks are Monday-Sunday; next Friday means Friday in the following calendar week."
+  },
+  "tags": [
+    "english",
+    "relative-date",
+    "week-boundary"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "ko-numeric-noise-synthetic",
+  "source": {
+    "kind": "synthetic",
+    "completeness": "complete-synthetic-input",
+    "notes": []
+  },
+  "context": {
+    "referenceInstant": "2026-10-24T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "title": "블루스 연습",
+      "start": "2026-10-25 17:00"
+    },
+    "ignoreAsDates": [
+      "27길",
+      "5천원",
+      "0000-0000-0000"
+    ]
+  },
+  "tags": [
+    "korean",
+    "negative-numeric",
+    "address",
+    "price"
+  ]
+}

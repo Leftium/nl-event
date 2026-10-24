@@ -1,0 +1,68 @@
+{
+  "id": "e2-workshop-times-only-sanitized",
+  "source": {
+    "kind": "calendar-derived-sanitized",
+    "completeness": "complete-sanitized-test-input",
+    "notes": [
+      "The calendar event had a May 16, 2026 parent date and venue, but neither appeared in the relevant pasted description section. They are deliberately absent here."
+    ]
+  },
+  "context": {
+    "referenceInstant": "2026-05-15T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "start": null,
+      "end": null
+    },
+    "partialCandidateValues": {
+      "startTimes": [
+        "12:15",
+        "13:30",
+        "15:00",
+        "16:15"
+      ],
+      "endTimes": [
+        "13:15",
+        "14:30",
+        "16:00",
+        "17:15"
+      ]
+    },
+    "relationships": [
+      {
+        "group": "class-1",
+        "startTime": "12:15",
+        "endTime": "13:15"
+      },
+      {
+        "group": "class-2",
+        "startTime": "13:30",
+        "endTime": "14:30"
+      },
+      {
+        "group": "class-3",
+        "startTime": "15:00",
+        "endTime": "16:00"
+      },
+      {
+        "group": "class-4",
+        "startTime": "16:15",
+        "endTime": "17:15"
+      }
+    ],
+    "exportable": false,
+    "blockedBy": [
+      "missing-event-date"
+    ],
+    "rule": "Clicking a time-only option must not invent a date; keep partial evidence unresolved unless a compatible existing date is explicitly available."
+  },
+  "tags": [
+    "english",
+    "partial-time",
+    "multi-section",
+    "blocked-export"
+  ]
+}

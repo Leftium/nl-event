@@ -1,0 +1,32 @@
+{
+  "id": "en-dst-fall-back-synthetic",
+  "source": {
+    "kind": "synthetic",
+    "completeness": "complete-synthetic-input",
+    "notes": []
+  },
+  "context": {
+    "referenceInstant": "2026-10-24T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": "America/Chicago"
+  },
+  "assertions": {
+    "preferred": {
+      "title": "Overnight shift",
+      "start": "2026-11-01 01:30",
+      "end": "2026-11-01 02:30"
+    },
+    "expectedZone": "America/Chicago",
+    "ambiguousStartOffsets": [
+      "-05:00",
+      "-06:00"
+    ],
+    "exportableBeforeChoice": false,
+    "rule": "Offer contextual choice of the two distinct instants for 01:30; do not silently choose an offset."
+  },
+  "tags": [
+    "english",
+    "dst-overlap",
+    "block-until-offset"
+  ]
+}

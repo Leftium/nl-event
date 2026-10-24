@@ -1,0 +1,60 @@
+{
+  "id": "k4-blues-jam-sanitized",
+  "source": {
+    "kind": "calendar-derived-sanitized",
+    "completeness": "sanitized-excerpts-in-calendar-order",
+    "notes": [
+      "Exact selected lines, not a full reproduction. Registration links, bank account, names and unrelated personal details omitted."
+    ]
+  },
+  "context": {
+    "referenceInstant": "2026-04-10T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "titleContains": "Blues Jam",
+      "start": "2026-04-13 20:00",
+      "end": "2026-04-13 22:30",
+      "locationContains": "서울 마포구 와우산로29길 27"
+    },
+    "candidateValues": {
+      "start": [
+        "2026-04-13 20:00",
+        "2026-04-13 20:30"
+      ],
+      "end": [
+        "2026-04-13 20:30",
+        "2026-04-13 22:30"
+      ]
+    },
+    "relationships": [
+      {
+        "group": "mini-workshop",
+        "start": "2026-04-13 20:00",
+        "end": "2026-04-13 20:30"
+      },
+      {
+        "group": "social",
+        "start": "2026-04-13 20:30",
+        "end": "2026-04-13 22:30"
+      },
+      {
+        "group": "overall",
+        "start": "2026-04-13 20:00",
+        "end": "2026-04-13 22:30"
+      }
+    ],
+    "ignoredAsDates": [
+      "5천원"
+    ],
+    "dedupeRepeatedDate": true
+  },
+  "tags": [
+    "korean",
+    "duplicates",
+    "multiple-activities",
+    "ignore-price"
+  ]
+}

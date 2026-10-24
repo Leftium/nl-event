@@ -1,0 +1,33 @@
+{
+  "id": "en-all-day-multiday-synthetic",
+  "source": {
+    "kind": "synthetic",
+    "completeness": "complete-synthetic-input",
+    "notes": []
+  },
+  "context": {
+    "referenceInstant": "2026-10-24T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "title": "Community festival",
+      "start": "2026-10-25",
+      "end": "2026-10-26"
+    },
+    "allDay": true,
+    "ics": {
+      "dtstart": "20261025",
+      "exclusiveDtend": "20261027"
+    },
+    "google": {
+      "exclusiveEndDate": "2026-10-27"
+    }
+  },
+  "tags": [
+    "english",
+    "all-day",
+    "exclusive-end"
+  ]
+}

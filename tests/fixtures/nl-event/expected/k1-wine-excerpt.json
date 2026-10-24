@@ -1,0 +1,43 @@
+{
+  "id": "k1-wine-excerpt",
+  "source": {
+    "kind": "user-quoted-excerpt",
+    "completeness": "excerpt-not-full-announcement",
+    "notes": [
+      "Only the three lines quoted in the prior discussion are available; do not label this the entire original announcement."
+    ]
+  },
+  "context": {
+    "referenceInstant": "2026-10-24T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "title": "잘익은 보르도 레드와인 탐구하기! 근데 신대륙 시라(쉬라즈)를 곁들인^^",
+      "start": "2026-10-25 17:00",
+      "end": "2026-10-25 18:00",
+      "location": "연남동 레스토랑 [모닥불]"
+    },
+    "candidateValues": {
+      "start": [
+        "2026-10-25 17:00"
+      ]
+    },
+    "inferred": {
+      "year": true,
+      "endDurationMinutes": 60
+    },
+    "warnings": [
+      "inferred-year",
+      "assumed-end"
+    ],
+    "expectedZone": "Asia/Seoul"
+  },
+  "tags": [
+    "korean",
+    "year-inference",
+    "weekday",
+    "default-end"
+  ]
+}

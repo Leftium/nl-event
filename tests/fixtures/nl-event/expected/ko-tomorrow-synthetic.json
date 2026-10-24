@@ -1,0 +1,28 @@
+{
+  "id": "ko-tomorrow-synthetic",
+  "source": {
+    "kind": "synthetic",
+    "completeness": "complete-synthetic-input",
+    "notes": []
+  },
+  "context": {
+    "referenceInstant": "2026-10-24T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "title": "내일 공연",
+      "start": "2026-10-25 17:00"
+    },
+    "candidateValues": {
+      "start": [
+        "2026-10-25 17:00"
+      ]
+    }
+  },
+  "tags": [
+    "korean",
+    "relative-date"
+  ]
+}

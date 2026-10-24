@@ -1,0 +1,57 @@
+{
+  "id": "k3-slow-saturday-synthetic",
+  "source": {
+    "kind": "synthetic-from-discussed-facts",
+    "completeness": "complete-synthetic-input",
+    "notes": [
+      "Original user announcement is not available. This is intentionally constructed from known dates, times, and season context."
+    ]
+  },
+  "context": {
+    "referenceInstant": "2026-06-30T03:00:00Z",
+    "browserTimeZone": "Asia/Seoul",
+    "eventTimeZoneOverride": null
+  },
+  "assertions": {
+    "preferred": {
+      "title": "슬로우 새터데이 연습",
+      "start": "2026-07-04 16:30",
+      "end": "2026-07-04 18:00"
+    },
+    "candidateValues": {
+      "start": [
+        "2026-07-04 16:30",
+        "2026-07-11 16:30",
+        "2026-07-18 16:30",
+        "2026-07-25 16:30",
+        "2026-08-01 16:30",
+        "2026-08-08 16:30",
+        "2026-08-22 16:30",
+        "2026-09-05 16:30",
+        "2026-09-12 16:30",
+        "2026-09-19 16:30"
+      ]
+    },
+    "additionalRelatedTimeRanges": [
+      [
+        "18:00",
+        "20:30"
+      ],
+      [
+        "20:30",
+        "23:00"
+      ]
+    ],
+    "excludeAsEventBoundary": [
+      "2026-07-01",
+      "2026-09-30"
+    ],
+    "candidateSelectionRule": "Each field is selectable independently; maintain date/time associations and warn rather than mutate other fields."
+  },
+  "tags": [
+    "korean",
+    "multi-date-series",
+    "season-window",
+    "associated-candidates"
+  ]
+}
