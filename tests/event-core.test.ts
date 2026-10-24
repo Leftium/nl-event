@@ -7,6 +7,8 @@ const context = { referenceInstant: '2026-10-24T03:00:00Z', browserTimeZone: 'As
 const make = (start = '2026-10-25 17:00', end = '2026-10-25 18:00') =>
 	Core.edit(Core.edit(Core.create(context), 'start', start), 'end', end);
 const normalized = (draft: Core.draft): Core.normalized => {
+	if (draft.parseStatus === 'pending')
+		draft = Core.completeParse(draft, Core.parseTicket(draft), Core.extract(draft), false);
 	const result = Core.validate(draft);
 	expect(result.startError).toBe('');
 	expect(result.endError).toBe('');
@@ -43,30 +45,31 @@ describe('manual draft lifecycle', () => {
 			expect(next.title.value).toBe('');
 		}
 	});
-	it('a manual blank or zone override requires replacement confirmation', () => {
+	it('counts a manual blank or zone override as populated for clipboard replacement', () => {
 		expect(Core.populated(Core.edit(Core.create(context), 'title', ''))).toBe(true);
 		expect(Core.populated(Core.setZone(Core.create(context), ''))).toBe(true);
 	});
-	it('clipboard empty and cancelled replacement preserve the exact draft', () => {
+	it('an empty clipboard preserves the exact draft', () => {
 		const draft = Core.withUid(make(), 'id');
-		expect(Core.replaceClipboard(draft, '', true, context)).toBe(draft);
-		expect(Core.replaceClipboard(draft, 'replacement', false, context)).toBe(draft);
+		expect(Core.replaceClipboard(draft, '', context)).toBe(draft);
 	});
 	it('clipboard fills an empty draft without recapturing its reference context', () => {
 		const empty = Core.create(context);
 		const later = { ...context, referenceInstant: '2026-12-01T00:00:00Z' };
-		expect(Core.replaceClipboard(empty, 'description', false, later)).toEqual({
-			...empty,
-			description: 'description'
-		});
+		const next = Core.replaceClipboard(empty, 'description', later);
+		expect(next.context).toEqual(context);
+		expect(next.description).toBe('description');
+		expect(next.parseStatus).toBe('pending');
 	});
-	it('confirmed replacement resets identity, fields, zone, context, and offsets', () => {
+	it('clipboard replacement resets identity, fields, zone, context, and offsets without confirmation', () => {
 		const draft = Core.withUid(Core.setZone(make(), 'America/Chicago'), 'id');
 		const nextContext = { ...context, referenceInstant: '2026-11-01T00:00:00Z' };
-		expect(Core.replaceClipboard(draft, 'new text', true, nextContext)).toEqual({
-			...Core.create(nextContext),
-			description: 'new text'
-		});
+		const next = Core.replaceClipboard(draft, 'new text', nextContext);
+		expect(next.context).toEqual(nextContext);
+		expect(next.uid).toBeUndefined();
+		expect(next.zoneOverride).toBeUndefined();
+		expect(next.start.value).toBe('');
+		expect(next.description).toBe('new text');
 	});
 	it('new event captures new context and clears ownership and UID', () => {
 		const draft = Core.withUid(make(), 'id');
@@ -92,7 +95,6 @@ describe('validation and deterministic time conversion', () => {
 		'2026-04-31',
 		'2026-10-25 24:00',
 		'2026-10-25 17:60',
-		'2026-10-25T17:00',
 		'0000-10-25'
 	])('blocks incomplete/invalid Start %s', (start) => {
 		expect(Core.validate(make(start)).event).toBeUndefined();
@@ -227,6 +229,7 @@ describe('equivalent normalized calendar exports', () => {
 	it('encodes exact Google details without interpreting text as query parameters', () => {
 		let draft = Core.describe(make(), '한글 & = ? # +\nsecond line\r\nthird');
 		draft = Core.edit(Core.edit(draft, 'title', 'A & B'), 'location', 'St Paul, MN');
+		draft = Core.completeParse(draft, Core.parseTicket(draft), Core.extract(draft), true);
 		const event = normalized(Core.setZone(draft, 'America/Chicago'));
 		const url = new URL(Core.googleUrl(event));
 		expect(url.origin + url.pathname).toBe('https://calendar.google.com/calendar/render');

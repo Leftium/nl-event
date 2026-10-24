@@ -65,3 +65,92 @@ export function localDate(instant: string, zone: string): string {
 		.toString()
 		.replaceAll('-', '');
 }
+
+export function referenceDate(instant: string, zone: string): string {
+	try {
+		return Temporal.Instant.from(instant).toZonedDateTimeISO(zone).toPlainDate().toString();
+	} catch {
+		return '';
+	}
+}
+export function dateParts(date: string): {
+	year: number;
+	month: number;
+	day: number;
+	weekday: number;
+} {
+	const value = Temporal.PlainDate.from(date);
+	return { year: value.year, month: value.month, day: value.day, weekday: value.dayOfWeek };
+}
+export function makeDate(year: number, month: number, day: number): string {
+	try {
+		return Temporal.PlainDate.from({ year, month, day }, { overflow: 'reject' }).toString();
+	} catch {
+		return '';
+	}
+}
+export function addDays(date: string, days: number): string {
+	try {
+		return Temporal.PlainDate.from(date).add({ days }).toString();
+	} catch {
+		return '';
+	}
+}
+export function distance(a: string, b: string): number {
+	return Math.abs(Temporal.PlainDate.from(a).until(Temporal.PlainDate.from(b)).days);
+}
+export function elapsedEnd(value: string, zone: string, minutes: number): string {
+	const resolution = resolve(value, zone);
+	if (resolution.choices.length !== 1) return '';
+	return Temporal.Instant.fromEpochMilliseconds(resolution.choices[0].epoch)
+		.add({ minutes })
+		.toZonedDateTimeISO(zone)
+		.toPlainDateTime()
+		.toString({ smallestUnit: 'minute' })
+		.replace('T', ' ');
+}
+
+export function advanceInstant(
+	epoch: number,
+	zone: string,
+	minutes: number
+): { value: string; offset: string } {
+	try {
+		const end = Temporal.Instant.fromEpochMilliseconds(epoch)
+			.add({ minutes })
+			.toZonedDateTimeISO(zone);
+		return {
+			value: end.toPlainDateTime().toString({ smallestUnit: 'minute' }).replace('T', ' '),
+			offset: end.offset
+		};
+	} catch {
+		return { value: '', offset: '' };
+	}
+}
+
+export function advanceReference(instant: string, zone: string, minutes: number): string {
+	try {
+		const value = Temporal.Instant.from(instant).add({ minutes }).toZonedDateTimeISO(zone);
+		if (value.year < 1 || value.year > 9999) return '';
+		return value.toPlainDateTime().toString({ smallestUnit: 'minute' }).replace('T', ' ');
+	} catch {
+		return '';
+	}
+}
+
+export function rangeDuration(start: string, end: string, allDay: boolean): number {
+	try {
+		const iso = (value: string) =>
+			value
+				.replace(/^(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')
+				.replace(/T(\d{2})(\d{2})(\d{2})Z$/, 'T$1:$2:$3Z');
+		const amount = allDay
+			? Temporal.PlainDate.from(iso(start)).until(Temporal.PlainDate.from(iso(end))).days
+			: (Temporal.Instant.from(iso(end)).epochMilliseconds -
+					Temporal.Instant.from(iso(start)).epochMilliseconds) /
+				60000;
+		return Number.isSafeInteger(amount) && amount > 0 ? amount : 0;
+	} catch {
+		return 0;
+	}
+}
