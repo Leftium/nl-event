@@ -209,7 +209,12 @@ let defaultDateField = (draft: draft, name): option<field> => {
     draft.description->String.trim != "" &&
     !Parser.has(draft.description, "\\bin\\s+[-+\\d.]") &&
     Array.length(draft.suggestions.contextDates) == 0 &&
-    !(draft.suggestions.candidates->Array.some(c => c.date != "" || c.time != ""))
+    !(draft.suggestions.warnings->Array.includes("unresolved-source-day")) &&
+    !(
+      draft.suggestions.candidates->Array.some(c =>
+        c.date != "" || c.time != "" || c.completeness == "month-only"
+      )
+    )
   ) {
     let zone = draft.zoneOverride->Option.getOr(draft.suggestions.zone)
     let date =
@@ -1189,3 +1194,13 @@ let ics = (event: normalized, uid: string, dtstamp: string) => {
   ->Array.map(fold)
   ->Array.join("\r\n") ++ "\r\n"
 }
+
+@genType
+let partialLabels = (draft: draft, name) =>
+  alternatives(draft, name)
+  ->Array.filter(c =>
+    c.completeness == "month-only" ||
+      (c.completeness == "date-only" && c.inferred->Array.some(i => Parser.has(i, "^vague-")))
+  )
+  ->Array.map(c => c.completeness == "month-only" ? c.label : `${c.date}: ${c.label}`)
+  ->Parser.unique

@@ -203,6 +203,11 @@ let dateEvidence = (line: lexical, reference, seasonYear) => {
   ->Array.flatMap(v => v)
   ->Array.filter(d => d.date != "")
 }
+type englishEvidence = {start: int, end: int, unit: string, offset: int, day: int, period: string}
+@module("./englishDatesAdapter.ts")
+external recognizeEnglishDates: (string, string, string) => array<englishEvidence> =
+  "recognizeEnglishDates"
+
 type clock = {time: string, minutes: int, span: span, ambiguous: bool}
 let clocks = (line: lexical, evening) => {
   let tokens = matches(
@@ -255,9 +260,9 @@ let clocks = (line: lexical, evening) => {
   ->Array.filter(c => c.minutes >= 0 && c.minutes < 1440)
 }
 
-let headingTitle = (line: lexical, reference, seasonYear, evening) => {
+let headingTitle = (line: lexical, reference, seasonYear, evening, englishSpans: array<span>) => {
   let spans = Array.concat(
-    dateEvidence(line, reference, seasonYear)->Array.map(d => d.span),
+    Array.concat(dateEvidence(line, reference, seasonYear)->Array.map(d => d.span), englishSpans),
     Array.concat(
       clocks(line, evening)->Array.map(c => c.span),
       relativeDurations(line.text)
@@ -268,7 +273,16 @@ let headingTitle = (line: lexical, reference, seasonYear, evening) => {
       }),
     ),
   )
-  let spans = unique(spans)
+  let spans =
+    unique(spans)->Array.filter(s =>
+      !(
+        spans->Array.some(other =>
+          other.start <= s.start &&
+          other.end >= s.end &&
+          (other.start < s.start || other.end > s.end)
+        )
+      )
+    )
   let cleaned =
     spans
     ->Array.toSorted((a, b) => Int.toFloat(b.start - a.start))
@@ -280,7 +294,7 @@ let headingTitle = (line: lexical, reference, seasonYear, evening) => {
     Array.length(spans) > 0
       ? matches(
           cleaned,
-          "\\b(?:in the )?(?:morning|afternoon|evening|night)\\b|(?:아침|오후|저녁)",
+          "\\b(?:in the )?(?:tonight|morning|afternoon|evening|night)\\b|(?:아침|오후|저녁)",
         )->Array.reduce(cleaned, (text, m) => replaceAll(text, m.text, ""))
       : cleaned
   let cleaned =
@@ -324,6 +338,50 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
   let suggestedZone = ianas->Array.get(0)->Option.getOr(city ? "America/Chicago" : browserZone)
   let zone = override->Option.getOr(suggestedZone)
   let reference = referenceDate(referenceInstant, validZone(zone) ? zone : browserZone)
+  let english = recognizeEnglishDates(text, referenceInstant, validZone(zone) ? zone : browserZone)
+  let onLine = (line: lexical) =>
+    english->Array.filter(e => e.start >= line.start && e.end <= line.end)
+  let englishDate = (e: englishEvidence) => {
+    if e.unit == "day" {
+      addDays(reference, e.offset)
+    } else if e.day > 0 {
+      let parts = dateParts(reference)
+      makeDate(
+        parts.year + (parts.month == 12 ? 1 : 0),
+        parts.month == 12 ? 1 : parts.month + 1,
+        e.day,
+      )
+    } else {
+      ""
+    }
+  }
+  // The external recognizer contributes evidence; calendar arithmetic and
+  // composition stay here, using the draft's event-local reference date.
+  let dateEvidence = (line: lexical, reference, seasonYear) => {
+    let additions = onLine(line)->Array.filterMap(e => {
+      let date = englishDate(e)
+      date == ""
+        ? None
+        : Some({
+            date,
+            span: {start: e.start, end: e.end},
+            inferred: Array.concat(
+              ["english-adapter"],
+              e.period == "" ? [] : [`vague-${e.period}`],
+            ),
+            mismatch: false,
+          })
+    })
+    let existing =
+      dateEvidence(line, reference, seasonYear)->Array.filter(d =>
+        !(
+          additions->Array.some(a =>
+            a.date == d.date && a.span.start <= d.span.start && a.span.end >= d.span.end
+          )
+        )
+      )
+    Array.concat(existing, additions)
+  }
   let season = lines->Array.filter(l => has(l.text, "운영기간|season"))
   let seasonYear =
     season
@@ -400,7 +458,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     !hasClockEvidence &&
     Array.length(distinctDates) == 1 &&
     Array.length(mealTimes) <= 1 &&
-    !has(text, "\\b(?:morning|afternoon|evening|night)\\b|저녁(?!식사)")
+    !has(text, "\\b(?:tonight|morning|afternoon|evening|night)\\b|저녁(?!식사)")
 
   let timelines =
     lines
@@ -495,7 +553,13 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
       ) {
         add(
           #title,
-          headingTitle(line, reference, seasonYear, evening),
+          headingTitle(
+            line,
+            reference,
+            seasonYear,
+            evening,
+            onLine(line)->Array.map(e => {start: e.start, end: e.end}),
+          ),
           "",
           "",
           "text",
@@ -544,6 +608,26 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
           (m, value)
         })
         ->Array.filter(((_, value)) => value != "")
+      let unresolvedMonth =
+        onLine(line)->Array.filter(e => e.unit == "month" && englishDate(e) == "")
+      unresolvedMonth->Array.forEach(e => {
+        let parts = dateParts(reference)
+        let year = parts.year + (parts.month == 12 ? 1 : 0)
+        let month = parts.month == 12 ? 1 : parts.month + 1
+        let value = `${Int.toString(year)}-${pad(month)}`
+        add(
+          #start,
+          value,
+          "",
+          "",
+          "month-only",
+          [{start: e.start, end: e.end}],
+          ["english-adapter", "unresolved-day"],
+          50,
+          [`activity-${Int.toString(index)}`],
+          e.day == 0 ? `${value}: day unresolved` : `${value}: invalid source day`,
+        )
+      })
       let localDates = Array.concat(
         dateEvidence(line, reference, seasonYear),
         relativeTimes->Array.map(((m, value)) => {
@@ -572,7 +656,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         Array.length(distinctDates) == 1 &&
         !hasClockEvidence &&
         Array.length(mealTimes) == 0 &&
-        !has(text, "\\b(?:morning|afternoon|evening|night)\\b|저녁"))
+        !has(text, "\\b(?:tonight|morning|afternoon|evening|night)\\b|저녁"))
       let labeled = has(line.text, "일시|날짜|시간|Date and time|When:|All day")
       let overall = labeled && !has(line.text, "강습|워크샵|소셜")
       let activity = has(line.text, "Class\\s*([1-4])")
@@ -593,7 +677,9 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         : `activity-${Int.toString(index)}`
       let rank = overall ? 200 : activity == "practice" ? 180 : activity == "free-lesson" ? 70 : 100
       let label = trim(line.text)
-      let dateOptions = if Array.length(localDates) > 0 {
+      let dateOptions = if Array.length(unresolvedMonth) > 0 {
+        localDates
+      } else if Array.length(localDates) > 0 {
         localDates
       } else if timelineSlots->Array.some(((i, _, _, _, _)) => i == index) {
         timelineSlots
@@ -769,8 +855,12 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
                   d.inferred,
                   50,
                   [activity],
-                  has(line.text, "evening|저녁")
+                  has(line.text, "tonight|night")
+                    ? "Date known; night has no exact time"
+                    : has(line.text, "evening|저녁")
                     ? "Date known; evening has no exact time"
+                    : has(line.text, "morning|afternoon")
+                    ? "Date known; period has no exact time"
                     : "Date known; time missing",
                 )
               }
@@ -903,6 +993,9 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
   let warnings = unique(
     [
       merged->Array.flatMap(c => c.inferred),
+      english->Array.some(e => e.unit == "month" && englishDate(e) == "")
+        ? ["unresolved-source-day"]
+        : [],
       dates->Array.some(d => d.mismatch) ? ["weekday-mismatch"] : [],
       Array.length(distinctDates) > 1 && !schedule && !has(text, "all[ -]day")
         ? ["multiple-source-dates"]
