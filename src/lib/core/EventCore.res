@@ -856,6 +856,7 @@ type temporalOption = {
   generated: bool,
   note: string,
   paired: option<bool>,
+  evidence: array<Parser.span>,
 }
 @genType
 let temporalParts = (draft: draft, name): temporalParts => {
@@ -904,6 +905,8 @@ let sourceTemporalCandidates = (draft, name): array<Parser.candidate> =>
         time: "",
         completeness: "date-only",
         spans: d.spans,
+        dateSpans: d.spans,
+        timeSpans: [],
         inferred: [],
         rank: 0,
         groups: [`context:${d.value}`],
@@ -1001,6 +1004,9 @@ let temporalOptions = (draft: draft, name, part: temporalPart): array<temporalOp
         ? c.label
         : candidateInput(draft, c),
       note,
+      evidence: draft.parseStatus != "ready" || generated(c)
+        ? []
+        : (part == #date ? c.dateSpans : c.timeSpans)->Option.getOr([]),
     }
   })
 }
