@@ -4,6 +4,134 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+async function checkCompactDates(page) {
+	const reset = () => page.getByRole('button', { name: 'Reset', exact: true }).click();
+	const dates = (field) => page.locator(`#${field}-date-options`);
+	const toggle = (field) => page.locator(`button[aria-controls="${field}-date-options"]`);
+	const values = (field) =>
+		dates(field)
+			.getByRole('button')
+			.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label')));
+	const sourceDates = [
+		'2026-10-21',
+		'2026-10-24',
+		'2026-10-31',
+		'2026-12-05',
+		'2027-02-01',
+		'2027-02-08'
+	];
+	const fill = async (count) => {
+		await reset();
+		await page.locator('#description').fill(sourceDates.slice(0, count).join('\n'));
+		await page.waitForFunction(
+			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+		);
+	};
+	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
+	for (const count of [1, 3, 4, 5, 6]) {
+		await fill(count);
+		// Keep the selected date in the first three to make the boundary explicit.
+		await dates('start').getByRole('button', { name: sourceDates[0], exact: true }).click();
+		assert.deepEqual(await values('start'), sourceDates.slice(0, count >= 5 ? 3 : count));
+		assert.equal(await toggle('start').count(), count >= 5 ? 1 : 0);
+		if (count >= 5) {
+			assert.equal(await toggle('start').textContent(), `Show ${count - 3} more`);
+		}
+	}
+	await toggle('start').focus();
+	await page.keyboard.press('Enter');
+	assert.equal(await toggle('start').getAttribute('aria-expanded'), 'true');
+	assert.deepEqual(await values('start'), sourceDates);
+	assert.equal(await toggle('end').getAttribute('aria-expanded'), 'false');
+	await dates('start').getByRole('button', { name: sourceDates[5], exact: true }).click();
+	assert.equal(await toggle('start').getAttribute('aria-expanded'), 'true');
+	await page.locator('#location').fill('Blue Hall');
+	assert.equal(await toggle('start').getAttribute('aria-expanded'), 'true');
+	await toggle('end').click();
+	await toggle('start').click();
+	assert.deepEqual(await values('start'), [...sourceDates.slice(0, 3), sourceDates[5]]);
+	assert.equal(await toggle('start').textContent(), 'Show 2 more');
+	assert.equal(await toggle('end').getAttribute('aria-expanded'), 'true');
+	const selected = dates('start').getByRole('button', { name: sourceDates[5], exact: true });
+	assert.equal(await selected.getAttribute('aria-pressed'), 'true');
+	assert.ok(await selected.getAttribute('data-tooltip'));
+	// Every column has the same width, including years and three-digit deltas.
+	await toggle('start').click();
+	assert.deepEqual(await dates('start').locator('.date-delta').allTextContents(), [
+		'-3d',
+		'0d',
+		'+7d',
+		'+42d',
+		'+100d',
+		'+107d'
+	]);
+	for (const column of ['.date-day', '.date-delta']) {
+		const widths = await dates('start')
+			.locator(column)
+			.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
+		assert.ok(widths.every((width) => Math.abs(width - widths[0]) < 1));
+	}
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-compact-dates-${page.context().browser().browserType().name()}-desktop.png`
+		),
+		fullPage: true
+	});
+	const viewport = page.viewportSize();
+	await page.setViewportSize({ width: 390, height: 844 });
+	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-compact-dates-${page.context().browser().browserType().name()}-narrow.png`
+		),
+		fullPage: true
+	});
+	await page.setViewportSize(viewport);
+	await page.locator('#description').fill(sourceDates.join('\n') + '\nLocation: Blue Hall');
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	for (const field of ['start', 'end']) {
+		assert.equal(await toggle(field).getAttribute('aria-expanded'), 'false');
+		await toggle(field).click();
+	}
+	// Clipboard replacement starts a new draft even when its Description is identical.
+	const source = await page.locator('#description').inputValue();
+	await page.evaluate((text) => {
+		Object.defineProperty(navigator.clipboard, 'readText', {
+			configurable: true,
+			value: async () => text
+		});
+	}, source);
+	await page.getByRole('button', { name: 'Paste from clipboard', exact: true }).click();
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	for (const field of ['start', 'end']) {
+		assert.equal(await toggle(field).getAttribute('aria-expanded'), 'false');
+		await toggle(field).click();
+	}
+	await page.evaluate(() => {
+		delete navigator.clipboard.readText;
+	});
+	await reset();
+	assert.equal(await dates('start').count(), 0);
+	assert.equal(await page.locator('.date-toggle').count(), 0);
+	await page.locator('#description').fill('Party');
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	assert.equal(await dates('start').getByRole('button').count(), 4);
+	assert.equal(await page.locator('.date-toggle').count(), 0);
+	assert.equal(
+		(await dates('start').getByRole('button', { name: 'Today', exact: true }).textContent()).trim(),
+		'Today'
+	);
+	await reset();
+}
+
 async function checkEvidenceHighlights(page) {
 	const viewport = page.viewportSize();
 	const textarea = page.locator('#description');
@@ -1064,6 +1192,8 @@ async function checkSlowSaturday(page) {
 		name: 'End/Duration date alternatives',
 		exact: true
 	});
+	await page.locator('button[aria-controls="start-date-options"]').click();
+	await page.locator('button[aria-controls="end-date-options"]').click();
 	assert.equal(await startOptions.getByRole('button').count(), 12);
 	assert.equal(
 		await page
@@ -1380,7 +1510,7 @@ async function checkTemporalParts(page) {
 	const times = page.getByRole('list', { name: 'Start time alternatives', exact: true });
 	assert.match(
 		await dates.getByRole('button', { name: '2026-10-26', exact: true }).textContent(),
-		/Mon, \+2d/
+		/Mon\s*\+2d/
 	);
 	const end = await page.locator('#end').inputValue();
 	await dates.getByRole('button', { name: '2026-10-26', exact: true }).focus();
@@ -2164,6 +2294,7 @@ for (const [name, engine] of [
 	await checkStickyDescription(page);
 	await checkPendingClipboard(page);
 	await checkCandidates(page);
+	await checkCompactDates(page);
 	await checkEnglishDates(page);
 	await checkSlowSaturday(page);
 	await checkRhythmParty(page);
@@ -2455,6 +2586,31 @@ for (const [name, engine] of [
 		path: path.join(os.tmpdir(), `nl-event-english-${name}-touch.png`),
 		fullPage: true
 	});
+	await touchPage.getByRole('button', { name: 'Reset', exact: true }).tap();
+	await touchPage
+		.locator('#description')
+		.fill(
+			['2026-10-21', '2026-10-24', '2026-10-31', '2026-12-05', '2027-02-01', '2027-02-08'].join(
+				'\n'
+			)
+		);
+	const touchToggle = touchPage.locator('button[aria-controls="start-date-options"]');
+	await touchToggle.waitFor();
+	const toggleBox = await touchToggle.boundingBox();
+	assert.ok(toggleBox.height >= 44);
+	await touchToggle.tap();
+	assert.equal(await touchToggle.getAttribute('aria-expanded'), 'true');
+	assert.equal(await touchPage.locator('#start-date-options button').count(), 6);
+	await touchPage.locator('#start-date-options button[aria-label="2027-02-08"]').tap();
+	await touchToggle.tap();
+	assert.equal(await touchToggle.textContent(), 'Show 2 more');
+	assert.equal(await touchPage.locator('#start-date-options button').count(), 4);
+	assert.equal(
+		await touchPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+		true
+	);
+	await touchPage.getByRole('button', { name: 'Reset', exact: true }).tap();
+	await touchPage.waitForFunction(() => document.querySelector('#description').offsetHeight < 100);
 	await checkDescriptionEditor(touchPage, { touch: true });
 	await checkSelectionActions(touchPage, { touch: true });
 	await touchContext.close();
