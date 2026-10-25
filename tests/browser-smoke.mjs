@@ -145,6 +145,28 @@ async function checkEvidenceHighlights(page) {
 	assert.ok(await longTooltip.evaluate((node) => node.scrollHeight > node.clientHeight));
 	await page.keyboard.press('PageDown');
 	assert.ok(await longTooltip.evaluate((node) => node.scrollTop > 0));
+	await page.keyboard.press('PageUp');
+	assert.equal(await longTooltip.evaluate((node) => node.scrollTop), 0);
+	for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey']) {
+		for (const key of ['PageUp', 'PageDown']) {
+			assert.equal(
+				await location.evaluate(
+					(node, { modifier, key }) =>
+						node.dispatchEvent(
+							new KeyboardEvent('keydown', {
+								bubbles: true,
+								cancelable: true,
+								key,
+								[modifier]: true
+							})
+						),
+					{ modifier, key }
+				),
+				true
+			);
+		}
+	}
+	assert.equal(await longTooltip.evaluate((node) => node.scrollTop), 0);
 	await longTooltip.hover();
 	await longTooltip.evaluate((node) => {
 		node.scrollTop = 0;
@@ -204,6 +226,31 @@ async function checkEvidenceHighlights(page) {
 		});
 		await time.dispatchEvent('pointerleave');
 		await page.getByRole('button', { name: 'Word wrap', exact: true }).click();
+		if (width === 1500) {
+			// Pointer-only tooltips must leave native textarea paging intact.
+			await textarea.focus();
+			await time.scrollIntoViewIfNeeded();
+			// Finish page scrolling before opening a pointer tooltip.
+			await page.waitForTimeout(350);
+			const original = await time.getAttribute('data-tooltip');
+			await time.evaluate((node) => {
+				node.dataset.tooltip = 'Long source evidence '.repeat(1500);
+			});
+			await page.mouse.move(0, 0);
+			await time.hover();
+			await longTooltip.waitFor();
+			assert.ok(await longTooltip.evaluate((node) => node.scrollHeight > node.clientHeight));
+			await textarea.evaluate((node) => {
+				node.setSelectionRange(0, 0);
+				node.scrollTop = 0;
+			});
+			assert.equal(await textarea.evaluate((node) => document.activeElement === node), true);
+			await page.keyboard.press('PageDown');
+			await page.waitForFunction(() => document.querySelector('#description').scrollTop > 0);
+			assert.equal(await longTooltip.evaluate((node) => node.scrollTop), 0);
+			await page.keyboard.press('Escape');
+			await time.evaluate((node, value) => (node.dataset.tooltip = value), original);
+		}
 	}
 	await textarea.fill('An event without a schedule');
 	await page.locator('[aria-label="Start date alternatives"] button').first().waitFor();

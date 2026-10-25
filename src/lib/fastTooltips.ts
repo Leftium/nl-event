@@ -133,7 +133,15 @@ export function fastTooltips(root: HTMLElement) {
 
 	function key(event: KeyboardEvent) {
 		if (event.key === 'Escape') hide();
-		else if (tooltip && tooltip.scrollHeight > tooltip.clientHeight) {
+		else if (
+			tooltip &&
+			document.activeElement === active &&
+			!event.altKey &&
+			!event.ctrlKey &&
+			!event.metaKey &&
+			!event.shiftKey &&
+			tooltip.scrollHeight > tooltip.clientHeight
+		) {
 			const amount =
 				event.key === 'PageDown'
 					? tooltip.clientHeight
