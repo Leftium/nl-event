@@ -4,6 +4,73 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+async function checkInitialFocus(browser) {
+	for (const scenario of ['fresh', 'scroll', 'before-hydration', 'enable-race']) {
+		const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+		const page = await context.newPage();
+		await page.addInitScript((scenario) => {
+			const observer = new MutationObserver(() => {
+				const description = document.querySelector('#description');
+				if (!description) return;
+				if (scenario === 'before-hydration' && description.disabled) {
+					const button = document.createElement('button');
+					button.id = 'early-focus';
+					button.textContent = 'Already focused';
+					document.body.append(button);
+					button.focus({ preventScroll: true });
+					window.initialFocusTarget = document.activeElement.id;
+					observer.disconnect();
+				} else if (!description.disabled) {
+					if (scenario === 'enable-race') {
+						document.querySelector('#title').focus({ preventScroll: true });
+						window.initialFocusTarget = document.activeElement.id;
+					}
+					if (scenario === 'scroll') {
+						window.scrollTo(0, 240);
+						window.initialScroll = window.scrollY;
+					}
+					observer.disconnect();
+				}
+			});
+			observer.observe(document, { childList: true, subtree: true, attributes: true });
+		}, scenario);
+		await page.goto(process.env.NL_EVENT_BASE_URL || 'http://localhost:5173/');
+		await page.waitForFunction(() => !document.querySelector('#description')?.disabled);
+		const description = page.locator('#description');
+		if (scenario === 'before-hydration' || scenario === 'enable-race') {
+			const expected = scenario === 'before-hydration' ? 'early-focus' : 'title';
+			assert.equal(await page.evaluate(() => window.initialFocusTarget), expected);
+			assert.equal(await page.evaluate(() => document.activeElement.id), expected);
+		} else {
+			assert.equal(await page.evaluate(() => document.activeElement.id), 'description');
+			assert.equal(await description.inputValue(), '');
+			assert.deepEqual(
+				await description.evaluate((node) => [node.selectionStart, node.selectionEnd]),
+				[0, 0]
+			);
+			if (scenario === 'scroll') {
+				const [before, after] = await page.evaluate(() => [window.initialScroll, window.scrollY]);
+				assert.ok(before > 0);
+				assert.equal(after, before);
+			} else {
+				assert.equal(await page.evaluate(() => window.scrollY), 0);
+				await page.keyboard.type('Lunch tomorrow at noon');
+				assert.equal(await description.inputValue(), 'Lunch tomorrow at noon');
+				await page.locator('#title').focus();
+				await page.waitForFunction(
+					() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+				);
+				await page.setViewportSize({ width: 1100, height: 800 });
+				assert.equal(await page.evaluate(() => document.activeElement.id), 'title');
+				await page.locator('#title').fill('Manual title');
+				assert.equal(await page.evaluate(() => document.activeElement.id), 'title');
+			}
+		}
+		assert.equal(await page.locator('.description-editor.fullscreen').count(), 0);
+		await context.close();
+	}
+}
+
 async function checkCompactDates(page) {
 	const reset = () => page.getByRole('button', { name: 'Reset', exact: true }).click();
 	const dates = (field) => page.locator(`#${field}-date-options`);
@@ -2397,6 +2464,7 @@ for (const [name, engine] of [
 	['webkit', webkit]
 ]) {
 	const browser = await engine.launch();
+	await checkInitialFocus(browser);
 	const context = await browser.newContext({
 		timezoneId: 'Asia/Seoul',
 		acceptDownloads: true,

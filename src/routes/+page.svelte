@@ -321,14 +321,29 @@
 	}
 
 	onMount(() => {
+		let mounted = true;
 		collapseDates();
 		draft = Core.create(captureContext());
 		ready = true;
+		void tick().then(() => {
+			if (!mounted || !descriptionInput.isConnected) return;
+			if (
+				document.activeElement !== document.body &&
+				document.activeElement !== document.documentElement
+			)
+				return;
+			descriptionInput.focus({ preventScroll: true });
+			descriptionInput.setSelectionRange(
+				descriptionInput.value.length,
+				descriptionInput.value.length
+			);
+		});
 		displayNow = draft.context.referenceInstant;
 		const dayTimer = setInterval(() => {
 			displayNow = new Date().toISOString();
 		}, 60000);
 		return () => {
+			mounted = false;
 			clearTimeout(parseTimer);
 			clearInterval(dayTimer);
 		};
