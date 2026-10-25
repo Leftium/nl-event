@@ -4,15 +4,15 @@ NL Event turns Korean and English event announcements into one editable calendar
 
 For example, `lunch tomorrow` suggests the title `lunch`, a noon start tomorrow, and an inferred one-hour end. The current Description is included in either export.
 
-Parsing runs in the browser. There is no account, backend, external LLM, or calendar-reading permission.
+Parsing runs in the browser without sending the announcement to a server or external LLM. No account or calendar-reading permission is needed. Drafts are not saved between page loads.
 
 ## Editing a draft
 
 Each field has an Auto switch. When it's on, the field follows parsing. Typing or choosing a chip makes only that field Manual. Turn Auto back on to accept the latest suggestion. Start and End show their interpreted values below the input, even when the input contains the announcement's original wording.
 
-Suggestions for Start and End are split into Date and Time chips. Choosing a date uses its associated time when available; choosing a time keeps that field's date. Unpaired combinations are allowed but flagged. Date chips show the weekday and days from today, and long lists start collapsed. Hovering or focusing source-backed suggestions highlights the matching text in Description. When an announcement has no date or clock, generated choices include Tomorrow and common times.
+Date and Time chips offer alternatives for Start and End. Choosing a date uses its associated time when available; choosing a time keeps that field's date. Combinations not found together in the announcement are flagged. Hover or focus a suggestion to highlight its source text, when available.
 
-Select text in Description to use it as Title or Location. Reset discards the draft without confirmation. Native paste edits Description; **Paste from clipboard** replaces the draft when a nonempty read succeeds. Word wrap and fullscreen controls change how Description is displayed, not its contents.
+Select text in Description to use it as Title or Location. Pasting directly into Description preserves Manual fields. **Paste from clipboard** replaces the whole draft, including manual edits, when a nonempty read succeeds. Reset also discards the draft without confirmation.
 
 ## Dates and times
 
@@ -26,7 +26,7 @@ Dates are interpreted in the event's time zone, taken from the announcement when
 
 Each export contains one event. Google Calendar opens an editable event form where you can add recurrence, reminders, and other details; downloading `.ics` gives you a file to import into a calendar app. Neither action confirms that the event was saved.
 
-The Google Calendar link includes event details in its URL, which may appear in browser history or exceed URL-length limits. The `.ics` file avoids that handoff, but importing the same file repeatedly may create duplicates.
+Opening Google Calendar sends the event details to Google in the URL, which may appear in browser history or exceed URL-length limits. Downloading `.ics` keeps the handoff local, but importing the same file repeatedly may create duplicates.
 
 ## Development
 
