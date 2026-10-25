@@ -4,6 +4,181 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+async function checkEvidenceHighlights(page) {
+	const viewport = page.viewportSize();
+	const textarea = page.locator('#description');
+	const marks = page.locator('.description-evidence mark[data-hovered=true]');
+	const source = '🙂 Party\n2026-10-25 16:00-18:00\n2026-10-26 19:00-20:00\nLocation: Blue Hall';
+	const time = page.locator('[aria-label="Start time alternatives"] button[aria-label="16:00"]');
+	const date = page.locator(
+		'[aria-label="Start date alternatives"] button[aria-label="2026-10-25"]'
+	);
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	await page.setViewportSize({ width: 1500, height: 900 });
+	await textarea.fill(source);
+	await time.waitFor();
+	await page
+		.locator('.description-evidence mark[data-evidence=selected]')
+		.first()
+		.waitFor({ state: 'attached' });
+	await page
+		.locator('.description-evidence mark[data-evidence=unselected]')
+		.first()
+		.waitFor({ state: 'attached' });
+	const before = await page
+		.locator('#title, #start, #end, #location')
+		.evaluateAll((nodes) => nodes.map((n) => n.value));
+	const reverseBefore = await textarea.evaluate((node) => ({
+		selection: [node.selectionStart, node.selectionEnd],
+		scroll: [node.scrollTop, node.scrollLeft],
+		active: document.activeElement.id,
+		page: [scrollX, scrollY]
+	}));
+	const evidencePoint = await page.locator('.description-evidence').evaluate((node) => {
+		const mark = [...node.querySelectorAll('mark')].find((mark) =>
+			mark.textContent.includes('16:00')
+		);
+		const range = document.createRange();
+		const start = mark.textContent.indexOf('16:00');
+		range.setStart(mark.firstChild, start + 1);
+		range.setEnd(mark.firstChild, start + 2);
+		const box = range.getBoundingClientRect();
+		return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+	});
+	await page.mouse.move(evidencePoint.x, evidencePoint.y);
+	await page.waitForFunction(() =>
+		document
+			.querySelector('[aria-label="Start time alternatives"] button[aria-label="16:00"]')
+			.classList.contains('evidence-hovered')
+	);
+	assert.equal(await marks.textContent(), '16:00');
+	assert.deepEqual(
+		await textarea.evaluate((node) => ({
+			selection: [node.selectionStart, node.selectionEnd],
+			scroll: [node.scrollTop, node.scrollLeft],
+			active: document.activeElement.id,
+			page: [scrollX, scrollY]
+		})),
+		reverseBefore
+	);
+	await page.mouse.move(0, 0);
+	await page.waitForFunction(() => !document.querySelector('.suggestion.evidence-hovered'));
+	await time.hover();
+	await page.waitForFunction(
+		() =>
+			document.querySelector('.description-evidence mark[data-hovered=true]')?.textContent ===
+			'16:00'
+	);
+	assert.ok(
+		await time.evaluate((node) => {
+			const mark = document.querySelector('.description-evidence mark[data-hovered=true]');
+			return (
+				node.classList.contains('source-backed') &&
+				getComputedStyle(node).backgroundColor === getComputedStyle(mark).backgroundColor &&
+				getComputedStyle(node).outlineColor === getComputedStyle(mark).outlineColor
+			);
+		})
+	);
+	assert.equal(await textarea.inputValue(), source);
+	assert.deepEqual(
+		await page
+			.locator('#title, #start, #end, #location')
+			.evaluateAll((nodes) => nodes.map((n) => n.value)),
+		before
+	);
+	await page.locator('#field-tooltip').waitFor();
+	assert.ok(
+		await page.locator('#field-tooltip').evaluate((node) => {
+			const box = node.getBoundingClientRect();
+			const pane = document.querySelector('.event-details').getBoundingClientRect();
+			const editor = document.querySelector('.description-editor').getBoundingClientRect();
+			return box.left >= pane.left && box.right <= pane.right && box.right < editor.left;
+		})
+	);
+	await time.click();
+	assert.equal(await marks.getAttribute('data-evidence'), 'selected');
+	assert.ok(await marks.evaluate((node) => getComputedStyle(node).outlineStyle === 'dashed'));
+	await page.mouse.move(0, 0);
+	assert.equal(await marks.count(), 0);
+	await page.keyboard.press('Tab');
+	await date.evaluate((node) => node.focus({ preventScroll: true }));
+	await page.waitForFunction(
+		() =>
+			document.querySelector('.description-evidence mark[data-hovered=true]')?.textContent ===
+			'2026-10-25'
+	);
+	await page.keyboard.press('Escape');
+	assert.equal(await page.locator('#field-tooltip').count(), 0);
+	assert.equal(await date.getAttribute('aria-describedby'), null);
+	await date.evaluate((node) => node.blur());
+	assert.equal(await marks.count(), 0);
+	const location = page.locator('[aria-label="Location alternatives"] button').first();
+	await location.evaluate((node) => node.focus({ preventScroll: true }));
+	await page.waitForFunction(
+		() =>
+			document.querySelector('.description-evidence mark[data-hovered=true]')?.textContent ===
+			'Blue Hall'
+	);
+	await textarea.focus();
+	assert.equal(await marks.count(), 0);
+	// The same node and native selection survive previews and fullscreen changes.
+	await textarea.evaluate((node) => {
+		window.evidenceTextarea = node;
+		node.setSelectionRange(3, 8);
+	});
+	await time.dispatchEvent('pointerenter');
+	assert.deepEqual(
+		await textarea.evaluate((node) => [node.selectionStart, node.selectionEnd]),
+		[3, 8]
+	);
+	await time.dispatchEvent('pointerleave');
+	await page.getByRole('button', { name: 'Fullscreen editor', exact: true }).click();
+	assert.equal(await textarea.evaluate((node) => window.evidenceTextarea === node), true);
+	await page.getByRole('button', { name: 'Restore editor', exact: true }).click();
+	for (const width of [1500, 390]) {
+		await page.setViewportSize({ width, height: 700 });
+		await textarea.fill('Long heading ' + 'word '.repeat(100) + '\n'.repeat(30) + source);
+		await time.waitFor();
+		await textarea.evaluate((node) => {
+			node.scrollTop = 0;
+		});
+		const pageScroll = await page.evaluate(() => scrollY);
+		await time.dispatchEvent('pointerenter');
+		await page.waitForFunction(() => document.querySelector('#description').scrollTop > 0);
+		assert.equal(await page.evaluate(() => scrollY), pageScroll);
+		await page.getByRole('button', { name: 'Word wrap', exact: true }).click();
+		await textarea.evaluate((node) => {
+			node.scrollTop = 50;
+			node.scrollLeft = 75;
+		});
+		await page.waitForFunction(() => {
+			const node = document.querySelector('#description');
+			const mirror = document.querySelector('.description-evidence');
+			const content = mirror.firstElementChild;
+			const transform = new DOMMatrix(getComputedStyle(content).transform);
+			return (
+				Math.abs(transform.m41 + node.scrollLeft) < 1 &&
+				Math.abs(transform.m42 + node.scrollTop) < 1 &&
+				Math.abs(mirror.getBoundingClientRect().width - node.clientWidth) < 1 &&
+				getComputedStyle(content).lineHeight === getComputedStyle(node).lineHeight
+			);
+		});
+		await time.dispatchEvent('pointerleave');
+		await page.getByRole('button', { name: 'Word wrap', exact: true }).click();
+	}
+	await textarea.fill('An event without a schedule');
+	await page.locator('[aria-label="Start date alternatives"] button').first().waitFor();
+	await page.locator('[aria-label="Start date alternatives"] button').first().focus();
+	assert.equal(await marks.count(), 0);
+	assert.equal(
+		await page.locator('[aria-label="Start date alternatives"] button.source-backed').count(),
+		0
+	);
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	assert.equal(await marks.count(), 0);
+	await page.setViewportSize(viewport);
+}
+
 async function checkDescriptionEditor(page, { touch = false } = {}) {
 	const originalViewport = page.viewportSize();
 	if (!touch) await page.setViewportSize({ width: 1100, height: 900 });
@@ -1862,6 +2037,7 @@ for (const [name, engine] of [
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 	assert.equal(await page.locator('#start-error, #end-error').count(), 0);
 	await checkDescriptionEditor(page);
+	await checkEvidenceHighlights(page);
 	await checkStickyDescription(page);
 	await checkPendingClipboard(page);
 	await checkCandidates(page);

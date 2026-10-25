@@ -42,9 +42,34 @@ export function fastTooltips(root: HTMLElement) {
 					[described.getAttribute('aria-describedby'), tooltip.id].filter(Boolean).join(' ')
 				);
 				const box = target.getBoundingClientRect();
+				const viewport = window.visualViewport;
+				let left = (viewport?.offsetLeft ?? 0) + 8;
+				let right =
+					Math.min(
+						document.documentElement.clientWidth,
+						(viewport?.offsetLeft ?? 0) + (viewport?.width ?? innerWidth)
+					) - 8;
+				const top = (viewport?.offsetTop ?? 0) + 8;
+				const bottom = (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight) - 8;
+				const pane = target.closest('.event-details');
+				const editor = root.querySelector('.description-editor');
+				if (pane && editor && target.matches('.suggestion')) {
+					const formBox = pane.getBoundingClientRect();
+					const editorBox = editor.getBoundingClientRect();
+					// Measured side-by-side geometry also handles zoom and short layouts.
+					if (formBox.right <= editorBox.left && editorBox.width > 0) {
+						left = Math.max(left, formBox.left + 8);
+						right = Math.min(right, formBox.right - 8);
+					}
+				}
+				tooltip.style.maxWidth = `min(24rem, ${Math.max(1, right - left)}px)`;
+				tooltip.style.maxHeight = `${Math.max(1, bottom - top)}px`;
+				tooltip.style.overflowY = 'auto';
 				const size = tooltip.getBoundingClientRect();
-				tooltip.style.left = `${Math.max(8, Math.min(box.left, innerWidth - size.width - 8))}px`;
-				tooltip.style.top = `${Math.max(8, box.bottom + size.height + 14 < innerHeight ? box.bottom + 6 : box.top - size.height - 6)}px`;
+				tooltip.style.left = `${Math.max(left, Math.min(box.left, right - size.width))}px`;
+				const preferredTop =
+					box.bottom + size.height + 6 <= bottom ? box.bottom + 6 : box.top - size.height - 6;
+				tooltip.style.top = `${Math.max(top, Math.min(preferredTop, bottom - size.height))}px`;
 			},
 			event.type === 'focusin' ? 0 : 100
 		);
@@ -53,6 +78,17 @@ export function fastTooltips(root: HTMLElement) {
 		const next = (event as MouseEvent | FocusEvent).relatedTarget;
 		if (!active || !(next instanceof Node) || !active.contains(next)) hide();
 	}
+	function scroll(event: Event) {
+		// Revealing evidence inside Description does not move a form chip's anchor.
+		if (
+			event.target instanceof HTMLTextAreaElement &&
+			event.target.id === 'description' &&
+			active?.closest('.event-details')
+		)
+			return;
+		hide();
+	}
+
 	function key(event: KeyboardEvent) {
 		if (event.key === 'Escape') hide();
 	}
@@ -62,7 +98,7 @@ export function fastTooltips(root: HTMLElement) {
 	root.addEventListener('focusout', leave);
 	root.addEventListener('click', hide);
 	root.addEventListener('keydown', key);
-	window.addEventListener('scroll', hide, true);
+	window.addEventListener('scroll', scroll, true);
 	window.addEventListener('resize', hide);
 	return {
 		destroy() {
@@ -73,7 +109,7 @@ export function fastTooltips(root: HTMLElement) {
 			root.removeEventListener('focusout', leave);
 			root.removeEventListener('click', hide);
 			root.removeEventListener('keydown', key);
-			window.removeEventListener('scroll', hide, true);
+			window.removeEventListener('scroll', scroll, true);
 			window.removeEventListener('resize', hide);
 		}
 	};

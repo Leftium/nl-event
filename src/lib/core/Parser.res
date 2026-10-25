@@ -11,6 +11,8 @@ type candidate = {
   time: string,
   completeness: string,
   spans: array<span>,
+  dateSpans?: array<span>,
+  timeSpans?: array<span>,
   inferred: array<string>,
   rank: int,
   groups: array<string>,
@@ -829,10 +831,27 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
       | #location => "location"
       }
       let id = `${fieldText}:${value}:${groups->Array.join("+")}`
+      // Capture presentation evidence before duplicate candidates concatenate spans.
+      // The original span order remains untouched for input/selection policies.
+      let dateSpans = date == ""
+        ? []
+        : spans->Array.get(0)->Option.map(span => [span])->Option.getOr([])
+      let clockIndex = date == ""
+        ? field == #end ? Array.length(spans) - 1 : 0
+        : field == #end ? 2 : 1
+      let timeSpans =
+        time == "" ||
+        inferred->Array.includes("assumed-end") ||
+        inferred->Array.includes("inferred-time")
+          ? []
+          : spans->Array.get(clockIndex)->Option.map(span => [span])->Option.getOr([])
       candidates :=
         Array.concat(
           candidates.contents,
-          [{id, field, value, date, time, completeness, spans, inferred, rank, groups, label}],
+          [{
+            id, field, value, date, time, completeness, spans,
+            dateSpans, timeSpans, inferred, rank, groups, label,
+          }],
         )
     }
   }
@@ -1403,6 +1422,14 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
           ? {
               ...v,
               spans: Array.concat(v.spans, c.spans),
+              dateSpans: unique(Array.concat(
+                v.dateSpans->Option.getOr([]),
+                c.dateSpans->Option.getOr([]),
+              )),
+              timeSpans: unique(Array.concat(
+                v.timeSpans->Option.getOr([]),
+                c.timeSpans->Option.getOr([]),
+              )),
               groups: unique(Array.concat(v.groups, c.groups)),
               inferred: unique(Array.concat(v.inferred, c.inferred)),
             }

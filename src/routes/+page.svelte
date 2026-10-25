@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import type { EvidenceRange } from '#lib/evidenceHighlight.ts';
 	import { descriptionEditor } from '#lib/descriptionEditor.ts';
 	import { SvelteDate } from 'svelte/reactivity';
 	import { Temporal } from '@js-temporal/polyfill';
@@ -35,6 +36,139 @@
 	let descriptionInput: HTMLTextAreaElement;
 	let descriptionFullscreen = $state(false);
 	let descriptionWrap = $state(true);
+	type Evidence = {
+		node: HTMLButtonElement;
+		ranges: readonly EvidenceRange[];
+		identity: Core.identity;
+		revision: number;
+		contextRevision: number;
+		description: string;
+		suggestions: Core.draft['suggestions'];
+	};
+	let hoveredEvidence = $state<Evidence>();
+	let focusedEvidence = $state<Evidence>();
+	let evidence = $derived(hoveredEvidence ?? focusedEvidence);
+	let evidenceRanges = $derived(
+		evidence &&
+			draft.parseStatus === 'ready' &&
+			evidence.identity === draft.identity &&
+			evidence.revision === draft.revision &&
+			evidence.contextRevision === draft.contextRevision &&
+			evidence.description === draft.description &&
+			evidence.suggestions === draft.suggestions
+			? evidence.ranges
+			: []
+	);
+
+	const candidateSelected = (
+		name: Core.fieldName,
+		candidate: ReturnType<typeof Core.alternatives>[number]
+	) =>
+		Core.getField(draft, name).value === candidate.value ||
+		draft.selections.some(
+			(s) => s.name === name && s.revision === draft.revision && s.candidate.id === candidate.id
+		);
+	let sourceHighlights = $derived.by(() => {
+		const selected: EvidenceRange[] = [];
+		const unselected: EvidenceRange[] = [];
+		if (draft.parseStatus !== 'ready') return { selected, unselected };
+		for (const { name } of fields) {
+			if (name === 'start' || name === 'end') {
+				for (const part of ['date', 'time'] as const) {
+					for (const option of Core.temporalOptions(draft, name, part)) {
+						const chosen = option.selected && (part !== 'time' || !result.allDay);
+						(chosen ? selected : unselected).push(...(option.evidence ?? []));
+					}
+				}
+			} else {
+				for (const candidate of Core.alternatives(draft, name)) {
+					(candidateSelected(name, candidate) ? selected : unselected).push(...candidate.spans);
+				}
+			}
+		}
+		return { selected, unselected };
+	});
+
+	let textEvidence = $state<{ range: EvidenceRange; suggestions: Core.draft['suggestions'] }>();
+	let textRange = $derived(
+		draft.parseStatus === 'ready' && textEvidence?.suggestions === draft.suggestions
+			? textEvidence.range
+			: undefined
+	);
+	const overlapsText = (range: EvidenceRange) =>
+		!!textRange && range.start < textRange.end && range.end > textRange.start;
+	const matchesTextEvidence = (ranges: readonly EvidenceRange[] = []) => ranges.some(overlapsText);
+	let textPreviewRanges = $derived(
+		textRange
+			? [...sourceHighlights.selected, ...sourceHighlights.unselected].filter(overlapsText)
+			: []
+	);
+
+	function previewText(range?: EvidenceRange) {
+		if (!range) {
+			textEvidence = undefined;
+			return;
+		}
+		if (textRange?.start === range.start && textRange.end === range.end) return;
+		hoveredEvidence = focusedEvidence = undefined;
+		textEvidence = { range, suggestions: draft.suggestions };
+	}
+
+	function clearEvidence() {
+		textEvidence = undefined;
+		hoveredEvidence = focusedEvidence = undefined;
+	}
+
+	function chipEvidence(node: HTMLButtonElement, ranges: readonly EvidenceRange[]) {
+		let current = ranges;
+		const snapshot = (): Evidence => ({
+			node,
+			ranges: current,
+			identity: draft.identity,
+			revision: draft.revision,
+			contextRevision: draft.contextRevision,
+			description: draft.description,
+			suggestions: draft.suggestions
+		});
+		const enter = () => {
+			textEvidence = undefined;
+			hoveredEvidence = snapshot();
+		};
+		const leave = () => {
+			if (hoveredEvidence?.node === node) hoveredEvidence = undefined;
+		};
+		const focus = () => {
+			if (node.matches(':focus-visible')) {
+				textEvidence = undefined;
+				focusedEvidence = snapshot();
+			}
+		};
+		const blur = () => {
+			if (focusedEvidence?.node === node) focusedEvidence = undefined;
+		};
+		const pointerdown = () => {
+			focusedEvidence = undefined;
+		};
+		node.addEventListener('pointerenter', enter);
+		node.addEventListener('pointerleave', leave);
+		node.addEventListener('focus', focus);
+		node.addEventListener('blur', blur);
+		node.addEventListener('pointerdown', pointerdown);
+		return {
+			update(next: readonly EvidenceRange[]) {
+				current = next;
+			},
+			destroy() {
+				leave();
+				blur();
+				node.removeEventListener('pointerenter', enter);
+				node.removeEventListener('pointerleave', leave);
+				node.removeEventListener('focus', focus);
+				node.removeEventListener('blur', blur);
+				node.removeEventListener('pointerdown', pointerdown);
+			}
+		};
+	}
 	let descriptionLines = $derived(draft.description.split('\n').length);
 	let descriptionWords = $derived(
 		draft.description.trim() ? draft.description.trim().split(/\s+/u).length : 0
@@ -267,6 +401,11 @@
 			aria-label="Description editor"
 			use:descriptionEditor={{
 				value: draft.description,
+				ranges: textRange ? textPreviewRanges : evidenceRanges,
+				hoverEvidence: previewText,
+				selectedRanges: sourceHighlights.selected,
+				unselectedRanges: sourceHighlights.unselected,
+				reveal: evidence,
 				fullscreen: descriptionFullscreen,
 				wrap: descriptionWrap,
 				close: () => {
@@ -296,7 +435,11 @@
 					bind:this={descriptionInput}
 					value={draft.description}
 					onselect={captureDescriptionSelection}
+					onfocus={clearEvidence}
+					onbeforeinput={clearEvidence}
+					oncompositionstart={clearEvidence}
 					oninput={(event) => {
+						clearEvidence();
 						descriptionSelection = '';
 						draft = Core.describe(draft, event.currentTarget.value);
 						scheduleParse(event instanceof InputEvent && event.inputType === 'insertFromPaste');
@@ -506,6 +649,7 @@
 										<button
 											type="button"
 											class="suggestion part-option"
+											use:chipEvidence={[]}
 											aria-pressed={option.selected}
 											data-tooltip={option.source
 												? `Suggested End - ${option.source}. Set End relative to Start.`
@@ -543,6 +687,7 @@
 												<button
 													type="button"
 													class="suggestion part-option"
+													use:chipEvidence={[]}
 													aria-pressed={result.allDay}
 													disabled={!ready}
 													data-tooltip={result.allDay
@@ -561,6 +706,9 @@
 												<button
 													type="button"
 													class="suggestion part-option"
+													use:chipEvidence={option.evidence}
+													class:source-backed={(option.evidence?.length ?? 0) > 0}
+													class:evidence-hovered={matchesTextEvidence(option.evidence)}
 													class:unpaired={option.paired === false}
 													aria-label={option.label}
 													aria-pressed={option.selected && (part !== 'time' || !result.allDay)}
@@ -599,13 +747,10 @@
 										class="suggestion"
 										aria-label={candidate.value}
 										data-tooltip={candidate.value}
-										aria-pressed={field.value === candidate.value ||
-											draft.selections.some(
-												(s) =>
-													s.name === name &&
-													s.revision === draft.revision &&
-													s.candidate.id === candidate.id
-											)}
+										use:chipEvidence={candidate.spans}
+										class:source-backed={candidate.spans.length > 0}
+										class:evidence-hovered={matchesTextEvidence(candidate.spans)}
+										aria-pressed={candidateSelected(name, candidate)}
 										onclick={() => {
 											draft = Core.selectCandidate(draft, name, candidate.id);
 										}}
@@ -730,6 +875,7 @@
 		min-width: 0;
 	}
 	.editor-surface {
+		position: relative;
 		min-width: 0;
 		margin-block: 0.5rem;
 		border: 1px solid var(--nc-border);
@@ -743,6 +889,8 @@
 		box-shadow: 0 0 0 2px var(--nc-primary-focus);
 	}
 	.description-editor textarea {
+		position: relative;
+		z-index: 1;
 		display: block;
 		min-height: 0;
 		margin: 0;
@@ -851,8 +999,11 @@
 
 	:global(html) {
 		scrollbar-gutter: stable;
+		--evidence-preview-color: #5b2182;
 	}
 	main {
+		--evidence-selected-bg: rgb(40 170 125 / 24%);
+		--evidence-unselected-bg: rgb(100 130 190 / 12%);
 		width: 100%;
 		min-width: 0;
 		box-sizing: border-box;
@@ -1126,7 +1277,8 @@
 	}
 	.suggestions {
 		list-style: none;
-		padding: 0;
+		/* Reserve room for outlines inside the scrolling chip list. */
+		padding: 3px;
 		margin-block: 0.4rem;
 		max-height: 18rem;
 		overflow-y: auto;
@@ -1153,7 +1305,7 @@
 		box-sizing: border-box;
 		padding: 0.35rem 0.55rem;
 		border-radius: 0.3rem;
-		background: #222;
+		background: var(--evidence-preview-color);
 		color: #fff;
 		font-size: 0.8rem;
 		line-height: 1.4;
@@ -1167,7 +1319,7 @@
 	.part-options {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.25rem;
+		gap: 0.375rem;
 		max-height: 9rem;
 		margin-block: 0.2rem;
 	}
@@ -1215,6 +1367,17 @@
 	.suggestion:focus-visible {
 		outline: 2px solid var(--color-primary, #2563eb);
 		outline-offset: -2px;
+	}
+	.suggestion.source-backed {
+		background: var(--evidence-unselected-bg);
+	}
+	.suggestion.source-backed[aria-pressed='true'] {
+		background: var(--evidence-selected-bg);
+	}
+	.suggestion.source-backed:not(:disabled):is(:hover, :focus-visible),
+	.suggestion.source-backed.evidence-hovered {
+		outline: 2px dashed var(--evidence-preview-color);
+		outline-offset: 1px;
 	}
 	.selection-mark {
 		width: 0.75rem;
