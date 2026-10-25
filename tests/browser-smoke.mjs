@@ -107,6 +107,20 @@ async function checkEvidenceHighlights(page) {
 			document.querySelector('.description-evidence mark[data-hovered=true]')?.textContent ===
 			'2026-10-25'
 	);
+	await page.mouse.move(evidencePoint.x, evidencePoint.y);
+	await page.waitForFunction(
+		() =>
+			document.querySelector('.description-evidence mark[data-hovered=true]')?.textContent ===
+			'16:00'
+	);
+	assert.equal(await date.evaluate((node) => node === document.activeElement), true);
+	await page.mouse.move(0, 0);
+	await page.waitForFunction(
+		() =>
+			document.querySelector('.description-evidence mark[data-hovered=true]')?.textContent ===
+			'2026-10-25'
+	);
+	assert.equal(await date.evaluate((node) => node === document.activeElement), true);
 	await page.keyboard.press('Escape');
 	assert.equal(await page.locator('#field-tooltip').count(), 0);
 	assert.equal(await date.getAttribute('aria-describedby'), null);
@@ -119,6 +133,31 @@ async function checkEvidenceHighlights(page) {
 			document.querySelector('.description-evidence mark[data-hovered=true]')?.textContent ===
 			'Blue Hall'
 	);
+	const savedTooltip = await location.getAttribute('data-tooltip');
+	await location.evaluate((node) => {
+		node.dataset.tooltip = 'Long source evidence '.repeat(1500);
+		node.setAttribute('aria-describedby', 'parse-status');
+	});
+	await location.evaluate((node) => node.blur());
+	await location.focus();
+	const longTooltip = page.locator('#field-tooltip');
+	await longTooltip.waitFor();
+	assert.ok(await longTooltip.evaluate((node) => node.scrollHeight > node.clientHeight));
+	await page.keyboard.press('PageDown');
+	assert.ok(await longTooltip.evaluate((node) => node.scrollTop > 0));
+	await longTooltip.hover();
+	await longTooltip.evaluate((node) => {
+		node.scrollTop = 0;
+	});
+	await page.mouse.wheel(0, 100);
+	await page.waitForFunction(() => document.querySelector('#field-tooltip')?.scrollTop > 0);
+	await page.keyboard.press('Escape');
+	assert.equal(await longTooltip.count(), 0);
+	assert.equal(await location.getAttribute('aria-describedby'), 'parse-status');
+	await location.evaluate((node, original) => {
+		node.dataset.tooltip = original;
+		node.removeAttribute('aria-describedby');
+	}, savedTooltip);
 	await textarea.focus();
 	assert.equal(await marks.count(), 0);
 	// The same node and native selection survive previews and fullscreen changes.
@@ -177,6 +216,42 @@ async function checkEvidenceHighlights(page) {
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 	assert.equal(await marks.count(), 0);
 	await page.setViewportSize(viewport);
+}
+
+async function checkTitleEvidence(page) {
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	const source = 'Dance Workshop 2026-10-25 16:00\nTitle: Dance Workshop';
+	await page.locator('#description').fill(source);
+	const title = page.locator(
+		'[aria-label="Title alternatives"] button[aria-label="Dance Workshop"]'
+	);
+	await title.waitFor();
+	await title.hover();
+	const marks = page.locator('.description-evidence mark[data-hovered=true]');
+	await page.waitForFunction(
+		() => document.querySelectorAll('.description-evidence mark[data-hovered=true]').length === 2
+	);
+	assert.deepEqual(await marks.allTextContents(), ['Dance Workshop', 'Dance Workshop']);
+	const datePoint = await page.locator('.description-evidence').evaluate((node) => {
+		const mark = [...node.querySelectorAll('mark')].find((m) =>
+			m.textContent.includes('2026-10-25')
+		);
+		const text = mark.firstChild;
+		const offset = mark.textContent.indexOf('2026-10-25');
+		const probe = document.createRange();
+		probe.setStart(text, offset);
+		probe.setEnd(text, offset + 1);
+		const box = probe.getBoundingClientRect();
+		return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+	});
+	await page.mouse.move(datePoint.x, datePoint.y);
+	await page.waitForFunction(
+		() => !!document.querySelector('[aria-label="Start date alternatives"] .evidence-hovered')
+	);
+	assert.equal(await title.evaluate((node) => node.classList.contains('evidence-hovered')), false);
+	assert.equal(await page.locator('#description').inputValue(), source);
+	await page.mouse.move(0, 0);
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 }
 
 async function checkDescriptionEditor(page, { touch = false } = {}) {
@@ -2038,6 +2113,7 @@ for (const [name, engine] of [
 	assert.equal(await page.locator('#start-error, #end-error').count(), 0);
 	await checkDescriptionEditor(page);
 	await checkEvidenceHighlights(page);
+	await checkTitleEvidence(page);
 	await checkStickyDescription(page);
 	await checkPendingClipboard(page);
 	await checkCandidates(page);

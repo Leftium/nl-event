@@ -82,7 +82,9 @@
 				}
 			} else {
 				for (const candidate of Core.alternatives(draft, name)) {
-					(candidateSelected(name, candidate) ? selected : unselected).push(...candidate.spans);
+					(candidateSelected(name, candidate) ? selected : unselected).push(
+						...(candidate.textSpans ?? [])
+					);
 				}
 			}
 		}
@@ -110,7 +112,7 @@
 			return;
 		}
 		if (textRange?.start === range.start && textRange.end === range.end) return;
-		hoveredEvidence = focusedEvidence = undefined;
+		hoveredEvidence = undefined;
 		textEvidence = { range, suggestions: draft.suggestions };
 	}
 
@@ -747,9 +749,9 @@
 										class="suggestion"
 										aria-label={candidate.value}
 										data-tooltip={candidate.value}
-										use:chipEvidence={candidate.spans}
-										class:source-backed={candidate.spans.length > 0}
-										class:evidence-hovered={matchesTextEvidence(candidate.spans)}
+										use:chipEvidence={candidate.textSpans ?? []}
+										class:source-backed={(candidate.textSpans?.length ?? 0) > 0}
+										class:evidence-hovered={matchesTextEvidence(candidate.textSpans)}
 										aria-pressed={candidateSelected(name, candidate)}
 										onclick={() => {
 											draft = Core.selectCandidate(draft, name, candidate.id);
@@ -1300,7 +1302,8 @@
 	:global(.fast-tooltip) {
 		position: fixed;
 		z-index: 10000;
-		pointer-events: none;
+		pointer-events: auto;
+		overscroll-behavior: contain;
 		max-width: min(24rem, calc(100vw - 16px));
 		box-sizing: border-box;
 		padding: 0.35rem 0.55rem;

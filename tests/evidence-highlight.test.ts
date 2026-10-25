@@ -133,3 +133,32 @@ it('handles shared boundaries, duplicate ranges, absent layers and invalid evide
 		{ text: '🙂\r\n ', kind: undefined, hovered: false }
 	]);
 });
+
+it('gives labeled titles presentation evidence without changing their original spans', () => {
+	const text = '🙂\r\nTitle: Dance Workshop\r\n2026-10-25 16:00';
+	const draft = parse(text);
+	const title = Core.alternatives(draft, 'title').find((c) => c.value === 'Dance Workshop')!;
+	expect(title.spans.map((s) => text.slice(s.start, s.end))).toEqual(['Title: Dance Workshop']);
+	expect(title.textSpans!.map((s) => text.slice(s.start, s.end))).toEqual(['Dance Workshop']);
+});
+
+it('tracks title fragments across removed dates and clocks, preserving duplicate and UTF-16 offsets', () => {
+	const text = '🙂 Dance Workshop 2026-10-25 16:00\r\nTitle: 🙂 Dance Workshop';
+	const draft = parse(text);
+	const title = Core.alternatives(draft, 'title').find((c) => c.value === '🙂 Dance Workshop')!;
+	const pieces = title.textSpans!.map((s) => text.slice(s.start, s.end));
+	expect(pieces).toEqual(['🙂 Dance Workshop', '🙂 Dance Workshop']);
+	expect(title.spans.map((s) => text.slice(s.start, s.end))).toContain(
+		'🙂 Dance Workshop 2026-10-25 16:00'
+	);
+	for (const span of title.textSpans!) {
+		expect(text.slice(span.start, span.end)).not.toMatch(/October|4pm|Title:/);
+	}
+});
+
+it('retains discontinuous heading evidence when time appears inside the title', () => {
+	const text = 'Dance 4pm Workshop\n2026-10-25';
+	const draft = parse(text);
+	const title = Core.alternatives(draft, 'title').find((c) => c.value === 'Dance Workshop')!;
+	expect(title.textSpans!.map((s) => text.slice(s.start, s.end))).toEqual(['Dance ', 'Workshop']);
+});

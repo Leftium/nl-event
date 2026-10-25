@@ -13,6 +13,7 @@ type candidate = {
   spans: array<span>,
   dateSpans?: array<span>,
   timeSpans?: array<span>,
+  textSpans?: array<span>,
   inferred: array<string>,
   rank: int,
   groups: array<string>,
@@ -69,6 +70,8 @@ let weekday = text => {
     }
   }
 }
+type textEvidence = {value: string, spans: array<span>}
+@module("./primitives.ts") external cleanSourceText: (string, int, array<span>, array<string>) => textEvidence = "cleanSourceText"
 type dateEvidence = {date: string, span: span, inferred: array<string>, mismatch: bool}
 let inferDate = (year, month, day, dayOfWeek, reference, sourceSpan): dateEvidence => {
   let years =
@@ -350,29 +353,12 @@ let headingTitle = (line: lexical, reference, seasonYear, evening, englishSpans:
         )
       )
     )
-  let cleaned =
-    spans
-    ->Array.toSorted((a, b) => Int.toFloat(b.start - a.start))
-    ->Array.reduce(line.text, (text, span) => {
-      slice(text, 0, span.start - line.start) ++
-      slice(text, span.end - line.start, String.length(text))
-    })
-  let cleaned =
+  cleanSourceText(line.text, line.start, spans, Array.concat(
     Array.length(spans) > 0
-      ? matches(
-          cleaned,
-          "\\b(?:in the )?(?:tonight|morning|afternoon|evening|night)\\b|(?:아침|오후|저녁)",
-        )->Array.reduce(cleaned, (text, m) => replaceAll(text, m.text, ""))
-      : cleaned
-  let cleaned =
-    matches(cleaned, "\\b(?:at|on|from|to)\\s*$|^[\\s,:;~–-]+|[\\s,:;~–-]+$")
-    ->Array.toSorted((a, b) => Int.toFloat(b.start - a.start))
-    ->Array.reduce(cleaned, (text, m) =>
-      slice(text, 0, m.start) ++ slice(text, m.end, String.length(text))
-    )
-  matches(cleaned, "\\s{2,}")
-  ->Array.reduce(cleaned, (text, m) => replaceAll(text, m.text, " "))
-  ->trim
+      ? ["\\b(?:in the )?(?:tonight|morning|afternoon|evening|night)\\b|(?:아침|오후|저녁)"]
+      : [],
+    ["\\b(?:at|on|from|to)\\s*$|^[\\s,:;~–-]+|[\\s,:;~–-]+$"],
+  ))
 }
 
 // Decoration is presentation only when followed by a recognized section label.
@@ -822,6 +808,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     rank,
     groups,
     label,
+    ~textSpans=[],
   ) => {
     if value != "" {
       let fieldText = switch field {
@@ -850,7 +837,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
           candidates.contents,
           [{
             id, field, value, date, time, completeness, spans,
-            dateSpans, timeSpans, inferred, rank, groups, label,
+            dateSpans, timeSpans, textSpans: field == #title ? textSpans : spans, inferred, rank, groups, label,
           }],
         )
     }
@@ -860,7 +847,9 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     let titleLabel = matches(line.text, "^\\s*(?:제목|Title)\\s*[:：]\\s*(.+)$")->Array.get(0)
     let sourceSpan = [{start: line.start, end: line.end}]
     switch titleLabel {
-    | Some(m) => add(#title, group(m, 1), "", "", "text", sourceSpan, [], 200, ["overall"], "Title")
+    | Some(m) => add(#title, group(m, 1), "", "", "text", sourceSpan, [], 200, ["overall"], "Title", ~textSpans=[{
+      start: line.start + m.end - String.length(group(m, 1)), end: line.start + m.end,
+    }])
     | None =>
       if (
         index == 0 &&
@@ -870,15 +859,13 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
           "^(?:날짜|시간|일시|When|All day|Time zone|Location|장소|주소)[:： ]|^📍",
         )
       ) {
+        let heading = headingTitle(
+          line, reference, seasonYear, evening,
+          onLine(line)->Array.map(e => {start: e.start, end: e.end}),
+        )
         add(
           #title,
-          headingTitle(
-            line,
-            reference,
-            seasonYear,
-            evening,
-            onLine(line)->Array.map(e => {start: e.start, end: e.end}),
-          ),
+          heading.value,
           "",
           "",
           "text",
@@ -887,6 +874,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
           100,
           ["overall"],
           "Heading",
+          ~textSpans=heading.spans,
         )
       }
     }
@@ -1211,7 +1199,11 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
                 let after = trim(
                   slice(line.text, lastClock.span.end - line.start, line.text->String.length),
                 )
-                let heading = before != "" && !has(before, "^[^\\p{L}]*$") ? before : after
+                let useBefore = before != "" && !has(before, "^[^\\p{L}]*$")
+                let heading = useBefore ? before : after
+                let headingStart = useBefore ? line.start : lastClock.span.end
+                let headingEnd = useBefore ? start.span.start : line.end
+                let evidence = cleanSourceText(slice(text, headingStart, headingEnd), headingStart, [], [])
                 if heading != "" {
                   add(
                     #title,
@@ -1224,6 +1216,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
                     rank - 20,
                     [groupId],
                     label,
+                    ~textSpans=evidence.spans,
                   )
                 }
               }
@@ -1401,6 +1394,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
           190,
           ["deadline"],
           line.text,
+          ~textSpans=cleanSourceText(slice(text, line.start, d.span.start), line.start, [], []).spans,
         )
       }
     }
@@ -1426,6 +1420,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
                 v.dateSpans->Option.getOr([]),
                 c.dateSpans->Option.getOr([]),
               )),
+              textSpans: unique(Array.concat(v.textSpans->Option.getOr([]), c.textSpans->Option.getOr([]))),
               timeSpans: unique(Array.concat(
                 v.timeSpans->Option.getOr([]),
                 c.timeSpans->Option.getOr([]),
