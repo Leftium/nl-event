@@ -2,13 +2,13 @@
 
 NL Event turns Korean and English event announcements into one editable calendar draft. Paste text into Description, review the suggested Title, Start, End, and Location, then open the event in Google Calendar or download an `.ics` file. Nothing is saved to a calendar automatically.
 
-For example, `lunch tomorrow` suggests the title `lunch`, a noon start tomorrow, and an inferred one-hour end. The original Description is included in either export.
+For example, `lunch tomorrow` suggests the title `lunch`, a noon start tomorrow, and an inferred one-hour end. The current Description is included in either export.
 
 Parsing runs in the browser. There is no account, backend, external LLM, or calendar-reading permission.
 
 ## Editing a draft
 
-Each field has an Auto switch. With Auto on, the field follows the latest parsed suggestion. Typing or choosing a chip makes only that field Manual; switching Auto back on uses the latest suggestion again. Start and End show their interpreted values below the input, even when the input contains the announcement's original wording.
+Each field has an Auto switch. When it's on, the field follows parsing. Typing or choosing a chip makes only that field Manual. Turn Auto back on to accept the latest suggestion. Start and End show their interpreted values below the input, even when the input contains the announcement's original wording.
 
 Suggestions for Start and End are split into Date and Time chips. Choosing a date uses its associated time when available; choosing a time keeps that field's date. Unpaired combinations are allowed but flagged. Date chips show the weekday and days from today, and long lists start collapsed. Hovering or focusing source-backed suggestions highlights the matching text in Description. When an announcement has no date or clock, generated choices include Tomorrow and common times.
 
