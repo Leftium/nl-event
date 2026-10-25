@@ -683,11 +683,14 @@
 					{#if name === 'end'}
 						{@const duration = Core.durationValue(draft)}
 						<div class="temporal-options">
-							<small class="part-label"
-								>Duration{duration > 0
-									? ` · ${Core.durationLabel(duration, result.allDay)}`
-									: ''}</small
-							>
+							<small class="part-label">
+								<span class="evidence-label">Duration</span>
+								{#if duration > 0}
+									<span class="duration-summary"
+										>· {Core.durationLabel(duration, result.allDay)}</span
+									>
+								{/if}
+							</small>
 							<ul class="suggestions part-options" aria-label="End/Duration duration alternatives">
 								{#each Core.durationOptions(draft) as option (option.amount)}
 									<li>
