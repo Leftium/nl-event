@@ -42,7 +42,7 @@
 		expandedDates = { start: false, end: false };
 	}
 	type Evidence = {
-		node: HTMLButtonElement;
+		node: HTMLElement;
 		ranges: readonly EvidenceRange[];
 		identity: Core.identity;
 		revision: number;
@@ -126,7 +126,7 @@
 		hoveredEvidence = focusedEvidence = undefined;
 	}
 
-	function chipEvidence(node: HTMLButtonElement, ranges: readonly EvidenceRange[]) {
+	function chipEvidence(node: HTMLElement, ranges: readonly EvidenceRange[]) {
 		let current = ranges;
 		const snapshot = (): Evidence => ({
 			node,
@@ -163,7 +163,16 @@
 		node.addEventListener('pointerdown', pointerdown);
 		return {
 			update(next: readonly EvidenceRange[]) {
+				const changed =
+					current.length !== next.length ||
+					current.some(
+						(range, index) => range.start !== next[index].start || range.end !== next[index].end
+					);
 				current = next;
+				if (changed) {
+					if (node.matches(':hover')) enter();
+					if (node.matches(':focus-visible')) focus();
+				}
 			},
 			destroy() {
 				leave();
@@ -549,6 +558,14 @@
 		<div class="event-details" inert={descriptionFullscreen}>
 			{#each fields as { name, label, hint } (name)}
 				{@const field = Core.getField(draft, name)}
+				{@const fieldEvidence =
+					name === 'start' || name === 'end'
+						? ['date', 'time'].flatMap((part) =>
+								Core.temporalOptions(draft, name, part as Core.temporalPart).flatMap(
+									(option) => option.evidence ?? []
+								)
+							)
+						: Core.alternatives(draft, name).flatMap((candidate) => candidate.textSpans ?? [])}
 				{@const hasInput = !!draft.description.trim() || !!(field.input ?? field.value).trim()}
 				{@const error = !hasInput
 					? ''
@@ -564,7 +581,12 @@
 				<fieldset class="event-field" aria-label={label} inert={descriptionFullscreen}>
 					<legend class="field-heading">
 						<span class="field-label">
-							<label for={name}>{label}</label>
+							<label
+								for={name}
+								class="evidence-label"
+								use:chipEvidence={fieldEvidence}
+								class:evidence-proxy={fieldEvidence.length > 0}>{label}</label
+							>
 							{#if name === 'start'}
 								<button
 									type="button"
@@ -679,12 +701,19 @@
 					{#if name === 'start' || name === 'end'}
 						{#each ['date', 'time'] as part (part)}
 							{@const options = Core.temporalOptions(draft, name, part as Core.temporalPart)}
+							{@const partEvidence = options.flatMap((option) => option.evidence ?? [])}
 							{@const collapsible = part === 'date' && options.length >= 5}
 							{@const visibleOptions =
 								collapsible && !expandedDates[name]
 									? options.filter((option, index) => index < 3 || option.selected)
 									: options}
 							{@const hiddenCount = options.length - visibleOptions.length}
+							{@const hiddenEvidence = hiddenCount
+								? options
+										.slice(3)
+										.filter((option) => !option.selected)
+										.flatMap((option) => option.evidence ?? [])
+								: []}
 							{@const dateLabels =
 								part === 'date'
 									? options
@@ -699,14 +728,23 @@
 							{#if options.length || part === 'time'}
 								<div class="temporal-options">
 									<small class="part-label">
-										{part === 'date' ? 'Date' : 'Time'}
+										<span
+											class="evidence-label"
+											use:chipEvidence={partEvidence}
+											class:evidence-proxy={partEvidence.length > 0}
+											>{part === 'date' ? 'Date' : 'Time'}</span
+										>
 										{#if collapsible}
 											<button
 												type="button"
 												class="quiet-action date-toggle"
+												use:chipEvidence={hiddenEvidence}
+												class:evidence-proxy={hiddenEvidence.length > 0}
+												class:evidence-hovered={matchesTextEvidence(hiddenEvidence)}
 												aria-expanded={expandedDates[name]}
 												aria-controls={`${name}-date-options`}
 												onclick={() => {
+													clearEvidence();
 													expandedDates[name] = !expandedDates[name];
 												}}>{expandedDates[name] ? 'Show fewer' : `Show ${hiddenCount} more`}</button
 											>
@@ -1348,6 +1386,17 @@
 		font: inherit;
 		text-decoration: underline;
 		text-underline-offset: 0.15em;
+	}
+	.date-toggle.evidence-proxy:is(:hover, :focus-visible),
+	.date-toggle.evidence-hovered,
+	.evidence-label.evidence-proxy:hover {
+		opacity: 1;
+		background: var(--evidence-unselected-bg);
+		outline: 2px dashed var(--evidence-preview-color);
+		outline-offset: 1px;
+	}
+	.evidence-label {
+		font-weight: 700;
 	}
 	.date-chip-label {
 		display: inline-grid;

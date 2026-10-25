@@ -38,8 +38,64 @@ async function checkCompactDates(page) {
 			assert.equal(await toggle('start').textContent(), `Show ${count - 3} more`);
 		}
 	}
+	const marks = page.locator('.description-evidence mark[data-hovered=true]');
+	const hoverSourceDate = async (date) => {
+		const editor = page.locator('.description-evidence');
+		await editor.scrollIntoViewIfNeeded();
+		const point = await editor.evaluate((node, value) => {
+			const mark = [...node.querySelectorAll('mark')].find((mark) =>
+				mark.textContent.includes(value)
+			);
+			const range = document.createRange();
+			const start = mark.textContent.indexOf(value);
+			range.setStart(mark.firstChild, start + 1);
+			range.setEnd(mark.firstChild, start + 2);
+			const box = range.getBoundingClientRect();
+			return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+		}, date);
+		await page.mouse.move(point.x, point.y);
+	};
+	for (const field of ['start', 'end']) {
+		await dates(field).getByRole('button', { name: sourceDates[0], exact: true }).click();
+		await toggle(field).hover();
+		assert.deepEqual(await marks.allTextContents(), sourceDates.slice(3));
+		await page.mouse.move(0, 0);
+		await page.waitForFunction(
+			() => !document.querySelector('.description-evidence mark[data-hovered=true]')
+		);
+		await page.keyboard.press('Tab');
+		await toggle(field).focus();
+		assert.deepEqual(await marks.allTextContents(), sourceDates.slice(3));
+		await page.locator('#description').focus();
+		await hoverSourceDate(sourceDates[4]);
+		await page.waitForFunction(
+			(field) =>
+				document
+					.querySelector(`button[aria-controls="${field}-date-options"]`)
+					.classList.contains('evidence-hovered'),
+			field
+		);
+		assert.equal(
+			await toggle(field).evaluate((node) => getComputedStyle(node).outlineStyle),
+			'dashed'
+		);
+		await hoverSourceDate(sourceDates[0]);
+		await page.waitForFunction(
+			(field) =>
+				!document
+					.querySelector(`button[aria-controls="${field}-date-options"]`)
+					.classList.contains('evidence-hovered'),
+			field
+		);
+		await page.mouse.move(0, 0);
+	}
 	await toggle('start').focus();
 	await page.keyboard.press('Enter');
+	assert.equal(await marks.count(), 0);
+	assert.equal(
+		await toggle('start').evaluate((node) => node.classList.contains('evidence-proxy')),
+		false
+	);
 	assert.equal(await toggle('start').getAttribute('aria-expanded'), 'true');
 	assert.deepEqual(await values('start'), sourceDates);
 	assert.equal(await toggle('end').getAttribute('aria-expanded'), 'false');
@@ -55,6 +111,9 @@ async function checkCompactDates(page) {
 	const selected = dates('start').getByRole('button', { name: sourceDates[5], exact: true });
 	assert.equal(await selected.getAttribute('aria-pressed'), 'true');
 	assert.ok(await selected.getAttribute('data-tooltip'));
+	await toggle('start').hover();
+	assert.deepEqual(await marks.allTextContents(), sourceDates.slice(3, 5));
+	await page.mouse.move(0, 0);
 	// Every column has the same width, including years and three-digit deltas.
 	await toggle('start').click();
 	assert.deepEqual(await dates('start').locator('.date-delta').allTextContents(), [
@@ -130,6 +189,96 @@ async function checkCompactDates(page) {
 		'Today'
 	);
 	await reset();
+}
+
+async function checkEvidenceLabels(page) {
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	const dates = [
+		'2026-10-25',
+		'2026-10-26',
+		'2026-10-27',
+		'2026-10-28',
+		'2026-10-29',
+		'2026-10-30'
+	];
+	await page
+		.locator('#description')
+		.fill(
+			'Title: Night Party\n' +
+				dates.map((date) => `${date} 16:00-18:00`).join('\n') +
+				'\nLocation: Blue Hall'
+		);
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	const before = await page
+		.locator('#title, #start, #end, #location')
+		.evaluateAll((nodes) => nodes.map((node) => node.value));
+	const marks = page.locator('.description-evidence mark[data-hovered=true]');
+	for (const [field, name] of [
+		['start', 'Start'],
+		['end', 'End/Duration']
+	]) {
+		const group = page.getByRole('group', { name, exact: true });
+		const dateLabel = group.locator('.part-label .evidence-label').filter({ hasText: /^Date$/ });
+		await dateLabel.hover();
+		assert.deepEqual(await marks.allTextContents(), dates);
+		assert.equal(await group.locator('button[aria-expanded=false]').count(), 1);
+		assert.equal(await dateLabel.evaluate((node) => getComputedStyle(node).fontWeight), '700');
+		await group
+			.locator('.part-label .evidence-label')
+			.filter({ hasText: /^Time$/ })
+			.hover();
+		const clocks = (await marks.allTextContents()).join(' ');
+		assert.ok(clocks.includes(field === 'start' ? '16:00' : '18:00'));
+		assert.ok(!clocks.includes(field === 'start' ? '18:00' : '16:00'));
+		assert.ok(!clocks.includes('2026-'));
+		await group.locator(`label[for="${field}"]`).hover();
+		const all = (await marks.allTextContents()).join(' ');
+		for (const date of dates) assert.ok(all.includes(date));
+		assert.ok(all.includes(field === 'start' ? '16:00' : '18:00'));
+	}
+	for (const [field, text] of [
+		['title', 'Night Party'],
+		['location', 'Blue Hall']
+	]) {
+		await page.locator(`label[for="${field}"]`).hover();
+		assert.ok((await marks.allTextContents()).join(' ').includes(text));
+	}
+	await page.mouse.move(0, 0);
+	await page.locator('#description').focus();
+	const point = await page.locator('.description-evidence').evaluate((node) => {
+		const mark = [...node.querySelectorAll('mark')].find((mark) =>
+			mark.textContent.includes('2026-10-25')
+		);
+		const range = document.createRange();
+		const start = mark.textContent.indexOf('2026-10-25');
+		range.setStart(mark.firstChild, start + 1);
+		range.setEnd(mark.firstChild, start + 2);
+		const box = range.getBoundingClientRect();
+		return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+	});
+	await page.mouse.move(point.x, point.y);
+	await page.waitForFunction(() => !!document.querySelector('.suggestion.evidence-hovered'));
+	assert.equal(await page.locator('.evidence-label.evidence-hovered').count(), 0);
+	assert.ok(
+		await page
+			.locator('.evidence-label')
+			.evaluateAll((nodes) =>
+				nodes.every((node) => getComputedStyle(node).outlineStyle !== 'dashed')
+			)
+	);
+	assert.deepEqual(
+		await page
+			.locator('#title, #start, #end, #location')
+			.evaluateAll((nodes) => nodes.map((node) => node.value)),
+		before
+	);
+	for (const field of ['title', 'start', 'end', 'location']) {
+		await page.locator(`label[for="${field}"]`).click();
+		assert.equal(await page.evaluate(() => document.activeElement.id), field);
+	}
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 }
 
 async function checkEvidenceHighlights(page) {
@@ -2295,6 +2444,7 @@ for (const [name, engine] of [
 	await checkPendingClipboard(page);
 	await checkCandidates(page);
 	await checkCompactDates(page);
+	await checkEvidenceLabels(page);
 	await checkEnglishDates(page);
 	await checkSlowSaturday(page);
 	await checkRhythmParty(page);
