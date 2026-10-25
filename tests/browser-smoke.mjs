@@ -282,6 +282,14 @@ async function checkEvidenceLabels(page) {
 		.locator('#title, #start, #end, #location')
 		.evaluateAll((nodes) => nodes.map((node) => node.value));
 	const marks = page.locator('.description-evidence mark[data-hovered=true]');
+	const endGroup = page.getByRole('group', { name: 'End/Duration', exact: true });
+	const durationHeading = endGroup.locator('.part-label .evidence-label').filter({ hasText: /^Duration$/ });
+	assert.equal(await durationHeading.count(), 1);
+	assert.equal(await durationHeading.evaluate((node) => getComputedStyle(node).fontWeight), '700');
+	const durationSummary = endGroup.locator('.duration-summary');
+	if (await durationSummary.count()) {
+		assert.notEqual(await durationSummary.evaluate((node) => getComputedStyle(node).fontWeight), '700');
+	}
 	for (const [field, name] of [
 		['start', 'Start'],
 		['end', 'End/Duration']
