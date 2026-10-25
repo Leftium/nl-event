@@ -36,8 +36,13 @@
 	let descriptionInput: HTMLTextAreaElement;
 	let descriptionFullscreen = $state(false);
 	let descriptionWrap = $state(true);
+	let expandedDates = $state({ start: false, end: false });
+
+	function collapseDates() {
+		expandedDates = { start: false, end: false };
+	}
 	type Evidence = {
-		node: HTMLButtonElement;
+		node: HTMLElement;
 		ranges: readonly EvidenceRange[];
 		identity: Core.identity;
 		revision: number;
@@ -121,7 +126,7 @@
 		hoveredEvidence = focusedEvidence = undefined;
 	}
 
-	function chipEvidence(node: HTMLButtonElement, ranges: readonly EvidenceRange[]) {
+	function chipEvidence(node: HTMLElement, ranges: readonly EvidenceRange[]) {
 		let current = ranges;
 		const snapshot = (): Evidence => ({
 			node,
@@ -158,7 +163,16 @@
 		node.addEventListener('pointerdown', pointerdown);
 		return {
 			update(next: readonly EvidenceRange[]) {
+				const changed =
+					current.length !== next.length ||
+					current.some(
+						(range, index) => range.start !== next[index].start || range.end !== next[index].end
+					);
 				current = next;
+				if (changed) {
+					if (node.matches(':hover')) enter();
+					if (node.matches(':focus-visible')) focus();
+				}
 			},
 			destroy() {
 				leave();
@@ -210,23 +224,20 @@
 
 	function displayDateOption(value: string) {
 		const formatted = displayDateTime(value);
-		if (formatted === value) return value;
-		const month = [
-			'Jan',
-			'Feb',
-			'Mar',
-			'Apr',
-			'May',
-			'Jun',
-			'Jul',
-			'Aug',
-			'Sep',
-			'Oct',
-			'Nov',
-			'Dec'
-		][Number(value.slice(5, 7)) - 1];
-		const year = value.slice(0, 4) === displayNow.slice(0, 4) ? '' : ` ${value.slice(0, 4)}`;
-		return `${month} ${Number(value.slice(8, 10))}${year}${formatted.slice(10)}`;
+		const annotation = formatted.match(/\((\w{3}), (today|[+-]?\d+d)\)$/);
+		if (!annotation) return undefined;
+		const today = Temporal.Instant.from(displayNow)
+			.toZonedDateTimeISO(validZone(zone) ? zone : draft.context.browserTimeZone)
+			.toPlainDate();
+		return {
+			month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][
+				Number(value.slice(5, 7)) - 1
+			],
+			day: String(Number(value.slice(8, 10))),
+			year: value.slice(0, 4) === String(today.year) ? '' : value.slice(0, 4),
+			weekday: annotation[1],
+			delta: annotation[2] === 'today' ? '0d' : annotation[2]
+		};
 	}
 
 	function captureDescriptionSelection() {
@@ -310,6 +321,7 @@
 	}
 
 	onMount(() => {
+		collapseDates();
 		draft = Core.create(captureContext());
 		ready = true;
 		displayNow = draft.context.referenceInstant;
@@ -328,6 +340,7 @@
 		readingClipboard = false;
 		clearTimeout(parseTimer);
 		descriptionSelection = '';
+		collapseDates();
 		draft = Core.create(captureContext());
 		displayNow = draft.context.referenceInstant;
 		zoneDialog?.close();
@@ -346,6 +359,7 @@
 				return;
 			}
 			descriptionSelection = '';
+			collapseDates();
 			draft = Core.replaceClipboard(draft, text, captureContext());
 			displayNow = draft.context.referenceInstant;
 			scheduleParse(true);
@@ -443,6 +457,7 @@
 					oninput={(event) => {
 						clearEvidence();
 						descriptionSelection = '';
+						collapseDates();
 						draft = Core.describe(draft, event.currentTarget.value);
 						scheduleParse(event instanceof InputEvent && event.inputType === 'insertFromPaste');
 					}}
@@ -543,6 +558,14 @@
 		<div class="event-details" inert={descriptionFullscreen}>
 			{#each fields as { name, label, hint } (name)}
 				{@const field = Core.getField(draft, name)}
+				{@const fieldEvidence =
+					name === 'start' || name === 'end'
+						? ['date', 'time'].flatMap((part) =>
+								Core.temporalOptions(draft, name, part as Core.temporalPart).flatMap(
+									(option) => option.evidence ?? []
+								)
+							)
+						: Core.alternatives(draft, name).flatMap((candidate) => candidate.textSpans ?? [])}
 				{@const hasInput = !!draft.description.trim() || !!(field.input ?? field.value).trim()}
 				{@const error = !hasInput
 					? ''
@@ -558,7 +581,12 @@
 				<fieldset class="event-field" aria-label={label} inert={descriptionFullscreen}>
 					<legend class="field-heading">
 						<span class="field-label">
-							<label for={name}>{label}</label>
+							<label
+								for={name}
+								class="evidence-label"
+								use:chipEvidence={fieldEvidence}
+								class:evidence-proxy={fieldEvidence.length > 0}>{label}</label
+							>
 							{#if name === 'start'}
 								<button
 									type="button"
@@ -673,17 +701,67 @@
 					{#if name === 'start' || name === 'end'}
 						{#each ['date', 'time'] as part (part)}
 							{@const options = Core.temporalOptions(draft, name, part as Core.temporalPart)}
+							{@const partEvidence = options.flatMap((option) => option.evidence ?? [])}
+							{@const collapsible = part === 'date' && options.length >= 5}
+							{@const visibleOptions =
+								collapsible && !expandedDates[name]
+									? options.filter((option, index) => index < 3 || option.selected)
+									: options}
+							{@const hiddenCount = options.length - visibleOptions.length}
+							{@const hiddenEvidence = hiddenCount
+								? options
+										.slice(3)
+										.filter((option) => !option.selected)
+										.flatMap((option) => option.evidence ?? [])
+								: []}
+							{@const dateLabels =
+								part === 'date'
+									? options
+											.filter((option) => !option.generated)
+											.map((option) => displayDateOption(option.value))
+									: []}
+							{@const hasYear = dateLabels.some((label) => label?.year)}
+							{@const deltaWidth = Math.max(
+								4,
+								...dateLabels.map((label) => label?.delta.length ?? 0)
+							)}
 							{#if options.length || part === 'time'}
 								<div class="temporal-options">
-									<small class="part-label"
-										>{part === 'date' ? 'Date' : 'Time'}
+									<small class="part-label">
+										<span
+											class="evidence-label"
+											use:chipEvidence={partEvidence}
+											class:evidence-proxy={partEvidence.length > 0}
+											>{part === 'date' ? 'Date' : 'Time'}</span
+										>
+										{#if collapsible}
+											<button
+												type="button"
+												class="quiet-action date-toggle"
+												use:chipEvidence={hiddenEvidence}
+												class:evidence-proxy={hiddenEvidence.length > 0}
+												class:evidence-hovered={matchesTextEvidence(hiddenEvidence)}
+												aria-expanded={expandedDates[name]}
+												aria-controls={`${name}-date-options`}
+												onclick={() => {
+													clearEvidence();
+													expandedDates[name] = !expandedDates[name];
+												}}>{expandedDates[name] ? 'Show fewer' : `Show ${hiddenCount} more`}</button
+											>
+										{/if}
 										{#if part === 'time' && pairingWarning}<span
 												class="pairing-warning"
 												data-tooltip="This date and time were not paired in Description."
 												>Not paired in source</span
 											>{/if}
 									</small>
-									<ul class="suggestions part-options" aria-label={`${label} ${part} alternatives`}>
+									<ul
+										class="suggestions part-options"
+										class:with-date-year={hasYear}
+										style:--date-delta-width={`${deltaWidth}ch`}
+										id={`${name}-${part}-options`}
+										aria-label={`${label} ${part} alternatives`}
+									>
 										{#if part === 'time'}
 											<li>
 												<button
@@ -703,7 +781,11 @@
 												</button>
 											</li>
 										{/if}
-										{#each options as option (option.value)}
+										{#each visibleOptions as option (option.value)}
+											{@const dateLabel =
+												part === 'date' && !option.generated
+													? displayDateOption(option.value)
+													: undefined}
 											<li>
 												<button
 													type="button"
@@ -725,13 +807,19 @@
 													}}
 												>
 													<span class="selection-mark" aria-hidden="true"></span>
-													<span
-														>{option.generated
-															? option.label
-															: part === 'date'
-																? displayDateOption(option.value)
-																: option.value}</span
-													>
+													{#if dateLabel}
+														<span class="date-chip-label">
+															<span>{dateLabel.month}</span>
+															<span class="date-day">{dateLabel.day}</span>
+															{#if hasYear}<span>{dateLabel.year}</span>{/if}
+															<span class="date-annotation">
+																<span>{dateLabel.weekday}</span>
+																<span class="date-delta">{dateLabel.delta}</span>
+															</span>
+														</span>
+													{:else}
+														<span>{option.generated ? option.label : option.value}</span>
+													{/if}
 													{#if option.note}<span class="note">({option.note})</span>{/if}
 												</button>
 											</li>
@@ -1293,6 +1381,45 @@
 		align-items: baseline;
 		gap: 0.5rem;
 		min-height: 1.2em;
+	}
+	.date-toggle {
+		font: inherit;
+		text-decoration: underline;
+		text-underline-offset: 0.15em;
+	}
+	.date-toggle.evidence-proxy:is(:hover, :focus-visible),
+	.date-toggle.evidence-hovered,
+	.evidence-label.evidence-proxy:hover {
+		opacity: 1;
+		background: var(--evidence-unselected-bg);
+		outline: 2px dashed var(--evidence-preview-color);
+		outline-offset: 1px;
+	}
+	.evidence-label {
+		font-weight: 700;
+	}
+	.date-chip-label {
+		display: inline-grid;
+		align-items: baseline;
+		grid-template-columns: 3ch 2ch auto;
+		column-gap: 0.5ch;
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-variant-numeric: tabular-nums;
+	}
+	.with-date-year .date-chip-label {
+		grid-template-columns: 3ch 2ch 4ch auto;
+	}
+	.date-day,
+	.date-delta {
+		text-align: right;
+	}
+	.date-annotation {
+		display: inline-grid;
+		grid-template-columns: 3ch var(--date-delta-width);
+		column-gap: 0.35ch;
+		margin-inline-start: 0.75ch;
+		font-size: 0.8em;
+		opacity: 0.55;
 	}
 	.pairing-warning {
 		overflow: hidden;

@@ -4,6 +4,283 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+async function checkCompactDates(page) {
+	const reset = () => page.getByRole('button', { name: 'Reset', exact: true }).click();
+	const dates = (field) => page.locator(`#${field}-date-options`);
+	const toggle = (field) => page.locator(`button[aria-controls="${field}-date-options"]`);
+	const values = (field) =>
+		dates(field)
+			.getByRole('button')
+			.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('aria-label')));
+	const sourceDates = [
+		'2026-10-21',
+		'2026-10-24',
+		'2026-10-31',
+		'2026-12-05',
+		'2027-02-01',
+		'2027-02-08'
+	];
+	const fill = async (count) => {
+		await reset();
+		await page.locator('#description').fill(sourceDates.slice(0, count).join('\n'));
+		await page.waitForFunction(
+			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+		);
+	};
+	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
+	for (const count of [1, 3, 4, 5, 6]) {
+		await fill(count);
+		// Keep the selected date in the first three to make the boundary explicit.
+		await dates('start').getByRole('button', { name: sourceDates[0], exact: true }).click();
+		assert.deepEqual(await values('start'), sourceDates.slice(0, count >= 5 ? 3 : count));
+		assert.equal(await toggle('start').count(), count >= 5 ? 1 : 0);
+		if (count >= 5) {
+			assert.equal(await toggle('start').textContent(), `Show ${count - 3} more`);
+		}
+	}
+	const marks = page.locator('.description-evidence mark[data-hovered=true]');
+	const hoverSourceDate = async (date) => {
+		const editor = page.locator('.description-evidence');
+		await editor.scrollIntoViewIfNeeded();
+		const point = await editor.evaluate((node, value) => {
+			const mark = [...node.querySelectorAll('mark')].find((mark) =>
+				mark.textContent.includes(value)
+			);
+			const range = document.createRange();
+			const start = mark.textContent.indexOf(value);
+			range.setStart(mark.firstChild, start + 1);
+			range.setEnd(mark.firstChild, start + 2);
+			const box = range.getBoundingClientRect();
+			return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+		}, date);
+		await page.mouse.move(point.x, point.y);
+	};
+	for (const field of ['start', 'end']) {
+		await dates(field).getByRole('button', { name: sourceDates[0], exact: true }).click();
+		await toggle(field).hover();
+		assert.deepEqual(await marks.allTextContents(), sourceDates.slice(3));
+		await page.mouse.move(0, 0);
+		await page.waitForFunction(
+			() => !document.querySelector('.description-evidence mark[data-hovered=true]')
+		);
+		await page.keyboard.press('Tab');
+		await toggle(field).focus();
+		assert.deepEqual(await marks.allTextContents(), sourceDates.slice(3));
+		await page.locator('#description').focus();
+		await hoverSourceDate(sourceDates[4]);
+		await page.waitForFunction(
+			(field) =>
+				document
+					.querySelector(`button[aria-controls="${field}-date-options"]`)
+					.classList.contains('evidence-hovered'),
+			field
+		);
+		assert.equal(
+			await toggle(field).evaluate((node) => getComputedStyle(node).outlineStyle),
+			'dashed'
+		);
+		await hoverSourceDate(sourceDates[0]);
+		await page.waitForFunction(
+			(field) =>
+				!document
+					.querySelector(`button[aria-controls="${field}-date-options"]`)
+					.classList.contains('evidence-hovered'),
+			field
+		);
+		await page.mouse.move(0, 0);
+	}
+	await toggle('start').focus();
+	await page.keyboard.press('Enter');
+	assert.equal(await marks.count(), 0);
+	assert.equal(
+		await toggle('start').evaluate((node) => node.classList.contains('evidence-proxy')),
+		false
+	);
+	assert.equal(await toggle('start').getAttribute('aria-expanded'), 'true');
+	assert.deepEqual(await values('start'), sourceDates);
+	assert.equal(await toggle('end').getAttribute('aria-expanded'), 'false');
+	await dates('start').getByRole('button', { name: sourceDates[5], exact: true }).click();
+	assert.equal(await toggle('start').getAttribute('aria-expanded'), 'true');
+	await page.locator('#location').fill('Blue Hall');
+	assert.equal(await toggle('start').getAttribute('aria-expanded'), 'true');
+	await toggle('end').click();
+	await toggle('start').click();
+	assert.deepEqual(await values('start'), [...sourceDates.slice(0, 3), sourceDates[5]]);
+	assert.equal(await toggle('start').textContent(), 'Show 2 more');
+	assert.equal(await toggle('end').getAttribute('aria-expanded'), 'true');
+	const selected = dates('start').getByRole('button', { name: sourceDates[5], exact: true });
+	assert.equal(await selected.getAttribute('aria-pressed'), 'true');
+	assert.ok(await selected.getAttribute('data-tooltip'));
+	await toggle('start').hover();
+	assert.deepEqual(await marks.allTextContents(), sourceDates.slice(3, 5));
+	await page.mouse.move(0, 0);
+	// Every column has the same width, including years and three-digit deltas.
+	await toggle('start').click();
+	assert.deepEqual(await dates('start').locator('.date-delta').allTextContents(), [
+		'-3d',
+		'0d',
+		'+7d',
+		'+42d',
+		'+100d',
+		'+107d'
+	]);
+	for (const column of ['.date-day', '.date-delta']) {
+		const widths = await dates('start')
+			.locator(column)
+			.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
+		assert.ok(widths.every((width) => Math.abs(width - widths[0]) < 1));
+	}
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-compact-dates-${page.context().browser().browserType().name()}-desktop.png`
+		),
+		fullPage: true
+	});
+	const viewport = page.viewportSize();
+	await page.setViewportSize({ width: 390, height: 844 });
+	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+	await page.screenshot({
+		path: path.join(
+			os.tmpdir(),
+			`nl-event-compact-dates-${page.context().browser().browserType().name()}-narrow.png`
+		),
+		fullPage: true
+	});
+	await page.setViewportSize(viewport);
+	await page.locator('#description').fill(sourceDates.join('\n') + '\nLocation: Blue Hall');
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	for (const field of ['start', 'end']) {
+		assert.equal(await toggle(field).getAttribute('aria-expanded'), 'false');
+		await toggle(field).click();
+	}
+	// Clipboard replacement starts a new draft even when its Description is identical.
+	const source = await page.locator('#description').inputValue();
+	await page.evaluate((text) => {
+		Object.defineProperty(navigator.clipboard, 'readText', {
+			configurable: true,
+			value: async () => text
+		});
+	}, source);
+	await page.getByRole('button', { name: 'Paste from clipboard', exact: true }).click();
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	for (const field of ['start', 'end']) {
+		assert.equal(await toggle(field).getAttribute('aria-expanded'), 'false');
+		await toggle(field).click();
+	}
+	await page.evaluate(() => {
+		delete navigator.clipboard.readText;
+	});
+	await reset();
+	assert.equal(await dates('start').count(), 0);
+	assert.equal(await page.locator('.date-toggle').count(), 0);
+	await page.locator('#description').fill('Party');
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	assert.equal(await dates('start').getByRole('button').count(), 4);
+	assert.equal(await page.locator('.date-toggle').count(), 0);
+	assert.equal(
+		(await dates('start').getByRole('button', { name: 'Today', exact: true }).textContent()).trim(),
+		'Today'
+	);
+	await reset();
+}
+
+async function checkEvidenceLabels(page) {
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+	const dates = [
+		'2026-10-25',
+		'2026-10-26',
+		'2026-10-27',
+		'2026-10-28',
+		'2026-10-29',
+		'2026-10-30'
+	];
+	await page
+		.locator('#description')
+		.fill(
+			'Title: Night Party\n' +
+				dates.map((date) => `${date} 16:00-18:00`).join('\n') +
+				'\nLocation: Blue Hall'
+		);
+	await page.waitForFunction(
+		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+	);
+	const before = await page
+		.locator('#title, #start, #end, #location')
+		.evaluateAll((nodes) => nodes.map((node) => node.value));
+	const marks = page.locator('.description-evidence mark[data-hovered=true]');
+	for (const [field, name] of [
+		['start', 'Start'],
+		['end', 'End/Duration']
+	]) {
+		const group = page.getByRole('group', { name, exact: true });
+		const dateLabel = group.locator('.part-label .evidence-label').filter({ hasText: /^Date$/ });
+		await dateLabel.hover();
+		assert.deepEqual(await marks.allTextContents(), dates);
+		assert.equal(await group.locator('button[aria-expanded=false]').count(), 1);
+		assert.equal(await dateLabel.evaluate((node) => getComputedStyle(node).fontWeight), '700');
+		await group
+			.locator('.part-label .evidence-label')
+			.filter({ hasText: /^Time$/ })
+			.hover();
+		const clocks = (await marks.allTextContents()).join(' ');
+		assert.ok(clocks.includes(field === 'start' ? '16:00' : '18:00'));
+		assert.ok(!clocks.includes(field === 'start' ? '18:00' : '16:00'));
+		assert.ok(!clocks.includes('2026-'));
+		await group.locator(`label[for="${field}"]`).hover();
+		const all = (await marks.allTextContents()).join(' ');
+		for (const date of dates) assert.ok(all.includes(date));
+		assert.ok(all.includes(field === 'start' ? '16:00' : '18:00'));
+	}
+	for (const [field, text] of [
+		['title', 'Night Party'],
+		['location', 'Blue Hall']
+	]) {
+		await page.locator(`label[for="${field}"]`).hover();
+		assert.ok((await marks.allTextContents()).join(' ').includes(text));
+	}
+	await page.mouse.move(0, 0);
+	await page.locator('#description').focus();
+	const point = await page.locator('.description-evidence').evaluate((node) => {
+		const mark = [...node.querySelectorAll('mark')].find((mark) =>
+			mark.textContent.includes('2026-10-25')
+		);
+		const range = document.createRange();
+		const start = mark.textContent.indexOf('2026-10-25');
+		range.setStart(mark.firstChild, start + 1);
+		range.setEnd(mark.firstChild, start + 2);
+		const box = range.getBoundingClientRect();
+		return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+	});
+	await page.mouse.move(point.x, point.y);
+	await page.waitForFunction(() => !!document.querySelector('.suggestion.evidence-hovered'));
+	assert.equal(await page.locator('.evidence-label.evidence-hovered').count(), 0);
+	assert.ok(
+		await page
+			.locator('.evidence-label')
+			.evaluateAll((nodes) =>
+				nodes.every((node) => getComputedStyle(node).outlineStyle !== 'dashed')
+			)
+	);
+	assert.deepEqual(
+		await page
+			.locator('#title, #start, #end, #location')
+			.evaluateAll((nodes) => nodes.map((node) => node.value)),
+		before
+	);
+	for (const field of ['title', 'start', 'end', 'location']) {
+		await page.locator(`label[for="${field}"]`).click();
+		assert.equal(await page.evaluate(() => document.activeElement.id), field);
+	}
+	await page.getByRole('button', { name: 'Reset', exact: true }).click();
+}
+
 async function checkEvidenceHighlights(page) {
 	const viewport = page.viewportSize();
 	const textarea = page.locator('#description');
@@ -1064,6 +1341,8 @@ async function checkSlowSaturday(page) {
 		name: 'End/Duration date alternatives',
 		exact: true
 	});
+	await page.locator('button[aria-controls="start-date-options"]').click();
+	await page.locator('button[aria-controls="end-date-options"]').click();
 	assert.equal(await startOptions.getByRole('button').count(), 12);
 	assert.equal(
 		await page
@@ -1380,7 +1659,7 @@ async function checkTemporalParts(page) {
 	const times = page.getByRole('list', { name: 'Start time alternatives', exact: true });
 	assert.match(
 		await dates.getByRole('button', { name: '2026-10-26', exact: true }).textContent(),
-		/Mon, \+2d/
+		/Mon\s*\+2d/
 	);
 	const end = await page.locator('#end').inputValue();
 	await dates.getByRole('button', { name: '2026-10-26', exact: true }).focus();
@@ -2164,6 +2443,8 @@ for (const [name, engine] of [
 	await checkStickyDescription(page);
 	await checkPendingClipboard(page);
 	await checkCandidates(page);
+	await checkCompactDates(page);
+	await checkEvidenceLabels(page);
 	await checkEnglishDates(page);
 	await checkSlowSaturday(page);
 	await checkRhythmParty(page);
@@ -2455,6 +2736,31 @@ for (const [name, engine] of [
 		path: path.join(os.tmpdir(), `nl-event-english-${name}-touch.png`),
 		fullPage: true
 	});
+	await touchPage.getByRole('button', { name: 'Reset', exact: true }).tap();
+	await touchPage
+		.locator('#description')
+		.fill(
+			['2026-10-21', '2026-10-24', '2026-10-31', '2026-12-05', '2027-02-01', '2027-02-08'].join(
+				'\n'
+			)
+		);
+	const touchToggle = touchPage.locator('button[aria-controls="start-date-options"]');
+	await touchToggle.waitFor();
+	const toggleBox = await touchToggle.boundingBox();
+	assert.ok(toggleBox.height >= 44);
+	await touchToggle.tap();
+	assert.equal(await touchToggle.getAttribute('aria-expanded'), 'true');
+	assert.equal(await touchPage.locator('#start-date-options button').count(), 6);
+	await touchPage.locator('#start-date-options button[aria-label="2027-02-08"]').tap();
+	await touchToggle.tap();
+	assert.equal(await touchToggle.textContent(), 'Show 2 more');
+	assert.equal(await touchPage.locator('#start-date-options button').count(), 4);
+	assert.equal(
+		await touchPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+		true
+	);
+	await touchPage.getByRole('button', { name: 'Reset', exact: true }).tap();
+	await touchPage.waitForFunction(() => document.querySelector('#description').offsetHeight < 100);
 	await checkDescriptionEditor(touchPage, { touch: true });
 	await checkSelectionActions(touchPage, { touch: true });
 	await touchContext.close();
