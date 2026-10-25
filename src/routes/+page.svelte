@@ -686,7 +686,9 @@
 							<small class="part-label">
 								<span class="evidence-label">Duration</span>
 								{#if duration > 0}
-									<span class="duration-summary">· {Core.durationLabel(duration, result.allDay)}</span>
+									<span class="duration-summary"
+										>· {Core.durationLabel(duration, result.allDay)}</span
+									>
 								{/if}
 							</small>
 							<ul class="suggestions part-options" aria-label="End/Duration duration alternatives">

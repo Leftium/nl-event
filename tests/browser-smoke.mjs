@@ -289,12 +289,9 @@ async function checkEvidenceLabels(page) {
 	assert.equal(await durationHeading.count(), 1);
 	assert.equal(await durationHeading.evaluate((node) => getComputedStyle(node).fontWeight), '700');
 	const durationSummary = endGroup.locator('.duration-summary');
-	if (await durationSummary.count()) {
-		assert.notEqual(
-			await durationSummary.evaluate((node) => getComputedStyle(node).fontWeight),
-			'700'
-		);
-	}
+	assert.equal(await durationSummary.count(), 1);
+	assert.equal((await durationSummary.textContent()).trim(), '· 2h');
+	assert.equal(await durationSummary.evaluate((node) => getComputedStyle(node).fontWeight), '400');
 	for (const [field, name] of [
 		['start', 'Start'],
 		['end', 'End/Duration']
@@ -305,10 +302,9 @@ async function checkEvidenceLabels(page) {
 		assert.deepEqual(await marks.allTextContents(), dates);
 		assert.equal(await group.locator('button[aria-expanded=false]').count(), 1);
 		assert.equal(await dateLabel.evaluate((node) => getComputedStyle(node).fontWeight), '700');
-		await group
-			.locator('.part-label .evidence-label')
-			.filter({ hasText: /^Time$/ })
-			.hover();
+		const timeLabel = group.locator('.part-label .evidence-label').filter({ hasText: /^Time$/ });
+		assert.equal(await timeLabel.evaluate((node) => getComputedStyle(node).fontWeight), '700');
+		await timeLabel.hover();
 		const clocks = (await marks.allTextContents()).join(' ');
 		assert.ok(clocks.includes(field === 'start' ? '16:00' : '18:00'));
 		assert.ok(!clocks.includes(field === 'start' ? '18:00' : '16:00'));
