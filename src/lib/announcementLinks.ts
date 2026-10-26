@@ -67,25 +67,35 @@ export function discoverLinks(description: string): AnnouncementLink[] {
 		}
 		if (!['http:', 'https:'].includes(url.protocol)) continue;
 		const identity = url.href;
+		const lineStart = description.lastIndexOf('\n', match.start - 1) + 1;
+		const nextNewline = description.indexOf('\n', match.end);
+		const lineEnd = nextNewline < 0 ? description.length : nextNewline;
 		// Cues stop at adjacent URLs so one label does not identify every link on a line.
-		const before = description.slice(
-			Math.max(
-				description.lastIndexOf('\n', match.start - 1) + 1,
-				matches[index - 1]?.end ?? 0,
-				match.start - 80
-			),
+		let before = description.slice(
+			Math.max(lineStart, matches[index - 1]?.end ?? 0, match.start - 80),
 			match.start
 		);
 		const after = description.slice(
 			match.end,
-			Math.min(
-				description.indexOf('\n', match.end) < 0
-					? description.length
-					: description.indexOf('\n', match.end),
-				matches[index + 1]?.start ?? description.length,
-				match.end + 80
-			)
+			Math.min(lineEnd, matches[index + 1]?.start ?? description.length, match.end + 80)
 		);
+		// A standalone URL can belong to the immediately preceding label, never a
+		// distant paragraph, blank line, or another URL's line.
+		if (
+			lineStart > 0 &&
+			!description.slice(lineStart, match.start).trim() &&
+			!description.slice(match.end, lineEnd).trim()
+		) {
+			const previousStart = description.lastIndexOf('\n', lineStart - 2) + 1;
+			const previousLine = description.slice(previousStart, lineStart - 1);
+			if (
+				previousLine.trim() &&
+				previousLine.length <= 80 &&
+				(matches[index - 1]?.end ?? 0) <= previousStart
+			) {
+				before = previousLine + '\n' + before;
+			}
+		}
 		const roles: LinkRole[] = [];
 		for (const [role, pattern] of [
 			['Signup', /신청|등록|\b(?:sign[ -]?up|register|registration)\b/i],

@@ -17,6 +17,22 @@ export async function checkAnnouncementLinks(page, touch = false) {
 	};
 	page.on('request', onRequest);
 	try {
+		await page.evaluate(() => {
+			Object.defineProperty(navigator, 'clipboard', {
+				configurable: true,
+				value: { readText: async () => window.announcementClipboard }
+			});
+		});
+		const paste = async (text) => {
+			await page.evaluate((text) => {
+				window.announcementClipboard = text;
+			}, text);
+			await activate(page.getByRole('button', { name: 'Paste from clipboard', exact: true }));
+			await page.waitForFunction(
+				(text) => document.querySelector('#description').value === text,
+				text
+			);
+		};
 		await activate(page.getByRole('button', { name: 'Reset', exact: true }));
 		assert.equal(await trigger.count(), 0);
 		await description.fill(source);
@@ -31,10 +47,7 @@ export async function checkAnnouncementLinks(page, touch = false) {
 		);
 		await activate(trigger);
 		await dialog.waitFor({ state: 'visible' });
-		assert.equal(
-			await dialog.getByRole('radio', { name: 'Primary signup', exact: true }).isChecked(),
-			true
-		);
+		assert.equal(await dialog.getByRole('radio', { name: /^Primary signup:/ }).isChecked(), true);
 		assert.equal(await dialog.getByRole('heading', { name: 'Map', exact: true }).count(), 1);
 		assert.equal(await dialog.getByRole('heading', { name: 'Other', exact: true }).count(), 1);
 		assert.match(await dialog.textContent(), /Confirmation fallback candidate/);
@@ -71,16 +84,61 @@ export async function checkAnnouncementLinks(page, touch = false) {
 			await dialog.getByRole('radio', { name: 'None selected', exact: true }).isChecked(),
 			true
 		);
-		await activate(dialog.getByRole('radio', { name: 'Use as signup', exact: true }).nth(1));
+		assert.equal(
+			await dialog
+				.getByRole('radio', {
+					name: 'Use as signup: https://forms.gle/FIRST_SYNTHETIC',
+					exact: true
+				})
+				.count(),
+			1
+		);
+		await activate(
+			dialog.getByRole('radio', {
+				name: 'Use as signup: https://forms.gle/SECOND_SYNTHETIC',
+				exact: true
+			})
+		);
 		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
 		await description.fill('https://forms.gle/SECOND_SYNTHETIC\nhttps://forms.gle/FIRST_SYNTHETIC');
 		await activate(trigger);
 		assert.match(
 			await dialog
 				.locator('li')
-				.filter({ has: page.getByRole('radio', { name: 'Primary signup', exact: true }) })
+				.filter({ has: page.getByRole('radio', { name: /^Primary signup:/ }) })
 				.textContent(),
 			/SECOND_SYNTHETIC/
+		);
+		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
+		// New clipboard drafts must discard explicit choices even when URLs/text survive.
+		await paste('https://forms.gle/SECOND_SYNTHETIC\nhttps://forms.gle/FIRST_SYNTHETIC');
+		await activate(trigger);
+		assert.equal(
+			await dialog.getByRole('radio', { name: 'None selected', exact: true }).isChecked(),
+			true
+		);
+		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
+		await description.fill('https://forms.gle/FIRST_SYNTHETIC');
+		await activate(trigger);
+		await activate(dialog.getByRole('radio', { name: 'None selected', exact: true }));
+		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
+		await description.fill('https://forms.gle/FIRST_SYNTHETIC\nExtra text');
+		await activate(trigger);
+		assert.equal(
+			await dialog.getByRole('radio', { name: 'None selected', exact: true }).isChecked(),
+			true
+		);
+		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
+		await paste('https://forms.gle/FIRST_SYNTHETIC\nExtra text');
+		await activate(trigger);
+		assert.equal(
+			await dialog
+				.getByRole('radio', {
+					name: 'Primary signup: https://forms.gle/FIRST_SYNTHETIC',
+					exact: true
+				})
+				.isChecked(),
+			true
 		);
 		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
 		await description.fill('https://example.com/replacement');
@@ -90,22 +148,17 @@ export async function checkAnnouncementLinks(page, touch = false) {
 			true
 		);
 		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		await page.evaluate(() => {
-			Object.defineProperty(navigator, 'clipboard', {
-				configurable: true,
-				value: { readText: async () => 'https://url.kr/SYNTHETIC_CLIPBOARD' }
-			});
-		});
-		await activate(page.getByRole('button', { name: 'Paste from clipboard', exact: true }));
-		await page.waitForFunction(() =>
-			document.querySelector('#description').value.includes('SYNTHETIC_CLIPBOARD')
-		);
+		await paste('https://url.kr/SYNTHETIC_CLIPBOARD');
 		await activate(trigger);
 		assert.match(await dialog.textContent(), /Destination unknown/);
 		assert.equal(
 			await dialog.getByRole('radio', { name: 'None selected', exact: true }).isChecked(),
 			true
 		);
+		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
+		await description.fill('https://docs.google.com/spreadsheets/d/SYNTHETIC_UNRELATED/edit');
+		await activate(trigger);
+		assert.doesNotMatch(await dialog.textContent(), /Confirmation fallback candidate/);
 		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
 		await activate(page.getByRole('button', { name: 'Reset', exact: true }));
 		assert.equal(await trigger.count(), 0);

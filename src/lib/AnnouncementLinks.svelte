@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { discoverLinks, primarySignup } from './announcementLinks';
-	let { description }: { description: string } = $props();
+	import type { identity } from './core/EventCore.gen';
+	let { description, draftIdentity }: { description: string; draftIdentity: identity } = $props();
+	let previousIdentity: identity;
 	let links = $derived(discoverLinks(description));
 	let explicit = $state<string | null>();
 	let selected = $derived(primarySignup(links, explicit));
@@ -17,6 +19,10 @@
 				? 'Signup and confirmation'
 				: 'Other';
 	$effect(() => {
+		if (previousIdentity !== draftIdentity) {
+			explicit = undefined;
+			previousIdentity = draftIdentity;
+		}
 		if (explicit && !links.some((link) => link.identity === explicit)) explicit = undefined;
 		if (!links.length) explicit = undefined;
 		if (!links.length && dialog?.open) dialog.close();
@@ -110,7 +116,7 @@
 												}}
 											/>
 											<span class="sr-only"
-												>{selected === link.identity ? 'Primary signup' : 'Use as signup'}</span
+												>{selected === link.identity ? 'Primary signup' : 'Use as signup'}: {link.source}</span
 											>
 											<span class="link-kind" aria-hidden="true">{link.kind}</span>
 										</label>
@@ -129,7 +135,7 @@
 								<details>
 									<summary>Details</summary>
 									{#if link.roles.length}<p>Suggested: {link.roles.join(', ')}</p>{/if}
-									{#if link.sheet}<p>
+									{#if link.sheet && link.roles.includes('Confirmation')}<p>
 											Confirmation fallback candidate. Veneer can discover a Form-linked Sheet
 											first.
 										</p>{/if}

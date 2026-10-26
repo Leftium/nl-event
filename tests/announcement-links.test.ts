@@ -79,3 +79,34 @@ it('combines weak hints from duplicate occurrences without changing first-occurr
 	expect(links[0].roles).toEqual(['Signup']);
 	expect(primarySignup([...links].reverse())).toBe(links[0].identity);
 });
+
+it.each([
+	[
+		'Korean',
+		`신청 링크:\nhttps://example.com/signup\n\n신청 확인:\n${sheet}`,
+		[['Signup'], ['Signup', 'Confirmation']]
+	],
+	[
+		'English',
+		`Registration:\r\n  https://example.com/signup\r\n\r\nConfirmation:\r\n${sheet}`,
+		[['Signup'], ['Confirmation']]
+	]
+])('uses immediately preceding labels for standalone URLs in %s', (_language, source, roles) => {
+	const links = discoverLinks(source as string);
+	expect(links.map((link) => link.roles)).toEqual(roles);
+	expect(links[0].context).toContain('https://example.com/signup');
+	for (const link of links)
+		expect((source as string).slice(link.start, link.end)).toBe(link.source);
+});
+
+it('does not inherit labels across blanks, intervening prose, or another URL', () => {
+	for (const source of [
+		'Registration:\n\nhttps://example.com/info',
+		'신청 링크:\nGeneral information\nhttps://example.com/info',
+		'Registration: https://example.com/first\nhttps://example.com/second',
+		'Registration:\nhttps://example.com/first https://example.com/second',
+		'Registration:\nInfo: https://example.com/info'
+	]) {
+		expect(discoverLinks(source).at(-1)?.roles).toEqual([]);
+	}
+});

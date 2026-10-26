@@ -459,7 +459,7 @@
 					>
 						{readingClipboard ? 'Reading clipboard...' : 'Paste from clipboard'}
 					</button>
-					<AnnouncementLinks description={draft.description} />
+					<AnnouncementLinks description={draft.description} draftIdentity={draft.identity} />
 				</div>
 			</div>
 			<div class="editor-surface">
