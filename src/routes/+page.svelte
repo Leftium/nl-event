@@ -1,12 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import AnnouncementLinks from '#lib/AnnouncementLinks.svelte';
-	import {
-		leadingVeneerLink,
-		setSignupLink,
-		signupSource,
-		veneerLink
-	} from '#lib/calendarDescription.ts';
+	import { setSignupLink, signupSource, veneerLink } from '#lib/calendarDescription.ts';
 	import { discoverLinks, groupEquivalentLinks } from '#lib/announcementLinks.ts';
 	import type { EvidenceRange } from '#lib/evidenceHighlight.ts';
 	import { descriptionEditor } from '#lib/descriptionEditor.ts';
@@ -37,15 +32,6 @@
 	);
 	let result = $derived(Core.validate(draft));
 	let links = $derived(groupEquivalentLinks(discoverLinks(draft.description)));
-	let leadingSignup = $derived(leadingVeneerLink(draft.description));
-	let includedSignup = $derived(
-		leadingSignup
-			? links.find((link) => signupSource(link.href)?.id === leadingSignup.id)?.identity
-			: undefined
-	);
-	let signupSheet = $derived(
-		leadingSignup ? (new URL(leadingSignup.veneerUrl).pathname.split('/')[2] ?? '') : ''
-	);
 	let googleUrl = $derived(result.event ? Core.googleUrl(result.event) : '');
 	let longGoogleUrl = $derived(googleUrl.length > 8000);
 	let zone = $derived(Core.effectiveZone(draft));
@@ -345,9 +331,13 @@
 
 	function includeSignup(identity: string, include: boolean, sheet?: string) {
 		const link = links.find((candidate) => candidate.identity === identity);
-		const source = signupSource(link?.href ?? '');
+		const source = signupSource(link?.veneerUrl ?? link?.href ?? '');
 		if (!source) return;
-		const text = setSignupLink(draft.description, include ? veneerLink(source, sheet) : undefined);
+		const text = setSignupLink(
+			draft.description,
+			include ? veneerLink(source, sheet) : undefined,
+			source.id
+		);
 		clearEvidence();
 		descriptionSelection = '';
 		draft = Core.describe(draft, text);
@@ -631,8 +621,6 @@
 				<AnnouncementLinks
 					{links}
 					original={draft.description}
-					included={includedSignup}
-					sheet={signupSheet}
 					oninclude={includeSignup}
 					onimport={importFormDetails}
 					onhighlight={(link) => {

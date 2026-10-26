@@ -168,3 +168,92 @@ export async function checkCalendarDescription(page, touch = false) {
 		await reset();
 	}
 }
+
+export async function checkDescriptionReviewRegressions(page, touch = false) {
+	const activate = (node) => (touch ? node.tap() : node.click());
+	const reset = () => activate(page.getByRole('button', { name: 'Reset', exact: true }));
+	const description = page.locator('#description');
+	const chips = page.getByRole('group', { name: 'Description links', exact: true });
+	const details = page.getByRole('region', { name: 'Link details', exact: true });
+	const first = 'https://docs.google.com/forms/d/e/REVIEW_FIRST/viewform';
+	const second = 'https://docs.google.com/forms/d/e/REVIEW_SECOND/viewform';
+	const veneer = 'https://veneer.leftium.com/f.REVIEW_FIRST/s.REVIEW_SHEET?tabs=info#form';
+	const source = `Dance party\n${first}\n${second}\nSignup: ${veneer}`;
+	let version = 1;
+	const routeHandler = async (route) => {
+		const isFirst = new URL(route.request().url()).searchParams.get('id') === 'f.REVIEW_FIRST';
+		await route.fulfill({
+			contentType: 'application/json',
+			body: JSON.stringify({
+				status: 'ok',
+				type: 'form',
+				documentId: isFirst ? 'f.REVIEW_FIRST' : 'f.REVIEW_SECOND',
+				title: isFirst ? 'First Form' : 'Second Form',
+				infoText: isFirst ? `Introduction version ${version}` : 'Second introduction',
+				autoSheets: [],
+				autoSheetsStatus: 'complete'
+			})
+		});
+	};
+	await page.route('**/api/form-meta?*', routeHandler);
+	const open = async (url) => {
+		await activate(chips.getByRole('button', { name: `Details for ${url}`, exact: true }));
+		await details.getByRole('button', { name: 'Refresh', exact: true }).waitFor();
+	};
+	try {
+		await reset();
+		await description.fill(source);
+		await open(first);
+		assert.equal(await details.getByLabel('Veneer link', { exact: true }).isChecked(), true);
+		await details.getByLabel('Veneer link', { exact: true }).check();
+		assert.equal(await description.inputValue(), source);
+		assert.equal(await chips.locator('.included').count(), 1);
+		await activate(details.getByText('Confirmation Sheet', { exact: true }));
+		assert.equal(
+			await details.getByLabel('Confirmation Sheet', { exact: true }).inputValue(),
+			's.REVIEW_SHEET'
+		);
+		await activate(details.getByRole('button', { name: 'Add to description', exact: true }));
+		const initial = `${source}\n\n---\n\nFirst Form\n\nIntroduction version 1`;
+		assert.equal(await description.inputValue(), initial);
+		await open(first);
+		version = 2;
+		await activate(details.getByRole('button', { name: 'Refresh', exact: true }));
+		await details.getByRole('button', { name: 'Update description', exact: true }).waitFor();
+		assert.equal(await description.inputValue(), initial);
+		await activate(details.getByRole('button', { name: 'Update description', exact: true }));
+		const updated = initial.replace('Introduction version 1', 'Introduction version 2');
+		assert.equal(await description.inputValue(), updated);
+		await open(second);
+		await activate(details.getByRole('button', { name: 'Update description', exact: true }));
+		const switched = `${source}\n\n---\n\nSecond Form\n\nSecond introduction`;
+		assert.equal(await description.inputValue(), switched);
+		const edited = switched.replace('Second introduction', 'My edited introduction');
+		await description.fill(edited);
+		await open(first);
+		await activate(details.getByRole('button', { name: 'Review replacement', exact: true }));
+		assert.equal(await description.inputValue(), edited);
+		await activate(details.getByRole('button', { name: 'Keep edits', exact: true }));
+		assert.equal(await description.inputValue(), edited);
+		await activate(details.getByRole('button', { name: 'Review replacement', exact: true }));
+		await activate(details.getByRole('button', { name: 'Replace edited details', exact: true }));
+		assert.equal(await description.inputValue(), updated);
+		// Edits followed by changed metadata also require explicit replacement.
+		const manual = updated.replace('Introduction version 2', 'My manual version');
+		await description.fill(manual);
+		await open(first);
+		version = 3;
+		await activate(details.getByRole('button', { name: 'Refresh', exact: true }));
+		await details.getByRole('button', { name: 'Review replacement', exact: true }).waitFor();
+		assert.equal(await description.inputValue(), manual);
+		await activate(details.getByRole('button', { name: 'Review replacement', exact: true }));
+		await activate(details.getByRole('button', { name: 'Replace edited details', exact: true }));
+		assert.equal(
+			await description.inputValue(),
+			initial.replace('Introduction version 1', 'Introduction version 3')
+		);
+	} finally {
+		await page.unroute('**/api/form-meta?*', routeHandler);
+		await reset();
+	}
+}

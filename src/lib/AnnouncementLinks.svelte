@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { onDestroy, tick } from 'svelte';
+	import { onDestroy, tick, untrack } from 'svelte';
 	import type { AnnouncementLink } from './announcementLinks';
 	import {
-		addFormIntroduction,
 		formIntroduction,
 		sheetIdentity,
 		signupSource,
+		trackFormIntroduction,
+		writeFormIntroduction,
+		type FormIntroductionSection,
 		type FormMetadata
 	} from './calendarDescription';
 	import { loadFormMetadata } from './formMetadata';
@@ -13,16 +15,12 @@
 	let {
 		links,
 		original,
-		included,
-		sheet = '',
 		oninclude,
 		onimport,
 		onhighlight
 	}: {
 		links: AnnouncementLink[];
 		original: string;
-		included?: string;
-		sheet?: string;
 		oninclude: (identity: string, include: boolean, sheet?: string) => void;
 		onimport: (text: string) => void;
 		onhighlight: (link?: AnnouncementLink) => void;
@@ -34,16 +32,22 @@
 	let metadata = $state<FormMetadata>();
 	let phase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	let failure = $state('');
-	let used = $state<Record<string, string>>({});
+	let imported = $state<FormIntroductionSection>();
+	let trackedDescription = '';
+	let confirmReplacement = $state(false);
 	let generation = 0;
 	let disposed = false;
 	let source = $derived(signupSource(selected?.href ?? ''));
 	let intro = $derived(metadata?.type === 'form' ? formIntroduction(metadata) : '');
-	let alreadyUsed = $derived(
-		!!selected && used[selected.identity] === intro && !!intro && original.includes(intro)
+	let alreadyUsed = $derived(!!intro && imported?.text === intro);
+	let edited = $derived(
+		!!imported && original.slice(imported.start, imported.end) !== imported.text
 	);
+	let included = $derived(links.find((link) => link.identity === selected?.identity)?.veneerUrl);
+	let sheet = $derived(included ? (new URL(included).pathname.split('/')[2] ?? '') : '');
 	let sheets = $derived([
 		...new Map([
+			...(sheet ? [[sheet, { id: sheet, label: sheet }] as const] : []),
 			...(metadata?.autoSheets ?? []).map(
 				({ veneerId, title }) => [veneerId, { id: veneerId, label: title || veneerId }] as const
 			),
@@ -56,6 +60,14 @@
 	$effect(() => {
 		if (selected && !links.some((link) => link.identity === selected?.identity)) dismiss();
 	});
+	$effect(() => {
+		const text = original;
+		untrack(() => {
+			imported = trackFormIntroduction(trackedDescription, text, imported);
+			trackedDescription = text;
+			confirmReplacement = false;
+		});
+	});
 	onDestroy(() => {
 		disposed = true;
 		generation++;
@@ -63,6 +75,7 @@
 	});
 
 	async function show(link: AnnouncementLink, button = trigger, refresh = false) {
+		confirmReplacement = false;
 		trigger = button;
 		const same = selected?.identity === link.identity;
 		if (same && !refresh && phase !== 'error') {
@@ -105,6 +118,7 @@
 		}
 	}
 	function dismiss(restoreFocus = false) {
+		confirmReplacement = false;
 		generation++;
 		selected = undefined;
 		metadata = undefined;
@@ -112,12 +126,17 @@
 		onhighlight();
 		if (restoreFocus && trigger?.isConnected) trigger.focus({ preventScroll: true });
 	}
-	function addDetails() {
+	function addDetails(replaceEdited = false) {
 		if (!selected || !intro || alreadyUsed) return;
-		used = { ...used, [selected.identity]: intro };
-		const text = addFormIntroduction(original, intro);
+		if (edited && !replaceEdited) {
+			confirmReplacement = true;
+			return;
+		}
+		const result = writeFormIntroduction(original, intro, imported);
+		imported = result.section;
+		trackedDescription = result.description;
 		dismiss();
-		onimport(text);
+		onimport(result.description);
 	}
 </script>
 
@@ -136,7 +155,7 @@
 			<button
 				type="button"
 				class="link-chip"
-				class:included={included === link.identity}
+				class:included={!!link.veneerUrl}
 				aria-label={`Details for ${link.source}`}
 				aria-controls={detailsId}
 				aria-expanded={selected?.identity === link.identity}
@@ -150,7 +169,7 @@
 				<span class="chip-kind">{link.kind}</span><span class="chip-url"
 					>{link.source.replace(/^https?:\/\//i, '')}</span
 				>
-				{#if included === link.identity}<span class="signup-badge">Veneer</span>{/if}
+				{#if link.veneerUrl}<span class="signup-badge">Veneer</span>{/if}
 			</button>
 		{/each}
 	</div>
@@ -182,7 +201,7 @@
 				<label
 					><input
 						type="checkbox"
-						checked={included === selected.identity}
+						checked={!!included}
 						onchange={(event) =>
 							selected && oninclude(selected.identity, event.currentTarget.checked)}
 					/> Veneer link</label
@@ -192,7 +211,14 @@
 					type="button"
 					class="inline outline"
 					disabled={alreadyUsed || phase === 'loading'}
-					onclick={addDetails}>{alreadyUsed ? 'Already added' : 'Add to description'}</button
+					onclick={() => addDetails()}
+					>{alreadyUsed
+						? 'Already added'
+						: imported
+							? edited
+								? 'Review replacement'
+								: 'Update description'
+							: 'Add to description'}</button
 				>{/if}
 			{#if source && phase !== 'loading'}<button
 					type="button"
@@ -201,13 +227,24 @@
 					>{phase === 'error' ? 'Retry' : 'Refresh'}</button
 				>{/if}
 		</div>
+		{#if confirmReplacement}
+			<div role="group" aria-label="Replace edited Form details">
+				<p>The imported details were edited. Replace that section with the current Form details?</p>
+				<button type="button" class="quiet" onclick={() => (confirmReplacement = false)}
+					>Keep edits</button
+				>
+				<button type="button" class="inline outline" onclick={() => addDetails(true)}
+					>Replace edited details</button
+				>
+			</div>
+		{/if}
 		{#if phase === 'loading'}<p role="status">Getting event details...</p>{/if}
 		{#if phase === 'error'}<p role="alert">{failure}</p>{/if}
 		{#if metadata?.type === 'sheet'}<p>This link opens a Sheet, without Form details.</p>{/if}
 		{#if metadata?.type === 'form' && !intro}<p>No introductory details were found.</p>{/if}
 		{#if intro}<pre aria-label="Form details preview">{intro}</pre>{/if}
 
-		{#if source && included === selected.identity && sheets.length}
+		{#if source && included && sheets.length}
 			<details class="secondary-details">
 				<summary>Confirmation Sheet</summary>
 				{#if sheets.length}<select

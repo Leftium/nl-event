@@ -8,7 +8,10 @@ import {
 	sheetIdentity,
 	signupSource,
 	setSignupLink,
-	veneerLink
+	veneerLink,
+	existingVeneerLinks,
+	writeFormIntroduction,
+	trackFormIntroduction
 } from '../src/lib/calendarDescription';
 import * as Core from '../src/lib/core/EventCore.gen';
 
@@ -26,6 +29,17 @@ const metadata = (extra = {}) =>
 	});
 
 describe('export description composition', () => {
+	it('reuses an inline Veneer URL and updates or removes it in place', () => {
+		const url = `${veneer}/s.SHEET?tabs=info#form`;
+		const text = `Dance party\nSignup: ${url}\nKeep this text.  `;
+		expect(existingVeneerLinks(text)[0]).toMatchObject({ id: 'f.SYNTHETIC_FORM', veneerUrl: url });
+		expect(setSignupLink(text, url)).toBe(text);
+		expect(setSignupLink(text, `${veneer}/s.OTHER`)).toBe(text.replace(url, `${veneer}/s.OTHER`));
+		expect(setSignupLink(text, undefined, 'f.SYNTHETIC_FORM')).toBe(text.replace(url, ''));
+		expect(existingVeneerLinks(`Ignore https://veneer.leftium.com.evil.example/f.FORM`)).toEqual(
+			[]
+		);
+	});
 	it('keeps source whitespace, Unicode and repeated prose in the agreed order', () => {
 		const original = '  춤 🎵\r\nIntro\n\n ';
 		expect(composeDescription(original, veneer)).toBe(`${veneer}\n\n---\n\n${original}`);
@@ -79,6 +93,59 @@ describe('export description composition', () => {
 		expect(setSignupLink(original)).toBe(original);
 		expect(setSignupLink(veneer)).toBe('');
 		expect(leadingVeneerLink('https://veneer.leftium.com.evil.example/f.FORM')).toBeUndefined();
+	});
+});
+
+describe('tracked Form introduction', () => {
+	it('tracks the inserted copy when the announcement already contains identical prose', () => {
+		const first = writeFormIntroduction('Announcement\nRepeated intro', 'Repeated intro');
+		const updated = writeFormIntroduction(first.description, 'Updated intro', first.section);
+		expect(updated.description).toBe('Announcement\nRepeated intro\n\n---\n\nUpdated intro');
+	});
+	it('updates changed metadata and switches Forms by replacing one section', () => {
+		const source = 'Dance party\nhttps://forms.gle/FIRST\nhttps://forms.gle/SECOND';
+		const first = writeFormIntroduction(source, 'Form one\n\nOriginal intro');
+		const refreshed = writeFormIntroduction(
+			first.description,
+			'Form one\n\nUpdated intro',
+			first.section
+		);
+		expect(refreshed.description).toBe(`${source}\n\n---\n\nForm one\n\nUpdated intro`);
+		const second = writeFormIntroduction(
+			refreshed.description,
+			'Form two\n\nSecond intro',
+			refreshed.section
+		);
+		expect(second.description).toBe(`${source}\n\n---\n\nForm two\n\nSecond intro`);
+	});
+	it('tracks edits within the imported section while preserving surrounding edits', () => {
+		const first = writeFormIntroduction('Announcement', 'Form title\n\nOriginal intro');
+		const edited = first.description.replace('Original intro', 'My edited intro');
+		const section = trackFormIntroduction(first.description, edited, first.section)!;
+		expect(edited.slice(section.start, section.end)).toBe('Form title\n\nMy edited intro');
+		expect(section.text).toBe('Form title\n\nOriginal intro');
+		const prefixed = `My announcement edit\n${edited}\nMy footer`;
+		const moved = trackFormIntroduction(edited, prefixed, section)!;
+		const replaced = writeFormIntroduction(prefixed, 'Refreshed Form\n\nNew intro', moved);
+		expect(replaced.description).toBe(
+			'My announcement edit\nAnnouncement\n\n---\n\nRefreshed Form\n\nNew intro\nMy footer'
+		);
+	});
+	it('follows inserted Veneer blocks and forgets removed imports or replacement drafts', () => {
+		const first = writeFormIntroduction(form, 'Form title\n\nOriginal intro');
+		const withLink = setSignupLink(first.description, veneer);
+		const section = trackFormIntroduction(first.description, withLink, first.section)!;
+		expect(withLink.slice(section.start, section.end)).toBe(first.section.text);
+		expect(
+			trackFormIntroduction(
+				withLink,
+				withLink.slice(0, section.start) + withLink.slice(section.end),
+				section
+			)
+		).toBeUndefined();
+		expect(
+			trackFormIntroduction(withLink, 'Completely different announcement', section)
+		).toBeUndefined();
 	});
 });
 
