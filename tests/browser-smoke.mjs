@@ -1497,6 +1497,19 @@ async function checkNumericDateReports(page) {
 			startAlternative: '22:30',
 			endAlternative: '23:00',
 			inferred: true
+		},
+		{
+			input: 'simple-blues-party-spaced-slash-sanitized',
+			title: 'Simple Blues Party 3rd',
+			location: '쏘셜클럽',
+			start: '2026-12-05 23:00',
+			end: '2026-12-06 03:30',
+			dates: ['2026-12-05', '2026-12-06'],
+			duration: '4h 30m',
+			utc: '20261205T140000Z/20261205T183000Z',
+			startAlternative: '23:00',
+			endAlternative: '03:30',
+			inferred: false
 		}
 	]) {
 		const text = await fs.readFile(`tests/inputs/${report.input}.txt`, 'utf8');
@@ -1505,6 +1518,15 @@ async function checkNumericDateReports(page) {
 			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
 		);
 		assert.equal(await page.locator('#description').inputValue(), text);
+		if (report.title) {
+			assert.equal(await page.locator('#title').inputValue(), report.title);
+			assert.equal(await page.locator('#location').inputValue(), report.location);
+			for (const field of ['Title', 'Start', 'End/Duration', 'Location'])
+				assert.equal(
+					await page.getByRole('switch', { name: `Auto ${field}`, exact: true }).isChecked(),
+					true
+				);
+		}
 		assert.ok((await page.locator('#start-hint').textContent()).includes(report.start));
 		assert.ok((await page.locator('#end-hint').textContent()).includes(report.end));
 		if (report.inferred) {
@@ -2843,7 +2865,7 @@ for (const [name, engine] of [
 	await touchContext.close();
 	assert.deepEqual(errors, []);
 	console.log(
-		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, sanitized October/November numeric dates, prices, midnight and inferred End with Google/ICS parity, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
+		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, sanitized October/November/December numeric dates, prices, midnight and inferred End with Google/ICS parity, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
 	);
 	await browser.close();
 }
