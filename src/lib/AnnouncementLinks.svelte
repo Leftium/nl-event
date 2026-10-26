@@ -28,7 +28,8 @@
 	const detailsId = $props.id();
 	let panel = $state<HTMLDivElement>();
 	let trigger: HTMLButtonElement | undefined;
-	let selected = $state<AnnouncementLink>();
+	let selectedIdentity = $state<string>();
+	let selected = $derived(links.find((link) => link.identity === selectedIdentity));
 	let metadata = $state<FormMetadata>();
 	let phase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	let failure = $state('');
@@ -39,11 +40,11 @@
 	let disposed = false;
 	let source = $derived(signupSource(selected?.href ?? ''));
 	let intro = $derived(metadata?.type === 'form' ? formIntroduction(metadata) : '');
-	let alreadyUsed = $derived(!!intro && imported?.text === intro);
 	let edited = $derived(
 		!!imported && original.slice(imported.start, imported.end) !== imported.text
 	);
-	let included = $derived(links.find((link) => link.identity === selected?.identity)?.veneerUrl);
+	let alreadyUsed = $derived(!!intro && imported?.text === intro && !edited);
+	let included = $derived(selected?.veneerUrl);
 	let sheet = $derived(included ? (new URL(included).pathname.split('/')[2] ?? '') : '');
 	let sheets = $derived([
 		...new Map([
@@ -58,7 +59,7 @@
 		]).values()
 	]);
 	$effect(() => {
-		if (selected && !links.some((link) => link.identity === selected?.identity)) dismiss();
+		if (selectedIdentity && !selected) dismiss();
 	});
 	$effect(() => {
 		const text = original;
@@ -79,14 +80,14 @@
 		trigger = button;
 		const same = selected?.identity === link.identity;
 		if (same && !refresh && phase !== 'error') {
-			selected = link;
+			selectedIdentity = link.identity;
 			await tick();
 			panel?.focus({ preventScroll: true });
 			panel?.scrollIntoView({ block: 'nearest' });
 			return;
 		}
 		if (!same) metadata = undefined;
-		selected = link;
+		selectedIdentity = link.identity;
 		const token = ++generation;
 		const target = signupSource(link.href);
 		const shouldLoad = !!target && (!same || refresh || phase === 'error');
@@ -120,7 +121,7 @@
 	function dismiss(restoreFocus = false) {
 		confirmReplacement = false;
 		generation++;
-		selected = undefined;
+		selectedIdentity = undefined;
 		metadata = undefined;
 		phase = 'idle';
 		onhighlight();

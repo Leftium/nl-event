@@ -69,8 +69,17 @@ export async function checkCalendarDescription(page, touch = false) {
 			.getByLabel('Confirmation Sheet', { exact: true })
 			.selectOption('s.SYNTHETIC_SHEET');
 		assert.ok((await description.inputValue()).startsWith(`${veneer}/s.SYNTHETIC_SHEET`));
+		assert.equal(
+			await details.locator('.details-url a').getAttribute('href'),
+			`${veneer}/s.SYNTHETIC_SHEET`
+		);
+		assert.equal(
+			await details.locator('.details-url a').textContent(),
+			`${veneer}/s.SYNTHETIC_SHEET`
+		);
 		await details.getByLabel('Confirmation Sheet', { exact: true }).selectOption('');
 		assert.equal(await description.inputValue(), composed);
+		assert.equal(await details.locator('.details-url a').getAttribute('href'), veneer);
 		await page.evaluate(() =>
 			Object.defineProperty(navigator, 'clipboard', {
 				configurable: true,
@@ -215,6 +224,17 @@ export async function checkDescriptionReviewRegressions(page, touch = false) {
 		);
 		await activate(details.getByRole('button', { name: 'Add to description', exact: true }));
 		const initial = `${source}\n\n---\n\nFirst Form\n\nIntroduction version 1`;
+		assert.equal(await description.inputValue(), initial);
+		// Unchanged metadata must still allow restoring an edited import.
+		const editedInitial = initial.replace('Introduction version 1', 'My first edit');
+		await description.fill(editedInitial);
+		await open(first);
+		await activate(details.getByRole('button', { name: 'Review replacement', exact: true }));
+		assert.equal(await description.inputValue(), editedInitial);
+		await activate(details.getByRole('button', { name: 'Keep edits', exact: true }));
+		assert.equal(await description.inputValue(), editedInitial);
+		await activate(details.getByRole('button', { name: 'Review replacement', exact: true }));
+		await activate(details.getByRole('button', { name: 'Replace edited details', exact: true }));
 		assert.equal(await description.inputValue(), initial);
 		await open(first);
 		version = 2;
