@@ -1566,7 +1566,7 @@ async function checkNumericDateReports(page) {
 				.getAttribute('aria-pressed'),
 			'true'
 		);
-		const truncation = page.getByRole('checkbox', { name: 'Truncate overnight' });
+		const truncation = page.getByRole('checkbox', { name: 'Trim overnight tail' });
 		if (await truncation.count()) await truncation.uncheck();
 		const query = new URL(
 			await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
@@ -1625,7 +1625,7 @@ async function checkRhythmParty(page) {
 	);
 	assert.equal(await page.locator('#location').inputValue(), '서울 서대문구 명물길 37');
 	// This parser regression checks the full real interval; clipping has its own coverage.
-	await page.getByRole('checkbox', { name: 'Truncate overnight' }).uncheck();
+	await page.getByRole('checkbox', { name: 'Trim overnight tail' }).uncheck();
 	const google = page.getByRole('link', { name: 'Open in Google Calendar' });
 	assert.equal(
 		new URL(await google.getAttribute('href')).searchParams.get('dates'),
@@ -1910,8 +1910,8 @@ async function checkOvernightParty(page) {
 			true
 		);
 	assert.equal(await page.locator('#description').inputValue(), text);
-	assert.equal(await page.getByRole('checkbox', { name: 'Truncate overnight' }).isChecked(), true);
-	await page.getByRole('checkbox', { name: 'Truncate overnight' }).uncheck();
+	assert.equal(await page.getByRole('checkbox', { name: 'Trim overnight tail' }).isChecked(), true);
+	await page.getByRole('checkbox', { name: 'Trim overnight tail' }).uncheck();
 	const params = new URL(
 		await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
 	).searchParams;
@@ -2042,7 +2042,7 @@ async function checkMapLocations(page) {
 		const options = page.getByRole('list', { name: 'Location alternatives', exact: true });
 		assert.equal(await options.getByRole('button', { name: venue, exact: true }).count(), 1);
 		assert.equal(await options.getByRole('button').count(), 2);
-		const truncation = page.getByRole('checkbox', { name: 'Truncate overnight' });
+		const truncation = page.getByRole('checkbox', { name: 'Trim overnight tail' });
 		if (await truncation.count()) await truncation.uncheck();
 		const google = new URL(
 			await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')

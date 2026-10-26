@@ -33,8 +33,8 @@
 	);
 	let result = $derived(Core.validate(draft));
 	let links = $derived(groupEquivalentLinks(discoverLinks(draft.description)));
-	let truncateOvernight = $state(true);
-	let overnight = $derived(overnightExport(result.event, truncateOvernight));
+	let trimOvernight = $state(true);
+	let overnight = $derived(overnightExport(result.event, trimOvernight));
 	let exportEvent = $derived(overnight.event);
 	let googleUrl = $derived(exportEvent ? Core.googleUrl(exportEvent) : '');
 	let longGoogleUrl = $derived(googleUrl.length > 8000);
@@ -381,7 +381,7 @@
 	onMount(() => {
 		let mounted = true;
 		collapseDates();
-		truncateOvernight = true;
+		trimOvernight = true;
 		draft = Core.create(captureContext());
 		ready = true;
 		void tick().then(() => {
@@ -415,7 +415,7 @@
 		clearTimeout(parseTimer);
 		descriptionSelection = '';
 		collapseDates();
-		truncateOvernight = true;
+		trimOvernight = true;
 		draft = Core.create(captureContext());
 		displayNow = draft.context.referenceInstant;
 		zoneDialog?.close();
@@ -435,7 +435,7 @@
 			}
 			descriptionSelection = '';
 			collapseDates();
-			truncateOvernight = true;
+			trimOvernight = true;
 			draft = Core.replaceClipboard(draft, text, captureContext());
 			displayNow = draft.context.referenceInstant;
 			scheduleParse(true);
@@ -974,6 +974,31 @@
 							{/each}
 						</fieldset>
 					{/if}
+					{#if name === 'end'}
+						{#if ready && overnight.eligible}
+							<div class="overnight-export">
+								<div class="overnight-control">
+									<label
+										><input type="checkbox" bind:checked={trimOvernight} /> Trim overnight tail</label
+									>
+									<details class="overnight-help">
+										<summary aria-label="About trimming overnight tail"
+											><span aria-hidden="true">?</span></summary
+										>
+										<p>
+											For events ending by 6 AM, calendar exports stop at midnight on the final day.
+											Hours after midnight won't be marked busy; the actual end stays in the regular
+											export description. Open without description omits that note.
+										</p>
+									</details>
+								</div>
+								{#if trimOvernight}<small class="calendar-end"
+										>Calendar end: {overnight.calendarEnd}</small
+									>{/if}
+							</div>
+						{/if}
+						{#if overnight.warning}<small role="status">{overnight.warning}</small>{/if}
+					{/if}
 				</fieldset>
 			{/each}
 			<dialog
@@ -1027,28 +1052,6 @@
 				<p>Inferred lesson end may overlap the social.</p>
 			{/if}
 			{#each result.warnings as warning (warning)}<p>{warning}</p>{/each}
-			{#if ready && overnight.eligible}
-				<div class="overnight-export">
-					<label
-						><input type="checkbox" bind:checked={truncateOvernight} /> Truncate overnight</label
-					>
-					<p>
-						Actual end: {overnight.actualEnd}. Calendar end: {truncateOvernight
-							? overnight.calendarEnd
-							: overnight.actualEnd}.
-					</p>
-					<details>
-						<summary>About overnight exports</summary>
-						<p>
-							Ends the calendar entry at midnight so it appears only on its start day in Google
-							Calendar's Schedule view. The event may continue after midnight; those hours will not
-							be marked busy. The actual end is included in the description.
-						</p>
-					</details>
-					{#if truncateOvernight}<p>Open without description omits the actual-end note.</p>{/if}
-				</div>
-			{/if}
-			{#if overnight.warning}<p role="status">{overnight.warning}</p>{/if}
 			{#if longGoogleUrl}<p role="status">
 					This Google Calendar URL is unusually long ({googleUrl.length.toLocaleString()} characters).
 					If it fails to open, download .ics for the full description, or copy the description and open
@@ -1090,6 +1093,77 @@
 </main>
 
 <style>
+	.overnight-export {
+		margin-top: 0.75rem;
+		font-size: 0.85rem;
+	}
+	.overnight-control {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.overnight-control label {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin: 0;
+		cursor: pointer;
+	}
+	.overnight-control input {
+		margin: 0;
+	}
+	.overnight-help {
+		position: static;
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+	.overnight-help summary {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		cursor: pointer;
+	}
+	.overnight-help summary span {
+		display: grid;
+		place-items: center;
+		width: 1rem;
+		height: 1rem;
+		font-size: 0.7rem;
+		border: 1px solid var(--nc-border);
+		border-radius: 50%;
+	}
+	.overnight-help summary::marker {
+		content: '';
+	}
+	.overnight-help p {
+		position: absolute;
+		z-index: 20;
+		left: 0;
+		top: 100%;
+		width: min(22rem, 100%);
+		box-sizing: border-box;
+		margin: 0.4rem 0 0;
+		padding: 0.75rem;
+		border: 1px solid var(--nc-border);
+		border-radius: 0.4rem;
+		background: var(--nc-surface-1);
+		box-shadow: 0 2px 8px #0003;
+	}
+	.calendar-end {
+		display: block;
+		margin-top: 0.2rem;
+	}
+	@media (any-pointer: coarse) {
+		.overnight-help summary {
+			min-width: 2.75rem;
+			min-height: 2.75rem;
+		}
+	}
+
 	.description-editor {
 		min-width: 0;
 		margin: 0;
@@ -1148,8 +1222,8 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
+		width: 2rem;
+		height: 2rem;
 		padding: 0.25rem;
 		border-radius: 0.25rem;
 		flex-shrink: 0;

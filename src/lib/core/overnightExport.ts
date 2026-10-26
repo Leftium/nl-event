@@ -28,10 +28,15 @@ export function overnightExport(event: normalized | undefined, enabled = true): 
 		const start = instant(event.start).toZonedDateTimeISO(event.zone);
 		const end = instant(event.end).toZonedDateTimeISO(event.zone);
 		if (Temporal.ZonedDateTime.compare(start, end) >= 0) return unchanged;
-		const nextDate = start.toPlainDate().add({ days: 1 });
-		if (!end.toPlainDate().equals(nextDate)) return unchanged;
-		const midnight = nextDate.toPlainDateTime('00:00');
-		if (Temporal.PlainDateTime.compare(end.toPlainDateTime(), midnight) <= 0) return unchanged;
+		const finalDate = end.toPlainDate();
+		if (Temporal.PlainDate.compare(finalDate, start.toPlainDate()) <= 0) return unchanged;
+		const endClock = end.toPlainTime();
+		if (
+			Temporal.PlainTime.compare(endClock, '00:00') <= 0 ||
+			Temporal.PlainTime.compare(endClock, '06:00') > 0
+		)
+			return unchanged;
+		const midnight = finalDate.toPlainDateTime('00:00');
 		let cutoff: Temporal.ZonedDateTime;
 		try {
 			// Reject both missing and repeated local midnights instead of guessing an offset.
@@ -40,7 +45,7 @@ export function overnightExport(event: normalized | undefined, enabled = true): 
 			return {
 				...unchanged,
 				warning:
-					'Overnight truncation is unavailable because midnight is ambiguous or missing in this time zone. The full interval will be exported.'
+					'Cannot trim: midnight is ambiguous or missing in this time zone. Exporting the full interval.'
 			};
 		}
 		if (
@@ -48,8 +53,9 @@ export function overnightExport(event: normalized | undefined, enabled = true): 
 			Temporal.ZonedDateTime.compare(cutoff, end) >= 0
 		)
 			return unchanged;
-		const actualEnd = `${label(end)} (${event.zone}; next day)`;
-		const calendarEnd = `${label(cutoff)} (${event.zone})`;
+		const nextDay = finalDate.equals(start.toPlainDate().add({ days: 1 }));
+		const actualEnd = `${label(end)} (${event.zone}${nextDay ? '; next day' : ''})`;
+		const calendarEnd = `${cutoff.toLocaleString('en-US', { month: 'short', day: 'numeric' })}, 00:00`;
 		const note = `Actual end: ${actualEnd}`;
 		const equivalent = (text: string) => text.trim().replace(/\s+/gu, ' ').toLowerCase();
 		const hasNote = event.description
