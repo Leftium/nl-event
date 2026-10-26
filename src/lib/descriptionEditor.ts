@@ -306,8 +306,10 @@ export function descriptionEditor(
 			options.close();
 		} else if (event.key === 'Tab') {
 			const controls = [
-				...shell.querySelectorAll<HTMLElement>('button:not(:disabled), textarea:not(:disabled)')
-			];
+				...shell.querySelectorAll<HTMLElement>(
+					'button:not(:disabled), textarea:not(:disabled), input:not(:disabled), select:not(:disabled), a[href], summary'
+				)
+			].filter((control) => control.getClientRects().length);
 			const first = controls[0];
 			const last = controls.at(-1);
 			if (event.shiftKey && document.activeElement === first) {

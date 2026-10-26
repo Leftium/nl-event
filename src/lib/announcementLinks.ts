@@ -1,4 +1,5 @@
 import { find } from 'linkifyjs';
+import { signupSource } from './calendarDescription';
 
 export type LinkKind = 'Form' | 'Sheet' | 'Short link' | 'Veneer' | 'Map' | 'Other';
 export type LinkRole = 'Signup' | 'Confirmation' | 'Location';
@@ -13,6 +14,7 @@ export type AnnouncementLink = {
 	context: string;
 	start: number;
 	end: number;
+	equivalents?: { href: string; source: string }[];
 };
 
 function classify(url: URL) {
@@ -121,6 +123,25 @@ export function discoverLinks(description: string): AnnouncementLink[] {
 		});
 	}
 	return [...links.values()];
+}
+
+/** Group known equivalent signup URLs without guessing shortener destinations. */
+export function groupEquivalentLinks(links: AnnouncementLink[]): AnnouncementLink[] {
+	const groups = new Map<string, AnnouncementLink>();
+	for (const link of links) {
+		const source = signupSource(link.href);
+		const key = source ? `signup:${source.id}` : link.identity;
+		const existing = groups.get(key);
+		if (existing) {
+			existing.roles = [...new Set([...existing.roles, ...link.roles])];
+			existing.equivalents = [
+				...(existing.equivalents ?? []),
+				{ href: link.href, source: link.source }
+			];
+		} else
+			groups.set(key, { ...link, identity: source ? key : link.identity, roles: [...link.roles] });
+	}
+	return [...groups.values()];
 }
 
 export function primarySignup(links: AnnouncementLink[], explicit?: string | null) {

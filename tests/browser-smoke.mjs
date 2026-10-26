@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { checkAnnouncementLinks } from './announcement-links.browser.mjs';
+import { checkCalendarDescription } from './calendar-description.browser.mjs';
 
 async function checkInitialFocus(browser) {
 	for (const scenario of ['fresh', 'scroll', 'before-hydration', 'enable-race']) {
@@ -2513,6 +2514,7 @@ for (const [name, engine] of [
 	await page.locator('#description').waitFor();
 	await page.waitForFunction(() => !document.querySelector('#description').disabled);
 	await checkAnnouncementLinks(page);
+	await checkCalendarDescription(page);
 	assert.deepEqual(
 		await page
 			.locator('textarea:visible, input[type=text]:visible')
@@ -2588,11 +2590,7 @@ for (const [name, engine] of [
 	const resetBox = await page.getByRole('button', { name: 'Reset', exact: true }).boundingBox();
 	assert.ok(resetBox.y + resetBox.height <= textareaBox.y);
 	const descriptionLabelBox = await page.locator('label[for=description]').boundingBox();
-	assert.ok(
-		Math.abs(
-			resetBox.y + resetBox.height / 2 - descriptionLabelBox.y - descriptionLabelBox.height / 2
-		) < 1
-	);
+	assert.ok(descriptionLabelBox.y + descriptionLabelBox.height <= resetBox.y);
 	const actionBox = await page.locator('.description-actions').boundingBox();
 	assert.ok(Math.abs(actionBox.x + actionBox.width - textareaBox.x - textareaBox.width) < 2);
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
@@ -2790,6 +2788,7 @@ for (const [name, engine] of [
 	await touchPage.goto(process.env.NL_EVENT_BASE_URL || 'http://localhost:5173/');
 	await touchPage.waitForFunction(() => !document.querySelector('#description').disabled);
 	await checkAnnouncementLinks(touchPage, true);
+	await checkCalendarDescription(touchPage, true);
 	await touchPage.locator('#title').fill('Touch target check');
 	await touchPage.locator('#start').fill('2026-10-25 17:00');
 	await touchPage.locator('#end').fill('2026-10-25 18:00');

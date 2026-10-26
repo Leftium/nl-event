@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import AnnouncementLinks from '#lib/AnnouncementLinks.svelte';
+	import {
+		leadingVeneerLink,
+		setSignupLink,
+		signupSource,
+		veneerLink
+	} from '#lib/calendarDescription.ts';
+	import { discoverLinks, groupEquivalentLinks } from '#lib/announcementLinks.ts';
 	import type { EvidenceRange } from '#lib/evidenceHighlight.ts';
 	import { descriptionEditor } from '#lib/descriptionEditor.ts';
 	import { SvelteDate } from 'svelte/reactivity';
@@ -29,6 +36,18 @@
 		Core.create({ referenceInstant: '2000-01-01T00:00:00Z', browserTimeZone: 'UTC' })
 	);
 	let result = $derived(Core.validate(draft));
+	let links = $derived(groupEquivalentLinks(discoverLinks(draft.description)));
+	let leadingSignup = $derived(leadingVeneerLink(draft.description));
+	let includedSignup = $derived(
+		leadingSignup
+			? links.find((link) => signupSource(link.href)?.id === leadingSignup.id)?.identity
+			: undefined
+	);
+	let signupSheet = $derived(
+		leadingSignup ? (new URL(leadingSignup.veneerUrl).pathname.split('/')[2] ?? '') : ''
+	);
+	let googleUrl = $derived(result.event ? Core.googleUrl(result.event) : '');
+	let longGoogleUrl = $derived(googleUrl.length > 8000);
 	let zone = $derived(Core.effectiveZone(draft));
 	let zoneDialog: HTMLDialogElement;
 	let message = $state('');
@@ -54,6 +73,10 @@
 	let hoveredEvidence = $state<Evidence>();
 	let focusedEvidence = $state<Evidence>();
 	let evidence = $derived(hoveredEvidence ?? focusedEvidence);
+	let linkHighlight = $state<{ description: string; range: EvidenceRange }>();
+	let linkRange = $derived(
+		linkHighlight?.description === draft.description ? linkHighlight.range : undefined
+	);
 	let evidenceRanges = $derived(
 		evidence &&
 			draft.parseStatus === 'ready' &&
@@ -123,6 +146,7 @@
 	}
 
 	function clearEvidence() {
+		linkHighlight = undefined;
 		textEvidence = undefined;
 		hoveredEvidence = focusedEvidence = undefined;
 	}
@@ -307,6 +331,45 @@
 		else parseTimer = setTimeout(run, 250);
 	}
 
+	function importFormDetails(text: string) {
+		clearEvidence();
+		descriptionSelection = '';
+		collapseDates();
+		draft = Core.describe(draft, text);
+		scheduleParse(true);
+		void tick().then(() => {
+			descriptionInput.focus({ preventScroll: true });
+			descriptionInput.setSelectionRange(text.length, text.length);
+		});
+	}
+
+	function includeSignup(identity: string, include: boolean, sheet?: string) {
+		const link = links.find((candidate) => candidate.identity === identity);
+		const source = signupSource(link?.href ?? '');
+		if (!source) return;
+		const text = setSignupLink(draft.description, include ? veneerLink(source, sheet) : undefined);
+		clearEvidence();
+		descriptionSelection = '';
+		draft = Core.describe(draft, text);
+		scheduleParse(true);
+	}
+
+	async function copyDescription() {
+		const identity = draft.identity;
+		const text = draft.description;
+		try {
+			await navigator.clipboard.writeText(text);
+			if (draft.identity === identity)
+				message =
+					draft.description === text
+						? 'Description copied.'
+						: 'Previous description copied. Copy again for the latest text.';
+		} catch {
+			if (draft.identity === identity)
+				message = 'Could not copy. Select the Description text and copy it manually.';
+		}
+	}
+
 	function openZoneDialog() {
 		zoneDialog.showModal();
 		// WebKit can reset the selection after native dialog autofocus.
@@ -425,19 +488,19 @@
 		<h1>NL Event</h1>
 	</header>
 	<form class="workspace" onsubmit={(event) => event.preventDefault()}>
-		<section
+		<fieldset
 			class="description-editor"
 			class:fullscreen={descriptionFullscreen}
-			role={descriptionFullscreen ? 'dialog' : 'region'}
+			role={descriptionFullscreen ? 'dialog' : undefined}
 			aria-modal={descriptionFullscreen ? true : undefined}
 			aria-label="Description editor"
 			use:descriptionEditor={{
 				value: draft.description,
-				ranges: textRange ? textPreviewRanges : evidenceRanges,
+				ranges: linkRange ? [linkRange] : textRange ? textPreviewRanges : evidenceRanges,
 				hoverEvidence: previewText,
 				selectedRanges: sourceHighlights.selected,
 				unselectedRanges: sourceHighlights.unselected,
-				reveal: evidence,
+				reveal: linkRange ? linkHighlight : evidence,
 				fullscreen: descriptionFullscreen,
 				wrap: descriptionWrap,
 				close: () => {
@@ -445,11 +508,17 @@
 				}
 			}}
 		>
+			<legend class="description-legend"><label for="description">Description</label></legend>
 			<div class="description-heading">
-				<label for="description">Description</label>
 				<div class="description-actions">
 					<button class="quiet-action" type="button" onclick={resetDraft} disabled={!ready}
 						>Reset</button
+					>
+					<button
+						class="quiet-action"
+						type="button"
+						onclick={copyDescription}
+						disabled={!ready || !draft.description}>Copy description</button
 					>
 					<button
 						class="quiet-action"
@@ -459,7 +528,6 @@
 					>
 						{readingClipboard ? 'Reading clipboard...' : 'Paste from clipboard'}
 					</button>
-					<AnnouncementLinks description={draft.description} draftIdentity={draft.identity} />
 				</div>
 			</div>
 			<div class="editor-surface">
@@ -559,6 +627,22 @@
 					</button>
 				</div>
 			</div>
+			{#key draft.identity}
+				<AnnouncementLinks
+					{links}
+					original={draft.description}
+					included={includedSignup}
+					sheet={signupSheet}
+					oninclude={includeSignup}
+					onimport={importFormDetails}
+					onhighlight={(link) => {
+						linkHighlight = link
+							? { description: draft.description, range: { start: link.start, end: link.end } }
+							: undefined;
+					}}
+				/>
+			{/key}
+
 			<p role="status" class:status-empty={!message}>{message}</p>
 			<p
 				id="parse-status"
@@ -571,7 +655,7 @@
 					{draft.parseError}
 				{/if}
 			</p>
-		</section>
+		</fieldset>
 		<div class="event-details" inert={descriptionFullscreen}>
 			{#each fields as { name, label, hint } (name)}
 				{@const field = Core.getField(draft, name)}
@@ -948,15 +1032,23 @@
 				<p>Inferred lesson end may overlap the social.</p>
 			{/if}
 			{#each result.warnings as warning (warning)}<p>{warning}</p>{/each}
+			{#if longGoogleUrl}<p role="status">
+					This Google Calendar URL is unusually long ({googleUrl.length.toLocaleString()} characters).
+					If it fails to open, download .ics for the full description, or copy the description and open
+					without it.
+				</p>{/if}
 			<div class="actions">
 				{#if ready && result.event}
 					<!-- External calendar URL; this is not a SvelteKit route. -->
 					<!-- eslint-disable svelte/no-navigation-without-resolve -->
+					<a class="nc-button" href={googleUrl} target="_blank" rel="noopener noreferrer"
+						>Open in Google Calendar</a
+					>
 					<a
-						class="nc-button"
-						href={Core.googleUrl(result.event)}
+						class="nc-button secondary"
+						href={Core.googleUrl({ ...result.event, description: '' })}
 						target="_blank"
-						rel="noopener noreferrer">Open in Google Calendar</a
+						rel="noopener noreferrer">Open without description</a
 					>
 					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{:else}
@@ -983,7 +1075,19 @@
 <style>
 	.description-editor {
 		min-width: 0;
+		margin: 0;
+		padding: 0.75rem;
+		border: 1px solid var(--nc-border);
+		border-radius: 0.4rem;
 	}
+	.description-legend {
+		padding-inline: 0.3rem;
+		font-weight: 700;
+	}
+	.description-legend label {
+		margin: 0;
+	}
+
 	.editor-surface {
 		position: relative;
 		min-width: 0;
@@ -1210,7 +1314,6 @@
 	.field-heading label {
 		margin: 0;
 	}
-	.description-heading > label,
 	.field-heading label {
 		font-weight: 700;
 	}
@@ -1231,9 +1334,6 @@
 		align-items: center;
 		flex-wrap: wrap;
 		gap: 0.25rem 0.5rem;
-	}
-	.description-heading > label {
-		margin: 0;
 	}
 	.description-actions {
 		display: flex;

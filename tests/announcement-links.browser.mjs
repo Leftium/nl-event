@@ -1,172 +1,141 @@
 import assert from 'node:assert/strict';
 
 export async function checkAnnouncementLinks(page, touch = false) {
-	const activate = (locator) => (touch ? locator.tap() : locator.click());
+	const activate = (node) => (touch ? node.tap() : node.click());
 	const description = page.locator('#description');
-	const trigger = page.getByRole('button', { name: /^Links \(/ });
-	const dialog = page.getByRole('dialog', { name: 'Description links', exact: true });
-	const source = [
-		'신청: https://forms.gle/SYNTHETIC_SIGNUP',
-		'확인: https://docs.google.com/spreadsheets/d/SYNTHETIC_SHEET/edit',
-		'장소: https://map.naver.com/p/example',
-		'Info: https://example.com/info'
-	].join('\n');
+	const chips = page.getByRole('group', { name: 'Description links', exact: true });
+	const details = page.getByRole('region', { name: 'Link details', exact: true });
+	const source =
+		'Synthetic event\nSignup: https://forms.gle/SYNTHETIC_SIGNUP\nConfirmation: https://docs.google.com/spreadsheets/d/SYNTHETIC_SHEET/edit\nMap: https://map.naver.com/p/example\nInfo: https://example.com/info';
+	const requests = [];
 	const external = [];
 	const onRequest = (request) => {
 		if (new URL(request.url()).origin !== new URL(page.url()).origin) external.push(request.url());
 	};
-	page.on('request', onRequest);
-	try {
-		await page.evaluate(() => {
-			Object.defineProperty(navigator, 'clipboard', {
-				configurable: true,
-				value: { readText: async () => window.announcementClipboard }
-			});
+	const routeHandler = async (route) => {
+		requests.push(route.request().url());
+		await route.fulfill({
+			contentType: 'application/json',
+			body: JSON.stringify({
+				status: 'ok',
+				type: 'form',
+				documentId: 'f.SYNTHETIC',
+				title: 'Form title',
+				infoText: 'Intro',
+				autoSheets: [],
+				autoSheetsStatus: 'complete'
+			})
 		});
-		const paste = async (text) => {
-			await page.evaluate((text) => {
-				window.announcementClipboard = text;
-			}, text);
-			await activate(page.getByRole('button', { name: 'Paste from clipboard', exact: true }));
-			await page.waitForFunction(
-				(text) => document.querySelector('#description').value === text,
-				text
-			);
-		};
+	};
+	page.on('request', onRequest);
+	await page.route('**/api/form-meta?*', routeHandler);
+	try {
 		await activate(page.getByRole('button', { name: 'Reset', exact: true }));
-		assert.equal(await trigger.count(), 0);
+		assert.equal(await chips.count(), 0);
 		await description.fill(source);
-		await description.evaluate((node) => node.setSelectionRange(3, 12, 'backward'));
-		assert.equal(await trigger.textContent(), 'Links (4)');
+		assert.equal(await chips.getByRole('button').count(), 4);
 		assert.equal(
-			await page
-				.locator('.description-heading .description-actions')
-				.getByRole('button', { name: 'Links (4)', exact: true })
-				.count(),
-			1
+			await page.locator('fieldset.description-editor legend').textContent(),
+			'Description'
 		);
-		await activate(trigger);
-		await dialog.waitFor({ state: 'visible' });
-		assert.equal(await dialog.getByRole('radio', { name: /^Primary signup:/ }).isChecked(), true);
-		assert.equal(await dialog.getByRole('heading', { name: 'Map', exact: true }).count(), 1);
-		assert.equal(await dialog.getByRole('heading', { name: 'Other', exact: true }).count(), 1);
-		assert.match(await dialog.textContent(), /Confirmation fallback candidate/);
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
-		assert.deepEqual(
-			await description.evaluate((node) => [
-				node.selectionStart,
-				node.selectionEnd,
-				node.selectionDirection
-			]),
-			[3, 12, 'backward']
-		);
-		assert.equal(await description.inputValue(), source);
-		await activate(trigger);
-		if (touch) await page.touchscreen.tap(2, 2);
-		else await page.mouse.click(2, 2);
-		await dialog.waitFor({ state: 'hidden' });
-		assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
-		await activate(page.getByRole('button', { name: 'Fullscreen editor', exact: true }));
-		await activate(trigger);
-		await page.keyboard.press('Shift+Tab');
-		assert.equal(await dialog.evaluate((node) => node.contains(document.activeElement)), true);
-		await page.keyboard.press('Tab');
-		assert.equal(await dialog.evaluate((node) => node.contains(document.activeElement)), true);
-		await page.keyboard.press('Escape');
-		await dialog.waitFor({ state: 'hidden' });
-		assert.equal(await page.locator('.description-editor.fullscreen').count(), 1);
-		assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
-		await activate(page.getByRole('button', { name: 'Restore editor', exact: true }));
-		await description.fill('https://forms.gle/FIRST_SYNTHETIC\nhttps://forms.gle/SECOND_SYNTHETIC');
-		await activate(trigger);
-		assert.equal(
-			await dialog.getByRole('radio', { name: 'None selected', exact: true }).isChecked(),
-			true
-		);
-		assert.equal(
-			await dialog
-				.getByRole('radio', {
-					name: 'Use as signup: https://forms.gle/FIRST_SYNTHETIC',
-					exact: true
-				})
-				.count(),
-			1
-		);
+		assert.equal(await page.locator('[popover]').count(), 0);
+		const signup = chips.getByRole('button', {
+			name: 'Details for https://forms.gle/SYNTHETIC_SIGNUP',
+			exact: true
+		});
+		if (!touch) {
+			await signup.hover();
+			await page.waitForFunction(() =>
+				[...document.querySelectorAll('.description-evidence mark[data-hovered=true]')].some(
+					(mark) => mark.textContent === 'https://forms.gle/SYNTHETIC_SIGNUP'
+				)
+			);
+		}
+		assert.equal(requests.length, 0);
 		await activate(
-			dialog.getByRole('radio', {
-				name: 'Use as signup: https://forms.gle/SECOND_SYNTHETIC',
+			chips.getByRole('button', {
+				name: 'Details for https://map.naver.com/p/example',
 				exact: true
 			})
 		);
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		await description.fill('https://forms.gle/SECOND_SYNTHETIC\nhttps://forms.gle/FIRST_SYNTHETIC');
-		await activate(trigger);
-		assert.match(
-			await dialog
-				.locator('li')
-				.filter({ has: page.getByRole('radio', { name: /^Primary signup:/ }) })
-				.textContent(),
-			/SECOND_SYNTHETIC/
-		);
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		// New clipboard drafts must discard explicit choices even when URLs/text survive.
-		await paste('https://forms.gle/SECOND_SYNTHETIC\nhttps://forms.gle/FIRST_SYNTHETIC');
-		await activate(trigger);
 		assert.equal(
-			await dialog.getByRole('radio', { name: 'None selected', exact: true }).isChecked(),
+			await details
+				.getByRole('link', { name: 'https://map.naver.com/p/example', exact: true })
+				.getAttribute('href'),
+			'https://map.naver.com/p/example'
+		);
+		assert.equal(await details.getByLabel('Veneer link', { exact: true }).count(), 0);
+		assert.equal(requests.length, 0);
+		await activate(
+			chips.getByRole('button', { name: 'Details for https://example.com/info', exact: true })
+		);
+		assert.equal(await details.count(), 1);
+		assert.equal(
+			await details
+				.getByRole('link', { name: 'https://example.com/info', exact: true })
+				.getAttribute('href'),
+			'https://example.com/info'
+		);
+		await activate(signup);
+		await details.getByRole('button', { name: 'Add to description', exact: true }).waitFor();
+		assert.equal(requests.length, 1);
+		assert.equal(await description.inputValue(), source);
+		await activate(details.getByLabel('Veneer link', { exact: true }));
+		assert.equal(await chips.getByRole('button').count(), 4);
+		assert.ok(
+			(await description.inputValue()).startsWith(
+				'https://veneer.leftium.com/g.SYNTHETIC_SIGNUP\n\n---\n\n'
+			)
+		);
+		await page.waitForFunction(() => document.querySelector('#title').value === 'Synthetic event');
+		await activate(details.getByLabel('Veneer link', { exact: true }));
+		assert.equal(await description.inputValue(), source);
+		await page.keyboard.press('Escape');
+		await details.waitFor({ state: 'hidden' });
+		assert.equal(await signup.evaluate((node) => document.activeElement === node), true);
+		await activate(page.getByRole('button', { name: 'Fullscreen editor', exact: true }));
+		await activate(
+			chips.getByRole('button', {
+				name: 'Details for https://map.naver.com/p/example',
+				exact: true
+			})
+		);
+		await page.keyboard.press('Escape');
+		assert.equal(await page.locator('.description-editor.fullscreen').count(), 1);
+		await activate(page.getByRole('button', { name: 'Restore editor', exact: true }));
+		await description.fill(
+			'https://docs.google.com/forms/d/e/SYNTHETIC_FORM/viewform\nhttps://veneer.leftium.com/f.SYNTHETIC_FORM'
+		);
+		assert.equal(await chips.getByRole('button').count(), 1);
+		await activate(chips.getByRole('button'));
+		await activate(details.getByText('Equivalent links (1)', { exact: true }));
+		await details
+			.getByRole('link', { name: 'https://veneer.leftium.com/f.SYNTHETIC_FORM', exact: true })
+			.waitFor();
+		await activate(page.getByRole('button', { name: 'Fullscreen editor', exact: true }));
+		await details
+			.getByRole('link', { name: 'https://veneer.leftium.com/f.SYNTHETIC_FORM', exact: true })
+			.focus();
+		await page.keyboard.press('Tab');
+		assert.equal(
+			await page
+				.getByRole('button', { name: 'Reset', exact: true })
+				.evaluate((node) => node === document.activeElement),
 			true
 		);
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		await description.fill('https://forms.gle/FIRST_SYNTHETIC');
-		await activate(trigger);
-		await activate(dialog.getByRole('radio', { name: 'None selected', exact: true }));
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		await description.fill('https://forms.gle/FIRST_SYNTHETIC\nExtra text');
-		await activate(trigger);
+		await activate(page.getByRole('button', { name: 'Restore editor', exact: true }));
 		assert.equal(
-			await dialog.getByRole('radio', { name: 'None selected', exact: true }).isChecked(),
-			true
+			await details
+				.getByRole('link', { name: 'https://veneer.leftium.com/f.SYNTHETIC_FORM', exact: true })
+				.count(),
+			1
 		);
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		await paste('https://forms.gle/FIRST_SYNTHETIC\nExtra text');
-		await activate(trigger);
-		assert.equal(
-			await dialog
-				.getByRole('radio', {
-					name: 'Primary signup: https://forms.gle/FIRST_SYNTHETIC',
-					exact: true
-				})
-				.isChecked(),
-			true
-		);
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		await description.fill('https://example.com/replacement');
-		await activate(trigger);
-		assert.equal(
-			await dialog.getByRole('radio', { name: 'None selected', exact: true }).isChecked(),
-			true
-		);
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		await paste('https://url.kr/SYNTHETIC_CLIPBOARD');
-		await activate(trigger);
-		assert.match(await dialog.textContent(), /Destination unknown/);
-		assert.equal(
-			await dialog.getByRole('radio', { name: 'None selected', exact: true }).isChecked(),
-			true
-		);
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
-		await description.fill('https://docs.google.com/spreadsheets/d/SYNTHETIC_UNRELATED/edit');
-		await activate(trigger);
-		assert.doesNotMatch(await dialog.textContent(), /Confirmation fallback candidate/);
-		await activate(dialog.getByRole('button', { name: 'Close', exact: true }));
 		await activate(page.getByRole('button', { name: 'Reset', exact: true }));
-		assert.equal(await trigger.count(), 0);
+		assert.equal(await chips.count(), 0);
+		assert.equal(await details.count(), 0);
 		assert.deepEqual(external, []);
 	} finally {
 		page.off('request', onRequest);
-		await page.evaluate(() => {
-			delete navigator.clipboard;
-		});
+		await page.unroute('**/api/form-meta?*', routeHandler);
 	}
 }

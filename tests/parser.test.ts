@@ -12,6 +12,33 @@ const settle = (draft: Core.draft, apply = true) =>
 const values = (draft: Core.draft, field: Core.fieldName) =>
 	Core.alternatives(draft, field).map((c) => c.value);
 
+it.each([
+	'https://veneer.leftium.com/f.SYNTHETIC',
+	'https://veneer.leftium.com/g.SYNTHETIC/s.SHEET?tabs=info#form',
+	'https://veneer.leftium.com/b.OPAQUE'
+])('skips an initial Veneer link and preserves title evidence offsets: %s', (url) => {
+	const source = `${url}\r\n\r\n---\r\n\r\nEvening dance\r\nNovember 1, 2026 at 7pm\r\nLocation: Test Hall`;
+	const draft = parse(source);
+	expect(draft.title.value).toBe('Evening dance');
+	expect(values(draft, 'title')).not.toContain(url);
+	const title = Core.alternatives(draft, 'title').find(
+		(candidate) => candidate.value === 'Evening dance'
+	);
+	expect(title?.textSpans?.map((span) => source.slice(span.start, span.end)).join('')).toBe(
+		'Evening dance'
+	);
+	expect(draft.description).toBe(source);
+});
+
+it('does not invent a title for a Veneer-only description, or replace a manual title', () => {
+	const url = 'https://veneer.leftium.com/f.SYNTHETIC';
+	expect(parse(url).title.value).toBe('');
+	const manual = Core.edit(parse('Original title'), 'title', 'My title');
+	const updated = settle(Core.describe(manual, `${url}\n\nUpdated heading`));
+	expect(updated.title.value).toBe('My title');
+	expect(values(updated, 'title')).toContain('Updated heading');
+});
+
 // The only expectation data passed to the parser is injected reference context.
 // Assertions and oracle metadata are read exclusively by the test driver.
 for (const file of fs.readdirSync('tests/fixtures/nl-event/expected')) {
