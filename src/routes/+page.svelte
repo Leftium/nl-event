@@ -982,14 +982,15 @@
 										><input type="checkbox" bind:checked={trimOvernight} /> Trim overnight tail</label
 									>
 
-									<details class="overnight-help">
+									<details class="overnight-help no-nimble">
 										<summary aria-label="About trimming overnight tail"
 											><span aria-hidden="true">?</span></summary
 										>
 										<p>
-											For events ending by 6 AM, calendar exports stop at midnight on the final day.
-											Hours after midnight won't be marked busy; the actual end stays in the regular
-											export description. Open without description omits that note.
+											Avoid an extra final-morning entry in Google Calendar's Schedule view. For
+											events ending by 6 AM, exports stop at midnight on the final day. Hours after
+											midnight won't be marked busy. The actual end stays in the regular export
+											description; Open without description omits it.
 										</p>
 									</details>
 									<small
@@ -1105,7 +1106,7 @@
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: 0.4rem;
+		gap: 0.3rem;
 	}
 	.overnight-control label {
 		display: flex;
@@ -1125,6 +1126,7 @@
 		border: 0;
 	}
 	.overnight-help summary {
+		margin: 0;
 		display: grid;
 		place-items: center;
 		width: 1.5rem;
@@ -1167,6 +1169,9 @@
 		visibility: hidden;
 	}
 	@media (any-pointer: coarse) {
+		.overnight-control label {
+			font-size: 0.8rem;
+		}
 		.overnight-help summary {
 			min-width: 1.5rem;
 			min-height: 2.75rem;

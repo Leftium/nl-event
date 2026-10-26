@@ -53,7 +53,12 @@ export async function checkOvernightExport(page, touch = false) {
 			await endField.locator('.overnight-control').evaluate((node) => {
 				const label = node.querySelector('label').getBoundingClientRect();
 				const preview = node.querySelector('.calendar-end').getBoundingClientRect();
-				return Math.abs((label.top + label.bottom) / 2 - (preview.top + preview.bottom) / 2) < 1;
+				const help = node.querySelector('summary').getBoundingClientRect();
+				return (
+					label.right < help.left &&
+					help.right < preview.left &&
+					Math.abs((label.top + label.bottom) / 2 - (preview.top + preview.bottom) / 2) < 1
+				);
 			}),
 			true
 		);
