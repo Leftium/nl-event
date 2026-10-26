@@ -9,6 +9,7 @@
 	import { Temporal } from '@js-temporal/polyfill';
 	import * as Core from '#lib/core/EventCore.gen.ts';
 	import { fastTooltips } from '#lib/fastTooltips.ts';
+	import { overnightExport } from '#lib/core/overnightExport.ts';
 	import { validZone } from '#lib/core/calendarAdapter.ts';
 
 	const fields = [
@@ -32,7 +33,10 @@
 	);
 	let result = $derived(Core.validate(draft));
 	let links = $derived(groupEquivalentLinks(discoverLinks(draft.description)));
-	let googleUrl = $derived(result.event ? Core.googleUrl(result.event) : '');
+	let trimOvernight = $state(true);
+	let overnight = $derived(overnightExport(result.event, trimOvernight));
+	let exportEvent = $derived(overnight.event);
+	let googleUrl = $derived(exportEvent ? Core.googleUrl(exportEvent) : '');
 	let longGoogleUrl = $derived(googleUrl.length > 8000);
 	let zone = $derived(Core.effectiveZone(draft));
 	let zoneDialog: HTMLDialogElement;
@@ -377,6 +381,7 @@
 	onMount(() => {
 		let mounted = true;
 		collapseDates();
+		trimOvernight = true;
 		draft = Core.create(captureContext());
 		ready = true;
 		void tick().then(() => {
@@ -410,6 +415,7 @@
 		clearTimeout(parseTimer);
 		descriptionSelection = '';
 		collapseDates();
+		trimOvernight = true;
 		draft = Core.create(captureContext());
 		displayNow = draft.context.referenceInstant;
 		zoneDialog?.close();
@@ -429,6 +435,7 @@
 			}
 			descriptionSelection = '';
 			collapseDates();
+			trimOvernight = true;
 			draft = Core.replaceClipboard(draft, text, captureContext());
 			displayNow = draft.context.referenceInstant;
 			scheduleParse(true);
@@ -445,7 +452,7 @@
 	}
 
 	function download() {
-		const event = Core.validate(draft).event;
+		const event = exportEvent;
 		if (!event) return;
 		draft = Core.withUid(draft, `${crypto.randomUUID()}@nl-event`);
 		const stamp = new Date()
@@ -967,6 +974,35 @@
 							{/each}
 						</fieldset>
 					{/if}
+					{#if name === 'end'}
+						{#if ready && overnight.eligible}
+							<div class="overnight-export">
+								<div class="overnight-control">
+									<label
+										><input type="checkbox" bind:checked={trimOvernight} /> Trim overnight tail</label
+									>
+
+									<details class="overnight-help no-nimble">
+										<summary aria-label="About trimming overnight tail"
+											><span aria-hidden="true">?</span></summary
+										>
+										<p>
+											Avoid an extra final-morning entry in Google Calendar's Schedule view. For
+											events ending by 6 AM, exports stop at midnight on the final day. Hours after
+											midnight won't be marked busy. The actual end stays in the regular export
+											description; Open without description omits it.
+										</p>
+									</details>
+									<small
+										class="calendar-end"
+										class:preview-hidden={!trimOvernight}
+										aria-hidden={!trimOvernight}>Calendar end: {overnight.calendarEnd}</small
+									>
+								</div>
+							</div>
+						{/if}
+						{#if overnight.warning}<small role="status">{overnight.warning}</small>{/if}
+					{/if}
 				</fieldset>
 			{/each}
 			<dialog
@@ -1026,7 +1062,7 @@
 					without it.
 				</p>{/if}
 			<div class="actions">
-				{#if ready && result.event}
+				{#if ready && exportEvent}
 					<!-- External calendar URL; this is not a SvelteKit route. -->
 					<!-- eslint-disable svelte/no-navigation-without-resolve -->
 					<a class="nc-button" href={googleUrl} target="_blank" rel="noopener noreferrer"
@@ -1034,7 +1070,7 @@
 					>
 					<a
 						class="nc-button secondary"
-						href={Core.googleUrl({ ...result.event, description: '' })}
+						href={Core.googleUrl({ ...exportEvent, description: '' })}
 						target="_blank"
 						rel="noopener noreferrer">Open without description</a
 					>
@@ -1061,6 +1097,87 @@
 </main>
 
 <style>
+	.overnight-export {
+		margin-top: 0.75rem;
+		font-size: 0.85rem;
+	}
+	.overnight-control {
+		position: relative;
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.15rem;
+	}
+	.overnight-control label {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin: 0 0 0 0.2rem;
+		white-space: nowrap;
+		cursor: pointer;
+	}
+	.overnight-control input {
+		margin: 0;
+	}
+	.overnight-help {
+		position: static;
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+	.overnight-help summary {
+		margin: 0;
+		display: grid;
+		place-items: center;
+		width: 1.5rem;
+		height: 2rem;
+		padding: 0;
+		cursor: pointer;
+	}
+	.overnight-help summary span {
+		display: grid;
+		place-items: center;
+		width: 1rem;
+		height: 1rem;
+		font-size: 0.7rem;
+		border: 1px solid var(--nc-border);
+		border-radius: 50%;
+	}
+	.overnight-help summary::marker {
+		content: '';
+	}
+	.overnight-help p {
+		position: absolute;
+		z-index: 20;
+		left: 0;
+		top: 100%;
+		width: min(22rem, 100%);
+		box-sizing: border-box;
+		margin: 0.4rem 0 0;
+		padding: 0.75rem;
+		border: 1px solid var(--nc-border);
+		border-radius: 0.4rem;
+		background: var(--nc-surface-1);
+		box-shadow: 0 2px 8px #0003;
+	}
+	.calendar-end {
+		margin-left: auto;
+		font-size: 0.7rem;
+		white-space: nowrap;
+	}
+	.preview-hidden {
+		visibility: hidden;
+	}
+	@media (any-pointer: coarse) {
+		.overnight-control label {
+			font-size: 0.8rem;
+		}
+		.overnight-help summary {
+			min-width: 1.5rem;
+			min-height: 2.75rem;
+		}
+	}
+
 	.description-editor {
 		min-width: 0;
 		margin: 0;
@@ -1119,8 +1236,8 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
+		width: 2rem;
+		height: 2rem;
 		padding: 0.25rem;
 		border-radius: 0.25rem;
 		flex-shrink: 0;
