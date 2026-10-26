@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import AnnouncementLinks from '#lib/AnnouncementLinks.svelte';
 	import type { EvidenceRange } from '#lib/evidenceHighlight.ts';
 	import { descriptionEditor } from '#lib/descriptionEditor.ts';
 	import { SvelteDate } from 'svelte/reactivity';
@@ -458,6 +459,7 @@
 					>
 						{readingClipboard ? 'Reading clipboard...' : 'Paste from clipboard'}
 					</button>
+					<AnnouncementLinks description={draft.description} />
 				</div>
 			</div>
 			<div class="editor-surface">
