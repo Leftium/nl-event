@@ -1,8 +1,35 @@
 import { expect, it } from 'vitest';
-import { discoverLinks, primarySignup } from '../src/lib/announcementLinks';
+import { discoverLinks, groupEquivalentLinks, primarySignup } from '../src/lib/announcementLinks';
 
 const form = 'https://docs.google.com/forms/d/e/SYNTHETIC_FORM/viewform';
 const sheet = 'https://docs.google.com/spreadsheets/d/SYNTHETIC_SHEET/edit';
+
+it.each([false, true])(
+	'prefers an existing Veneer Sheet URL regardless of source order (%s)',
+	(reverse) => {
+		const veneer = 'https://veneer.leftium.com/f.SYNTHETIC_FORM/s.SHEET?tabs=info#form';
+		const source = [form, 'https://veneer.leftium.com/f.SYNTHETIC_FORM/', veneer];
+		const links = groupEquivalentLinks(
+			discoverLinks((reverse ? source.reverse() : source).join('\n'))
+		);
+		expect(links).toHaveLength(1);
+		expect(links[0].veneerUrl).toBe(veneer);
+	}
+);
+
+it('groups known equivalent Form/Veneer signup URLs and retains each source without guessing redirects', () => {
+	const source = `${form}\nhttps://veneer.leftium.com/f.SYNTHETIC_FORM\nhttps://forms.gle/OPAQUE`;
+	const links = groupEquivalentLinks(discoverLinks(source));
+	expect(links).toHaveLength(2);
+	expect(links[0].href).toBe(form);
+	expect(links[0].equivalents).toEqual([
+		{
+			href: 'https://veneer.leftium.com/f.SYNTHETIC_FORM',
+			source: 'https://veneer.leftium.com/f.SYNTHETIC_FORM'
+		}
+	]);
+	expect(links[1].href).toBe('https://forms.gle/OPAQUE');
+});
 
 it('discovers every URL in source order with Korean role hints and exact offsets', () => {
 	const source = `신청: ${form}\n확인: ${sheet}\n장소: https://map.naver.com/p/example`;

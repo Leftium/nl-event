@@ -843,6 +843,25 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     }
   }
   // Only labeled values and credible headings become title/location evidence.
+  // Skip a leading signup block without moving any source evidence offsets.
+  let headingIndex = ref(0)
+  let leadingVeneer = ref(false)
+  let scanningHeading = ref(true)
+  lines->Array.forEachWithIndex((line, index) => {
+    if scanningHeading.contents {
+      if has(
+        trim(line.text),
+        "^https://veneer\\.leftium\\.com/[sfgbhu]\\.[A-Za-z0-9_-]+(?:/s\\.[A-Za-z0-9_-]+)?/?(?:[?#]\\S*)?$",
+      ) {
+        leadingVeneer := true
+        headingIndex := index + 1
+      } else if trim(line.text) == "" || (leadingVeneer.contents && has(trim(line.text), "^-{3,}$")) {
+        headingIndex := index + 1
+      } else {
+        scanningHeading := false
+      }
+    }
+  })
   lines->Array.forEachWithIndex((line, index) => {
     let titleLabel = matches(line.text, "^\\s*(?:제목|Title)\\s*[:：]\\s*(.+)$")->Array.get(0)
     let sourceSpan = [{start: line.start, end: line.end}]
@@ -852,7 +871,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     }])
     | None =>
       if (
-        index == 0 &&
+        index == headingIndex.contents &&
         locationLabel(locationContent(line))->Option.isNone &&
         !has(
           line.text,

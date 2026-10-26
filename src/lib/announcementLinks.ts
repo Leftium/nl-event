@@ -1,4 +1,5 @@
 import { find } from 'linkifyjs';
+import { signupSource, VENEER_ORIGIN } from './calendarDescription';
 
 export type LinkKind = 'Form' | 'Sheet' | 'Short link' | 'Veneer' | 'Map' | 'Other';
 export type LinkRole = 'Signup' | 'Confirmation' | 'Location';
@@ -13,6 +14,8 @@ export type AnnouncementLink = {
 	context: string;
 	start: number;
 	end: number;
+	equivalents?: { href: string; source: string }[];
+	veneerUrl?: string;
 };
 
 function classify(url: URL) {
@@ -121,6 +124,39 @@ export function discoverLinks(description: string): AnnouncementLink[] {
 		});
 	}
 	return [...links.values()];
+}
+
+/** Group known equivalent signup URLs without guessing shortener destinations. */
+export function groupEquivalentLinks(links: AnnouncementLink[]): AnnouncementLink[] {
+	const groups = new Map<string, AnnouncementLink>();
+	for (const link of links) {
+		const source = signupSource(link.href);
+		const veneerUrl =
+			source && new URL(link.href).origin === VENEER_ORIGIN ? source.veneerUrl : undefined;
+		const key = source ? `signup:${source.id}` : link.identity;
+		const existing = groups.get(key);
+		if (existing) {
+			if (
+				veneerUrl &&
+				(!existing.veneerUrl ||
+					new URL(veneerUrl).pathname.split('/').filter(Boolean).length >
+						new URL(existing.veneerUrl).pathname.split('/').filter(Boolean).length)
+			)
+				existing.veneerUrl = veneerUrl;
+			existing.roles = [...new Set([...existing.roles, ...link.roles])];
+			existing.equivalents = [
+				...(existing.equivalents ?? []),
+				{ href: link.href, source: link.source }
+			];
+		} else
+			groups.set(key, {
+				...link,
+				veneerUrl,
+				identity: source ? key : link.identity,
+				roles: [...link.roles]
+			});
+	}
+	return [...groups.values()];
 }
 
 export function primarySignup(links: AnnouncementLink[], explicit?: string | null) {

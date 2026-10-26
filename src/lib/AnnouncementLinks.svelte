@@ -1,331 +1,401 @@
 <script lang="ts">
-	import { discoverLinks, primarySignup } from './announcementLinks';
-	import type { identity } from './core/EventCore.gen';
-	let { description, draftIdentity }: { description: string; draftIdentity: identity } = $props();
-	let previousIdentity: identity;
-	let links = $derived(discoverLinks(description));
-	let explicit = $state<string | null>();
-	let selected = $derived(primarySignup(links, explicit));
-	let dialog: HTMLDialogElement;
-	let trigger = $state<HTMLButtonElement>();
-	let backdropPointer = false;
-	const groups = ['Signup and confirmation', 'Map', 'Other'] as const;
-	const groupFor = (link: (typeof links)[number]) =>
-		link.kind === 'Map'
-			? 'Map'
-			: link.kind !== 'Other' ||
-				  link.roles.includes('Signup') ||
-				  link.roles.includes('Confirmation')
-				? 'Signup and confirmation'
-				: 'Other';
+	import { onDestroy, tick, untrack } from 'svelte';
+	import type { AnnouncementLink } from './announcementLinks';
+	import {
+		formIntroduction,
+		sheetIdentity,
+		signupSource,
+		trackFormIntroduction,
+		writeFormIntroduction,
+		type FormIntroductionSection,
+		type FormMetadata
+	} from './calendarDescription';
+	import { loadFormMetadata } from './formMetadata';
+
+	let {
+		links,
+		original,
+		oninclude,
+		onimport,
+		onhighlight
+	}: {
+		links: AnnouncementLink[];
+		original: string;
+		oninclude: (identity: string, include: boolean, sheet?: string) => void;
+		onimport: (text: string) => void;
+		onhighlight: (link?: AnnouncementLink) => void;
+	} = $props();
+	const detailsId = $props.id();
+	let panel = $state<HTMLDivElement>();
+	let trigger: HTMLButtonElement | undefined;
+	let selectedIdentity = $state<string>();
+	let selected = $derived(links.find((link) => link.identity === selectedIdentity));
+	let metadata = $state<FormMetadata>();
+	let phase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
+	let failure = $state('');
+	let imported = $state<FormIntroductionSection>();
+	let trackedDescription = '';
+	let confirmReplacement = $state(false);
+	let generation = 0;
+	let disposed = false;
+	let source = $derived(signupSource(selected?.href ?? ''));
+	let intro = $derived(metadata?.type === 'form' ? formIntroduction(metadata) : '');
+	let edited = $derived(
+		!!imported && original.slice(imported.start, imported.end) !== imported.text
+	);
+	let alreadyUsed = $derived(!!intro && imported?.text === intro && !edited);
+	let included = $derived(selected?.veneerUrl);
+	let sheet = $derived(included ? (new URL(included).pathname.split('/')[2] ?? '') : '');
+	let sheets = $derived([
+		...new Map([
+			...(sheet ? [[sheet, { id: sheet, label: sheet }] as const] : []),
+			...(metadata?.autoSheets ?? []).map(
+				({ veneerId, title }) => [veneerId, { id: veneerId, label: title || veneerId }] as const
+			),
+			...links.flatMap((link) => {
+				const id = sheetIdentity(link.href);
+				return id ? [[id, { id, label: link.source }] as const] : [];
+			})
+		]).values()
+	]);
 	$effect(() => {
-		if (previousIdentity !== draftIdentity) {
-			explicit = undefined;
-			previousIdentity = draftIdentity;
-		}
-		if (explicit && !links.some((link) => link.identity === explicit)) explicit = undefined;
-		if (!links.length) explicit = undefined;
-		if (!links.length && dialog?.open) dialog.close();
+		if (selectedIdentity && !selected) dismiss();
 	});
-	function close() {
-		dialog.close();
-	}
-	function keepDialogFocus(event: KeyboardEvent) {
-		if (event.key !== 'Tab' || event.isComposing) return;
-		const controls = [
-			...dialog.querySelectorAll<HTMLElement>('button, input:checked, a[href], summary')
-		];
-		const first = controls[0];
-		const last = controls.at(-1);
-		if (event.shiftKey && document.activeElement === first) {
-			event.preventDefault();
-			last?.focus();
-		} else if (!event.shiftKey && document.activeElement === last) {
-			event.preventDefault();
-			first?.focus();
+	$effect(() => {
+		const text = original;
+		untrack(() => {
+			imported = trackFormIntroduction(trackedDescription, text, imported);
+			trackedDescription = text;
+			confirmReplacement = false;
+		});
+	});
+	onDestroy(() => {
+		disposed = true;
+		generation++;
+		onhighlight();
+	});
+
+	async function show(link: AnnouncementLink, button = trigger, refresh = false) {
+		confirmReplacement = false;
+		trigger = button;
+		const same = selected?.identity === link.identity;
+		if (same && !refresh && phase !== 'error') {
+			selectedIdentity = link.identity;
+			await tick();
+			panel?.focus({ preventScroll: true });
+			panel?.scrollIntoView({ block: 'nearest' });
+			return;
 		}
+		if (!same) metadata = undefined;
+		selectedIdentity = link.identity;
+		const token = ++generation;
+		const target = signupSource(link.href);
+		const shouldLoad = !!target && (!same || refresh || phase === 'error');
+		if (shouldLoad) {
+			phase = 'loading';
+			failure = '';
+		} else if (!target) phase = 'idle';
+		await tick();
+		if (disposed || token !== generation) return;
+		if (!refresh) {
+			panel?.focus({ preventScroll: true });
+			panel?.scrollIntoView({ block: 'nearest' });
+		}
+		if (!shouldLoad || !target) return;
+		try {
+			const result = await loadFormMetadata(target.id, refresh);
+			if (
+				disposed ||
+				token !== generation ||
+				!links.some((candidate) => candidate.identity === link.identity)
+			)
+				return;
+			metadata = result;
+			phase = 'ready';
+		} catch (error) {
+			if (disposed || token !== generation) return;
+			failure = error instanceof Error ? error.message : 'Could not get event details.';
+			phase = 'error';
+		}
+	}
+	function dismiss(restoreFocus = false) {
+		confirmReplacement = false;
+		generation++;
+		selectedIdentity = undefined;
+		metadata = undefined;
+		phase = 'idle';
+		onhighlight();
+		if (restoreFocus && trigger?.isConnected) trigger.focus({ preventScroll: true });
+	}
+	function addDetails(replaceEdited = false) {
+		if (!selected || !intro || alreadyUsed) return;
+		if (edited && !replaceEdited) {
+			confirmReplacement = true;
+			return;
+		}
+		const result = writeFormIntroduction(original, intro, imported);
+		imported = result.section;
+		trackedDescription = result.description;
+		dismiss();
+		onimport(result.description);
 	}
 </script>
 
+<svelte:window
+	onkeydowncapture={(event) => {
+		if (event.key === 'Escape' && panel?.contains(event.target as Node)) {
+			event.preventDefault();
+			dismiss(true);
+		}
+	}}
+/>
+
 {#if links.length}
-	<button
-		bind:this={trigger}
-		class="links-trigger"
-		type="button"
-		aria-haspopup="dialog"
-		onclick={() => dialog.showModal()}>Links ({links.length})</button
-	>
-{/if}
-<dialog
-	bind:this={dialog}
-	aria-labelledby="links-title"
-	aria-describedby="links-help"
-	onkeydown={keepDialogFocus}
-	onclose={() => trigger?.focus({ preventScroll: true })}
-	onpointerdown={(event) => {
-		backdropPointer = event.target === dialog;
-	}}
-	onclick={(event) => {
-		if (event.target === dialog && backdropPointer) close();
-		backdropPointer = false;
-	}}
->
-	<div class="dialog-content">
-		<div class="dialog-heading">
-			<h2 id="links-title">Description links</h2>
-			<button class="close-icon" type="button" aria-label="Close" onclick={close}>
-				<svg
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.7"
-					stroke-linecap="round"
-					aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg
-				>
-			</button>
-		</div>
-		<p id="links-help">Choose a primary signup link. Discovery stays on this device.</p>
-		<fieldset>
-			<legend class="sr-only">Primary signup</legend>
-			<label class="no-selection"
-				><input
-					type="radio"
-					name="primary-signup"
-					checked={!selected}
-					onchange={() => {
-						explicit = null;
-					}}
-				/> None selected</label
+	<div class="link-chips" role="group" aria-label="Description links">
+		{#each links as link (link.identity)}
+			<button
+				type="button"
+				class="link-chip"
+				class:included={!!link.veneerUrl}
+				aria-label={`Details for ${link.source}`}
+				aria-controls={detailsId}
+				aria-expanded={selected?.identity === link.identity}
+				title={signupSource(link.href) ? `Get details via Veneer: ${link.source}` : link.source}
+				onpointerenter={() => onhighlight(link)}
+				onpointerleave={() => onhighlight()}
+				onfocus={() => onhighlight(link)}
+				onblur={() => onhighlight()}
+				onclick={(event) => show(link, event.currentTarget)}
 			>
-			{#each groups as group (group)}
-				{@const entries = links.filter((link) => groupFor(link) === group)}
-				{#if entries.length}
-					<h3>{group}</h3>
-					<ul>
-						{#each entries as link (link.identity)}
-							<li class:selected={selected === link.identity}>
-								<div class="link-heading">
-									{#if !link.sheet && link.kind !== 'Map'}
-										<label class="link-choice">
-											<input
-												type="radio"
-												name="primary-signup"
-												checked={selected === link.identity}
-												onchange={() => {
-													explicit = link.identity;
-												}}
-											/>
-											<span class="sr-only"
-												>{selected === link.identity ? 'Primary signup' : 'Use as signup'}: {link.source}</span
-											>
-											<span class="link-kind" aria-hidden="true">{link.kind}</span>
-										</label>
-									{:else}
-										<span class="link-kind">{link.kind}</span>
-									{/if}
-									<!-- Discovery only emits absolute HTTP(S) URLs, outside the app router. -->
-									<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-									<a href={link.href} target="_blank" rel="noopener noreferrer" title={link.source}
-										>{link.source.replace(/^https?:\/\//i, '')}<span class="sr-only">
-											(opens in a new tab)</span
-										></a
-									>
-									{#if selected === link.identity}<span class="primary-label">Primary</span>{/if}
-								</div>
-								<details>
-									<summary>Details</summary>
-									{#if link.roles.length}<p>Suggested: {link.roles.join(', ')}</p>{/if}
-									{#if link.sheet && link.roles.includes('Confirmation')}<p>
-											Confirmation fallback candidate. Veneer can discover a Form-linked Sheet
-											first.
-										</p>{/if}
-									{#if link.kind === 'Short link' || (link.kind === 'Veneer' && !link.form && !link.sheet)}<p
-										>
-											Destination unknown until resolved.
-										</p>{/if}
-									<p>{link.source}</p>
-									<blockquote>{link.context}</blockquote>
-								</details>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			{/each}
-		</fieldset>
+				<span class="chip-kind">{link.kind}</span><span class="chip-url"
+					>{link.source.replace(/^https?:\/\//i, '')}</span
+				>
+				{#if link.veneerUrl}<span class="signup-badge">Veneer</span>{/if}
+			</button>
+		{/each}
 	</div>
-</dialog>
+{/if}
+{#if selected}
+	<div
+		id={detailsId}
+		bind:this={panel}
+		class="link-details"
+		role="region"
+		aria-label="Link details"
+		tabindex="-1"
+		aria-busy={phase === 'loading'}
+	>
+		<div class="details-heading">
+			<strong>Link details</strong><button
+				type="button"
+				class="quiet"
+				aria-label="Close link details"
+				onclick={() => dismiss(true)}>Close</button
+			>
+		</div>
+		<p class="details-url">
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+			<a href={selected.href} target="_blank" rel="noopener noreferrer">{selected.source}</a>
+		</p>
+		<div class="link-actions">
+			{#if source}
+				<label
+					><input
+						type="checkbox"
+						checked={!!included}
+						onchange={(event) =>
+							selected && oninclude(selected.identity, event.currentTarget.checked)}
+					/> Veneer link</label
+				>
+			{/if}
+			{#if intro}<button
+					type="button"
+					class="inline outline"
+					disabled={alreadyUsed || phase === 'loading'}
+					onclick={() => addDetails()}
+					>{alreadyUsed
+						? 'Already added'
+						: imported
+							? edited
+								? 'Review replacement'
+								: 'Update description'
+							: 'Add to description'}</button
+				>{/if}
+			{#if source && phase !== 'loading'}<button
+					type="button"
+					class="quiet"
+					onclick={() => selected && show(selected, trigger, true)}
+					>{phase === 'error' ? 'Retry' : 'Refresh'}</button
+				>{/if}
+		</div>
+		{#if confirmReplacement}
+			<div role="group" aria-label="Replace edited Form details">
+				<p>The imported details were edited. Replace that section with the current Form details?</p>
+				<button type="button" class="quiet" onclick={() => (confirmReplacement = false)}
+					>Keep edits</button
+				>
+				<button type="button" class="inline outline" onclick={() => addDetails(true)}
+					>Replace edited details</button
+				>
+			</div>
+		{/if}
+		{#if phase === 'loading'}<p role="status">Getting event details...</p>{/if}
+		{#if phase === 'error'}<p role="alert">{failure}</p>{/if}
+		{#if metadata?.type === 'sheet'}<p>This link opens a Sheet, without Form details.</p>{/if}
+		{#if metadata?.type === 'form' && !intro}<p>No introductory details were found.</p>{/if}
+		{#if intro}<pre aria-label="Form details preview">{intro}</pre>{/if}
+
+		{#if source && included && sheets.length}
+			<details class="secondary-details">
+				<summary>Confirmation Sheet</summary>
+				{#if sheets.length}<select
+						aria-label="Confirmation Sheet"
+						value={sheet}
+						onchange={(event) =>
+							selected && oninclude(selected.identity, true, event.currentTarget.value)}
+					>
+						<option value="">Automatic</option>
+						{#each sheets as candidate (candidate.id)}<option value={candidate.id}
+								>{candidate.label}</option
+							>{/each}
+					</select>{/if}
+			</details>
+		{/if}
+		{#if selected.equivalents?.length}
+			<details class="secondary-details">
+				<summary>Equivalent links ({selected.equivalents.length})</summary>
+				{#each selected.equivalents as equivalent (equivalent.href)}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a href={equivalent.href} target="_blank" rel="noopener noreferrer">{equivalent.source}</a
+					>
+				{/each}
+			</details>
+		{/if}
+	</div>
+{/if}
 
 <style>
-	.links-trigger {
+	.link-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin-block: 0.5rem;
+	}
+	.link-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		max-width: min(100%, 20rem);
+		min-width: 0;
+		min-height: 2rem;
+		margin: 0;
+		padding: 0.25rem 0.6rem;
+		border: 1px solid var(--nc-border);
+		border-radius: 1rem;
+		background: transparent;
+		color: inherit;
+		font-size: 0.8rem;
+		font-weight: 400;
+	}
+	.link-chip:hover,
+	.link-chip[aria-expanded='true'] {
+		background: color-mix(in srgb, currentColor 7%, transparent);
+	}
+	.link-chip.included {
+		border-color: var(--nc-primary);
+	}
+	.chip-kind {
+		opacity: 0.65;
+		flex-shrink: 0;
+	}
+	.chip-url {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.signup-badge {
+		font-size: 0.7rem;
+		flex-shrink: 0;
+	}
+	.link-details {
+		min-width: 0;
+		margin-block: 0.75rem;
+		padding: 0.75rem;
+		border: 1px solid var(--nc-border);
+		border-radius: 0.4rem;
+	}
+	.details-heading,
+	.link-actions {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.5rem 1rem;
+	}
+	.details-heading {
+		justify-content: space-between;
+	}
+	.details-url {
+		font-size: 0.75rem;
+		opacity: 0.65;
+		overflow-wrap: anywhere;
+		margin-block: 0.5rem;
+	}
+	.link-actions {
+		font-size: 0.85rem;
+	}
+	.link-actions label {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin: 0;
+		cursor: pointer;
+	}
+	.link-actions input {
+		margin: 0;
+	}
+	.link-details pre {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		max-height: 13rem;
+		overflow: auto;
+		margin-block: 0.75rem;
+		font: inherit;
+		font-size: 0.9rem;
+		user-select: text;
+	}
+	.quiet {
+		margin: 0;
+		padding: 0.25rem 0.4rem;
 		border: 0;
 		background: transparent;
 		color: inherit;
-		padding: 0;
 		font-size: 0.8rem;
+		font-weight: 400;
 		text-decoration: underline;
-		cursor: pointer;
 	}
-	dialog {
-		width: min(38rem, calc(100% - 1.5rem));
-		max-height: calc(100dvh - 2rem);
-		box-sizing: border-box;
-		padding: 0;
-		overflow: auto;
-		overscroll-behavior: contain;
-		border: 1px solid var(--nc-border);
-		border-radius: 0.5rem;
-		background: var(--nc-surface-1, Canvas);
-		color: inherit;
+	.secondary-details {
+		margin-top: 0.5rem;
+		font-size: 0.8rem;
 	}
-	dialog::backdrop {
-		background: rgb(0 0 0 / 45%);
-	}
-	.dialog-content {
-		padding: 1rem;
-	}
-	.dialog-heading {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.25rem;
-	}
-	h3 {
-		margin-block: 1rem 0.25rem;
-		font-size: 0.75rem;
-		font-weight: 500;
-		color: color-mix(in srgb, currentColor 65%, transparent);
-	}
-	fieldset {
-		min-width: 0;
-		margin: 0;
-		padding: 0;
-		border: 0;
-	}
-	legend {
-		font-weight: bold;
-	}
-	ul {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-	li {
-		min-width: 0;
-		padding: 0.3rem 0.5rem;
-		border-radius: 0.2rem;
-		font-size: 0.875rem;
-	}
-	label {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin: 0;
-		min-height: 1.75rem;
-		cursor: pointer;
-	}
-	input {
-		margin: 0;
-	}
-	a {
+	.secondary-details a {
 		display: block;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	details {
-		margin-top: 0;
-		font-size: 0.75rem;
-		color: color-mix(in srgb, currentColor 65%, transparent);
-	}
-	details p,
-	blockquote {
 		overflow-wrap: anywhere;
-		white-space: pre-wrap;
-		margin: 0.5rem 0;
+	}
+	select {
+		width: 100%;
+		box-sizing: border-box;
 	}
 	summary {
 		cursor: pointer;
-		min-height: 1.25rem;
-	}
-	#links-help {
-		font-size: 0.8rem;
-		color: color-mix(in srgb, currentColor 65%, transparent);
-		margin-block: 0.5rem;
-	}
-	.close-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
-		padding: 0.35rem;
-		margin: 0;
-		border: 0;
-		background: transparent;
-		box-shadow: none;
-		color: inherit;
-	}
-	.close-icon svg {
-		width: 1.1rem;
-		height: 1.1rem;
-	}
-	.close-icon:hover,
-	li:hover {
-		background: color-mix(in srgb, currentColor 4%, transparent);
-	}
-	li.selected {
-		background: color-mix(in srgb, currentColor 7%, transparent);
-	}
-	.link-heading {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		min-width: 0;
-	}
-	.link-choice,
-	.link-kind,
-	.primary-label {
-		flex-shrink: 0;
-	}
-	.link-kind {
-		font-weight: 400;
-		color: color-mix(in srgb, currentColor 65%, transparent);
-	}
-	.link-heading a {
-		flex: 1;
-		min-width: 0;
-		color: inherit;
-		text-decoration-color: color-mix(in srgb, currentColor 25%, transparent);
-		text-underline-offset: 0.15em;
-	}
-	.primary-label {
-		font-size: 0.7rem;
-		color: color-mix(in srgb, currentColor 65%, transparent);
 	}
 	@media (any-pointer: coarse) {
-		.close-icon {
-			width: 2.75rem;
-			height: 2.75rem;
-		}
-		label,
-		summary {
+		.link-chip,
+		.details-url a,
+		.link-actions label,
+		summary,
+		.quiet {
 			min-height: 2.75rem;
-		}
-		summary {
 			align-content: center;
 		}
-	}
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip-path: inset(50%);
-		white-space: nowrap;
 	}
 </style>
