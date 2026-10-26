@@ -230,6 +230,17 @@ export async function checkDescriptionReviewRegressions(page, touch = false) {
 		await description.fill(editedInitial);
 		await open(first);
 		await activate(details.getByRole('button', { name: 'Review replacement', exact: true }));
+		// Draft updates must not dismiss review when Description itself is unchanged.
+		await page.locator('#title').fill('Replacement review stays open');
+		await page.waitForFunction(
+			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+		);
+		assert.equal(
+			await details
+				.getByRole('group', { name: 'Replace edited Form details', exact: true })
+				.count(),
+			1
+		);
 		assert.equal(await description.inputValue(), editedInitial);
 		await activate(details.getByRole('button', { name: 'Keep edits', exact: true }));
 		assert.equal(await description.inputValue(), editedInitial);
