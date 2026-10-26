@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { checkOvernightExport } from './overnight-export.browser.mjs';
+import { checkSpacedClock } from './spaced-clock.browser.mjs';
 import { checkAnnouncementLinks } from './announcement-links.browser.mjs';
 import {
 	checkCalendarDescription,
@@ -2528,6 +2529,7 @@ for (const [name, engine] of [
 	await checkAnnouncementLinks(page);
 	await checkCalendarDescription(page);
 	await checkOvernightExport(page);
+	await checkSpacedClock(page);
 	await checkDescriptionReviewRegressions(page);
 	assert.deepEqual(
 		await page
@@ -2804,6 +2806,7 @@ for (const [name, engine] of [
 	await checkAnnouncementLinks(touchPage, true);
 	await checkCalendarDescription(touchPage, true);
 	await checkOvernightExport(touchPage, true);
+	await checkSpacedClock(touchPage, true);
 	await checkDescriptionReviewRegressions(touchPage, true);
 	await touchPage.locator('#title').fill('Touch target check');
 	await touchPage.locator('#start').fill('2026-10-25 17:00');
