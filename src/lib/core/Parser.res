@@ -118,7 +118,7 @@ let dateEvidence = (line: lexical, reference, seasonYear) => {
   let text = line.text
   let explicit = matches(
     text,
-    "(?<![\\d\\p{L}./-])(?:(\\d{4}|\\d{2})[ \\t]*[./-][ \\t]*)?(\\d{1,2})[ \\t]*[./-][ \\t]*(\\d{1,2})(?![\\d:]|[ \\t]*[./-][ \\t]*\\d)|(?:(\\d{4})년\\s*)?(\\d{1,2})월\\s*(\\d{1,2})일",
+    "(?<![\\d\\p{L}./-])(?:(\\d{4}|\\d{2})[\\t\\p{Zs}]*[./-][\\t\\p{Zs}]*)?(\\d{1,2})[\\t\\p{Zs}]*[./-][\\t\\p{Zs}]*(\\d{1,2})(?![\\d:]|[\\t\\p{Zs}]*[./-][\\t\\p{Zs}]*\\d)|(?:(\\d{4})년\\s*)?(\\d{1,2})월\\s*(\\d{1,2})일",
   )
   let english = matches(
     text,
@@ -130,8 +130,8 @@ let dateEvidence = (line: lexical, reference, seasonYear) => {
       // Spacing is supported only for explicit four-digit dates. A numeric
       // predecessor across whitespace still makes this a suffix, not a date.
       (group(m, 5) != "" ||
-        ((!has(m.text, "[ \\t]") || String.length(group(m, 1)) == 4) &&
-          !has(slice(text, 0, m.start), "\\d[ \\t]*[./-][ \\t]*$"))) &&
+        ((!has(m.text, "[\\t\\p{Zs}]") || String.length(group(m, 1)) == 4) &&
+          !has(slice(text, 0, m.start), "\\d[\\t\\p{Zs}]*[./-][\\t\\p{Zs}]*$"))) &&
       !has(
         slice(text, m.end, String.length(text)),
         "^\\s*(?:(?:days?|weeks?|hours?|hrs?|minutes?|mins?|KRW|USD)\\b|(?:만|천)(?:원|(?![가-힣]))|(?:원|달러)(?![가-힣])|[₩$€])",
@@ -232,12 +232,16 @@ type clock = {time: string, minutes: int, span: span, ambiguous: bool, ambiguous
 let clocks = (line: lexical, evening) => {
   let tokens = matches(
     line.text,
-    "(?<![\\d:/])(?:(오전|오후|저녁|아침|밤|새벽)\\s*)?(\\d{1,2})(?::(\\d{2})(?![\\d:])|시(?:\\s*(반|\\d{1,2}분))?)\\s*([ap]m?\\b)?|(?<![\\d:/])(\\d{1,2})\\s*([ap]m?)\\b|\\bmidnight\\b",
+    "(?<![\\d:/])(?:(오전|오후|저녁|아침|밤|새벽)\\s*)?(\\d{1,2})(?:[\\t\\p{Zs}]*:[\\t\\p{Zs}]*(\\d{2})(?![\\d:])|시(?:\\s*(반|\\d{1,2}분))?)\\s*([ap]m?\\b)?|(?<![\\d:/])(\\d{1,2})\\s*([ap]m?)\\b|\\bmidnight\\b",
   )
   // A bare first hour is meaningful only as part of an explicit range.
+  // Minutes inside a colon clock must not become another bare range endpoint.
   let bare = matches(
     line.text,
-    "(?<![\\d:])(\\d{1,2})\\s*(?=[~–-]\\s*\\d{1,2}(?::\\d{2})?\\s*(?:[ap]m?)\\b)",
+    "(?<![\\d:])(\\d{1,2})\\s*(?=[~–-]\\s*\\d{1,2}(?:[\\t\\p{Zs}]*:[\\t\\p{Zs}]*\\d{2})?\\s*(?:[ap]m?)\\b)",
+  )
+  ->Array.filter(m =>
+    !(tokens->Array.some(t => m.start >= t.start && m.start < t.end))
   )
   let all = Array.concat(tokens, bare)->Array.toSorted((a, b) => Int.toFloat(a.start - b.start))
   let qualifier = (m: lexical) =>
@@ -291,7 +295,7 @@ let clocks = (line: lexical, evening) => {
       h
     }
     let invalidMeridiem = has(m.text, "[ap]m?\\b") && (h < 1 || h > 12)
-    let explicit24 = has(m.text, "^0\\d:") || has(line.text, "(?:1[3-9]|2[0-4]):")
+    let explicit24 = has(m.text, "^0\\d[\\t\\p{Zs}]*:") || has(line.text, "(?:1[3-9]|2[0-4])[\\t\\p{Zs}]*:")
     let ambiguous = !midnight && !pm && !am && h < 13 && !explicit24
     {
       // Keep 1440 only as internal range-end evidence; canonical clocks use 00:00.
@@ -301,7 +305,7 @@ let clocks = (line: lexical, evening) => {
       invalidMeridiem ||
       (h == 24 &&
         (minute != 0 ||
-        !has(trim(m.text), "^24:00$") ||
+        !has(trim(m.text), "^24[\\t\\p{Zs}]*:[\\t\\p{Zs}]*00$") ||
         !has(slice(line.text, 0, m.start), "[~–-]\\s*$")))
         ? -1
         : hour * 60 + minute,
@@ -365,7 +369,7 @@ let headingTitle = (line: lexical, reference, seasonYear, evening, englishSpans:
 let sectionHeading = (line: lexical) =>
   matches(
     line.text,
-    "^[ \\t●•·*#>✓✔☑✅-]*(장소|주소|위치|기간|시간|날짜|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Location|Venue|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission)(?:\\*{1,2})?(?:[ \\t]*[:：][ \\t]*|[ \\t]+|$)(.*)$",
+    "^[ \\t●•·*#>✓✔☑✅-]*(장소|주소|위치|기간|시간|날짜|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Location|Venue|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission)(?:\\*{1,2})?(?:[\\t\\p{Zs}]*[:：][\\t\\p{Zs}]*|[\\t\\p{Zs}]+|$)(.*)$",
   )->Array.get(0)
 let sectionLine = (line: lexical): lexical =>
   switch sectionHeading(line) {
@@ -717,7 +721,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     ->Array.some(((l, index)) =>
       !sectionExcluded(index) &&
       !excluded(l.text) &&
-      has(l.text, "\\d{1,2}:\\d{2}|\\d{1,2}\\s*(?:시|[ap]m?\\b)|midnight")
+      has(l.text, "\\d{1,2}[\\t\\p{Zs}]*:[\\t\\p{Zs}]*\\d{2}|\\d{1,2}\\s*(?:시|[ap]m?\\b)|midnight")
     )
   let mealTimes =
     [

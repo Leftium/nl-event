@@ -12,3 +12,5 @@ Payment account numbers and payee names have been replaced with explicit redacti
 `blues-jam-october-sanitized.txt` is the sanitized PR #10 reproduction excerpt, not the complete original announcement. It omits payment accounts, personal details, and unrelated content; the adopted April K4 fixture remains unchanged.
 
 `november-spaced-date-sanitized.txt` is the second sanitized PR #10 reproduction excerpt. Only the reported date, clock, and fee lines are included; payment, personal, contact, and unrelated details are omitted. Its segment range does not supply an explicit overall End.
+
+`spaced-clock-overnight-sanitized.txt` is the sanitized Issue #37 reproduction. It retains the spaced overall clock, adjacent event date, registration deadline, DJ subranges, and later promotion without payment details, contacts, or personal names. Parser and browser regressions share this source.

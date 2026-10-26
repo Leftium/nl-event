@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import * as Core from '../src/lib/core/EventCore.gen';
+import { overnightExport } from '../src/lib/core/overnightExport';
 
 const context = { referenceInstant: '2026-10-24T03:00:00Z', browserTimeZone: 'Asia/Seoul' };
 const parse = (text: string, ctx = context, override?: string) => {
@@ -11,6 +12,159 @@ const settle = (draft: Core.draft, apply = true) =>
 	Core.completeParse(draft, Core.parseTicket(draft), Core.extract(draft), apply);
 const values = (draft: Core.draft, field: Core.fieldName) =>
 	Core.alternatives(draft, field).map((c) => c.value);
+
+const spacedClockSource = fs.readFileSync(
+	'tests/inputs/spaced-clock-overnight-sanitized.txt',
+	'utf8'
+);
+
+it.each(['23:00', '23: 00', '23 :00', '23 : 00', '23\t:\t00', '23\u00a0:\u300000'])(
+	'parses the sanitized overall overnight range with %s',
+	(clock) => {
+		const source = spacedClockSource.replace('23: 00', clock);
+		const draft = parse(source);
+		expect(draft.title.value).toBe('Example Blues Party');
+		expect(draft.start.value).toBe('2026-12-19 23:00');
+		expect(draft.end.value).toBe('2026-12-20 03:00');
+		expect(Core.durationValue(draft)).toBe(240);
+		expect(draft.description).toBe(source);
+		const starts = Core.alternatives(draft, 'start');
+		const ends = Core.alternatives(draft, 'end');
+		const start = starts.find((c) => c.value === draft.start.value)!;
+		const end = ends.find((c) => c.value === draft.end.value)!;
+		expect(end.groups.some((g) => start.groups.includes(g))).toBe(true);
+		expect(end.inferred).not.toContain('assumed-end');
+		expect(end.dateSpans).toEqual(start.dateSpans);
+		const endAt = source.indexOf('~ 3:00') + 2;
+		expect(end.timeSpans).toEqual([{ start: endAt, end: endAt + '3:00'.length }]);
+		for (const [first, last] of [
+			['23:00', '01:00'],
+			['01:00', '03:00']
+		])
+			expect(
+				starts.some(
+					(s) =>
+						s.time === first &&
+						ends.some((e) => e.time === last && e.groups.some((g) => s.groups.includes(g)))
+				)
+			).toBe(true);
+		expect(starts.some((c) => c.date === '2026-12-18')).toBe(false);
+		expect(starts.some((c) => c.date === '2027-03-20')).toBe(true);
+		const at = source.indexOf(clock);
+		expect(start.timeSpans).toEqual([{ start: at, end: at + clock.length + 1 }]);
+		expect(source.slice(start.timeSpans![0].start, start.timeSpans![0].end)).toBe(`${clock} `);
+		expect(Core.candidateInput(draft, start)).toContain(clock);
+		expect(draft.start.input).toBe(Core.candidateInput(draft, start));
+		const event = Core.validate(draft).event!;
+		expect(event).toMatchObject({
+			start: '20261219T140000Z',
+			end: '20261219T180000Z',
+			description: source,
+			zone: 'Asia/Seoul'
+		});
+		for (const enabled of [true, false]) {
+			const exported = overnightExport(event, enabled).event!;
+			const end = enabled ? '20261219T150000Z' : '20261219T180000Z';
+			expect(new URL(Core.googleUrl(exported)).searchParams.get('dates')).toBe(
+				`20261219T140000Z/${end}`
+			);
+			expect(
+				Core.ics(exported, 'spaced-clock', '20261024T030000Z').replace(/\r\n /g, '')
+			).toContain(`DTSTART:20261219T140000Z\r\nDTEND:${end}`);
+			expect(exported.description.includes('Actual end:')).toBe(enabled);
+		}
+	}
+);
+
+it('retains UTF-16 evidence and manual ownership through spaced-clock edits and reset', () => {
+	const source = spacedClockSource.replace('Party', 'Party 🎵').replaceAll('\n', '\r\n');
+	let draft = parse(source);
+	const candidate = Core.alternatives(draft, 'start').find((c) => c.value === draft.start.value)!;
+	const at = source.indexOf('23: 00');
+	const span = { start: at, end: at + '23: 00 '.length };
+	const selected = Core.selectCandidate(draft, 'start', candidate.id);
+	expect(
+		selected.selections.some((s) =>
+			s.candidate.timeSpans?.some((s) => s.start === span.start && s.end === span.end)
+		)
+	).toBe(true);
+	expect(Core.candidateInput(selected, candidate)).toContain('23: 00');
+	draft = Core.edit(draft, 'start', '2026-12-19 22:00');
+	draft = settle(Core.describe(draft, source.replace('23: 00', '23 : 00')));
+	expect(draft.start).toMatchObject({ value: '2026-12-19 22:00', ownership: 'manual' });
+	draft = Core.reset(draft, 'start');
+	draft = Core.reset(draft, 'end');
+	expect(draft.start).toMatchObject({ value: '2026-12-19 23:00', ownership: 'auto' });
+	expect(draft.start.input).toContain('23 : 00');
+	expect(draft.end.value).toBe('2026-12-20 03:00');
+	expect(Core.durationValue(draft)).toBe(240);
+	const updated = Core.alternatives(draft, 'start').find((c) => c.value === draft.start.value)!;
+	expect(updated.timeSpans).toEqual([{ start: at, end: at + '23 : 00 '.length }]);
+});
+
+it.each([
+	'23: 000',
+	'23 : 000',
+	'123 : 00',
+	'23 : 60',
+	'25 : 00',
+	'23:\n00',
+	'23\n:00',
+	'23:\v00',
+	'23:\f00',
+	'https://example.test/23:00',
+	'https://example.test/23: 00',
+	'Price: 23: 00',
+	'입장료: 23: 00원',
+	'Note: doors open later'
+])('does not invent a clock from malformed or incidental evidence: %s', (token) => {
+	const draft = parse(`Party\nDate: 2026-12-19\n${token}`);
+	expect(
+		draft.suggestions.candidates.filter((c) => c.time && !c.inferred.includes('inferred-time'))
+	).toEqual([]);
+});
+
+it.each([
+	['20 : 00 ~ 24 : 00', '2026-12-20 00:00'],
+	['23 : 00 ~ 00 : 00', '2026-12-20 00:00'],
+	['03 : 00 ~ 04 : 00', '2026-12-19 04:00'],
+	['11 : 00pm ~ 3 : 00am', '2026-12-20 03:00'],
+	['11 ~ 3 : 00pm', '2026-12-20 15:00'],
+	['오후 11시 ~ 새벽 3시', '2026-12-20 03:00']
+])('retains daypart and midnight semantics for %s', (range, end) => {
+	expect(parse(`Date: 2026-12-19 ${range}`).end.value).toBe(end);
+});
+
+it.each(['24 : 00', '24 : 01', '24 : 00pm', '오후 24 : 00', '24 : 000'])(
+	'keeps strict 24-hour start and endpoint validation with %s',
+	(clock) => {
+		expect(parse(`Date: 2026-12-19 ${clock}`).suggestions.candidates.filter((c) => c.time)).toEqual(
+			[]
+		);
+		if (clock !== '24 : 00')
+			expect(
+				Core.alternatives(parse(`Date: 2026-12-19 20 : 00 ~ ${clock}`), 'end').some(
+					(c) => !c.inferred.includes('assumed-end')
+				)
+			).toBe(false);
+	}
+);
+
+it('keeps an unqualified spaced clock ambiguous without inventing a default time', () => {
+	const draft = parse('Party\nDate: 2026-12-19\n3 : 00');
+	expect(Core.alternatives(draft, 'start')).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				time: '03:00',
+				inferred: expect.arrayContaining(['ambiguous-am-pm'])
+			})
+		])
+	);
+	expect(draft.suggestions.candidates.some((c) => c.inferred.includes('inferred-time'))).toBe(
+		false
+	);
+	expect(Core.validate(draft).event).toBeUndefined();
+});
 
 it.each([
 	'https://veneer.leftium.com/f.SYNTHETIC',
