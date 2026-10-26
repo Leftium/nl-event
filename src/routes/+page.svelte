@@ -9,6 +9,7 @@
 	import { Temporal } from '@js-temporal/polyfill';
 	import * as Core from '#lib/core/EventCore.gen.ts';
 	import { fastTooltips } from '#lib/fastTooltips.ts';
+	import { overnightExport } from '#lib/core/overnightExport.ts';
 	import { validZone } from '#lib/core/calendarAdapter.ts';
 
 	const fields = [
@@ -32,7 +33,10 @@
 	);
 	let result = $derived(Core.validate(draft));
 	let links = $derived(groupEquivalentLinks(discoverLinks(draft.description)));
-	let googleUrl = $derived(result.event ? Core.googleUrl(result.event) : '');
+	let truncateOvernight = $state(true);
+	let overnight = $derived(overnightExport(result.event, truncateOvernight));
+	let exportEvent = $derived(overnight.event);
+	let googleUrl = $derived(exportEvent ? Core.googleUrl(exportEvent) : '');
 	let longGoogleUrl = $derived(googleUrl.length > 8000);
 	let zone = $derived(Core.effectiveZone(draft));
 	let zoneDialog: HTMLDialogElement;
@@ -377,6 +381,7 @@
 	onMount(() => {
 		let mounted = true;
 		collapseDates();
+		truncateOvernight = true;
 		draft = Core.create(captureContext());
 		ready = true;
 		void tick().then(() => {
@@ -410,6 +415,7 @@
 		clearTimeout(parseTimer);
 		descriptionSelection = '';
 		collapseDates();
+		truncateOvernight = true;
 		draft = Core.create(captureContext());
 		displayNow = draft.context.referenceInstant;
 		zoneDialog?.close();
@@ -429,6 +435,7 @@
 			}
 			descriptionSelection = '';
 			collapseDates();
+			truncateOvernight = true;
 			draft = Core.replaceClipboard(draft, text, captureContext());
 			displayNow = draft.context.referenceInstant;
 			scheduleParse(true);
@@ -445,7 +452,7 @@
 	}
 
 	function download() {
-		const event = Core.validate(draft).event;
+		const event = exportEvent;
 		if (!event) return;
 		draft = Core.withUid(draft, `${crypto.randomUUID()}@nl-event`);
 		const stamp = new Date()
@@ -1020,13 +1027,35 @@
 				<p>Inferred lesson end may overlap the social.</p>
 			{/if}
 			{#each result.warnings as warning (warning)}<p>{warning}</p>{/each}
+			{#if ready && overnight.eligible}
+				<div class="overnight-export">
+					<label
+						><input type="checkbox" bind:checked={truncateOvernight} /> Truncate overnight</label
+					>
+					<p>
+						Actual end: {overnight.actualEnd}. Calendar end: {truncateOvernight
+							? overnight.calendarEnd
+							: overnight.actualEnd}.
+					</p>
+					<details>
+						<summary>About overnight exports</summary>
+						<p>
+							Ends the calendar entry at midnight so it appears only on its start day in Google
+							Calendar's Schedule view. The event may continue after midnight; those hours will not
+							be marked busy. The actual end is included in the description.
+						</p>
+					</details>
+					{#if truncateOvernight}<p>Open without description omits the actual-end note.</p>{/if}
+				</div>
+			{/if}
+			{#if overnight.warning}<p role="status">{overnight.warning}</p>{/if}
 			{#if longGoogleUrl}<p role="status">
 					This Google Calendar URL is unusually long ({googleUrl.length.toLocaleString()} characters).
 					If it fails to open, download .ics for the full description, or copy the description and open
 					without it.
 				</p>{/if}
 			<div class="actions">
-				{#if ready && result.event}
+				{#if ready && exportEvent}
 					<!-- External calendar URL; this is not a SvelteKit route. -->
 					<!-- eslint-disable svelte/no-navigation-without-resolve -->
 					<a class="nc-button" href={googleUrl} target="_blank" rel="noopener noreferrer"
@@ -1034,7 +1063,7 @@
 					>
 					<a
 						class="nc-button secondary"
-						href={Core.googleUrl({ ...result.event, description: '' })}
+						href={Core.googleUrl({ ...exportEvent, description: '' })}
 						target="_blank"
 						rel="noopener noreferrer">Open without description</a
 					>

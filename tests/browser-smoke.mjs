@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { checkOvernightExport } from './overnight-export.browser.mjs';
 import { checkAnnouncementLinks } from './announcement-links.browser.mjs';
 import {
 	checkCalendarDescription,
@@ -1565,6 +1566,8 @@ async function checkNumericDateReports(page) {
 				.getAttribute('aria-pressed'),
 			'true'
 		);
+		const truncation = page.getByRole('checkbox', { name: 'Truncate overnight' });
+		if (await truncation.count()) await truncation.uncheck();
 		const query = new URL(
 			await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
 		).searchParams;
@@ -1621,6 +1624,8 @@ async function checkRhythmParty(page) {
 		'true'
 	);
 	assert.equal(await page.locator('#location').inputValue(), '서울 서대문구 명물길 37');
+	// This parser regression checks the full real interval; clipping has its own coverage.
+	await page.getByRole('checkbox', { name: 'Truncate overnight' }).uncheck();
 	const google = page.getByRole('link', { name: 'Open in Google Calendar' });
 	assert.equal(
 		new URL(await google.getAttribute('href')).searchParams.get('dates'),
@@ -1905,6 +1910,8 @@ async function checkOvernightParty(page) {
 			true
 		);
 	assert.equal(await page.locator('#description').inputValue(), text);
+	assert.equal(await page.getByRole('checkbox', { name: 'Truncate overnight' }).isChecked(), true);
+	await page.getByRole('checkbox', { name: 'Truncate overnight' }).uncheck();
 	const params = new URL(
 		await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
 	).searchParams;
@@ -2035,6 +2042,8 @@ async function checkMapLocations(page) {
 		const options = page.getByRole('list', { name: 'Location alternatives', exact: true });
 		assert.equal(await options.getByRole('button', { name: venue, exact: true }).count(), 1);
 		assert.equal(await options.getByRole('button').count(), 2);
+		const truncation = page.getByRole('checkbox', { name: 'Truncate overnight' });
+		if (await truncation.count()) await truncation.uncheck();
 		const google = new URL(
 			await page.getByRole('link', { name: 'Open in Google Calendar' }).getAttribute('href')
 		);
@@ -2518,6 +2527,7 @@ for (const [name, engine] of [
 	await page.waitForFunction(() => !document.querySelector('#description').disabled);
 	await checkAnnouncementLinks(page);
 	await checkCalendarDescription(page);
+	await checkOvernightExport(page);
 	await checkDescriptionReviewRegressions(page);
 	assert.deepEqual(
 		await page
@@ -2793,6 +2803,7 @@ for (const [name, engine] of [
 	await touchPage.waitForFunction(() => !document.querySelector('#description').disabled);
 	await checkAnnouncementLinks(touchPage, true);
 	await checkCalendarDescription(touchPage, true);
+	await checkOvernightExport(touchPage, true);
 	await checkDescriptionReviewRegressions(touchPage, true);
 	await touchPage.locator('#title').fill('Touch target check');
 	await touchPage.locator('#start').fill('2026-10-25 17:00');
