@@ -47,6 +47,7 @@
 		"@leftium/nimble.css": "^0.24.1",
 		"@rescript/runtime": "^12.3.1",
 		"compromise": "^14.19.0",
-		"compromise-dates": "^3.10.0"
+		"compromise-dates": "^3.10.0",
+		"linkifyjs": "^4.4.0"
 	}
 }

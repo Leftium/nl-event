@@ -287,6 +287,10 @@ export function descriptionEditor(
 		} else if (!options.fullscreen && unlock) {
 			unlock();
 			unlock = undefined;
+			// A later fullscreen entry may happen after the viewport has resized.
+			for (const name of ['top', 'left', 'height', 'width']) {
+				shell.style.removeProperty(`--editor-${name}`);
+			}
 		}
 		// Hover must not resize the textarea between pointer-down and pointer-up.
 		if (layoutChanged) measure();
@@ -294,6 +298,8 @@ export function descriptionEditor(
 	}
 
 	function keydown(event: KeyboardEvent) {
+		// Native modal dialogs own their Escape behavior and focus trap.
+		if ((event.target as Element).closest('dialog[open]')) return;
 		if (!options.fullscreen || event.isComposing || event.defaultPrevented) return;
 		if (event.key === 'Escape') {
 			event.preventDefault();

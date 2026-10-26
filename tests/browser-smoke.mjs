@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { checkAnnouncementLinks } from './announcement-links.browser.mjs';
 
 async function checkInitialFocus(browser) {
 	for (const scenario of ['fresh', 'scroll', 'before-hydration', 'enable-race']) {
@@ -2511,6 +2512,7 @@ for (const [name, engine] of [
 	await page.goto(process.env.NL_EVENT_BASE_URL || 'http://localhost:5173/');
 	await page.locator('#description').waitFor();
 	await page.waitForFunction(() => !document.querySelector('#description').disabled);
+	await checkAnnouncementLinks(page);
 	assert.deepEqual(
 		await page
 			.locator('textarea:visible, input[type=text]:visible')
@@ -2787,6 +2789,7 @@ for (const [name, engine] of [
 	touchPage.on('pageerror', (error) => errors.push(error.message));
 	await touchPage.goto(process.env.NL_EVENT_BASE_URL || 'http://localhost:5173/');
 	await touchPage.waitForFunction(() => !document.querySelector('#description').disabled);
+	await checkAnnouncementLinks(touchPage, true);
 	await touchPage.locator('#title').fill('Touch target check');
 	await touchPage.locator('#start').fill('2026-10-25 17:00');
 	await touchPage.locator('#end').fill('2026-10-25 18:00');
