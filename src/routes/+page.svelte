@@ -991,10 +991,12 @@
 											export description. Open without description omits that note.
 										</p>
 									</details>
+									<small
+										class="calendar-end"
+										class:preview-hidden={!trimOvernight}
+										aria-hidden={!trimOvernight}>Calendar end: {overnight.calendarEnd}</small
+									>
 								</div>
-								{#if trimOvernight}<small class="calendar-end"
-										>Calendar end: {overnight.calendarEnd}</small
-									>{/if}
 							</div>
 						{/if}
 						{#if overnight.warning}<small role="status">{overnight.warning}</small>{/if}
@@ -1101,13 +1103,15 @@
 		position: relative;
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		flex-wrap: wrap;
+		gap: 0.25rem;
 	}
 	.overnight-control label {
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
 		margin: 0;
+		white-space: nowrap;
 		cursor: pointer;
 	}
 	.overnight-control input {
@@ -1154,12 +1158,16 @@
 		box-shadow: 0 2px 8px #0003;
 	}
 	.calendar-end {
-		display: block;
-		margin-top: 0.2rem;
+		margin-left: auto;
+		font-size: 0.7rem;
+		white-space: nowrap;
+	}
+	.preview-hidden {
+		visibility: hidden;
 	}
 	@media (any-pointer: coarse) {
 		.overnight-help summary {
-			min-width: 2.75rem;
+			min-width: 2rem;
 			min-height: 2.75rem;
 		}
 	}

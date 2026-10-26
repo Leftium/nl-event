@@ -49,6 +49,14 @@ export async function checkOvernightExport(page, touch = false) {
 		);
 		assert.equal(await page.locator('.actions .overnight-export').count(), 0);
 		assert.equal(await preview.textContent(), 'Calendar end: Oct 31, 00:00');
+		assert.equal(
+			await endField.locator('.overnight-control').evaluate((node) => {
+				const label = node.querySelector('label').getBoundingClientRect();
+				const preview = node.querySelector('.calendar-end').getBoundingClientRect();
+				return Math.abs((label.top + label.bottom) / 2 - (preview.top + preview.bottom) / 2) < 1;
+			}),
+			true
+		);
 		const help = endField.getByLabel('About trimming overnight tail', { exact: true });
 		if (touch) await activate(help);
 		else {
@@ -82,13 +90,15 @@ export async function checkOvernightExport(page, touch = false) {
 		const clipped = await download();
 		assert.ok(clipped.includes('DTEND:20261030T150000Z\r\n'));
 		assert.ok(clipped.includes('Actual end: Oct 31\\, 2026\\, 02:00 (Asia/Seoul\\; next day)'));
+		const fieldHeight = (await endField.boundingBox()).height;
 		if (touch) await activate(toggle);
 		else {
 			await toggle.focus();
 			await page.keyboard.press('Space');
 		}
 		assert.equal(await toggle.isChecked(), false);
-		assert.equal(await preview.count(), 0);
+		assert.equal(await preview.isVisible(), false);
+		assert.equal((await endField.boundingBox()).height, fieldHeight);
 		assert.equal((await query()).get('dates'), '20261030T120000Z/20261030T170000Z');
 		assert.equal((await query()).get('details'), source);
 		const full = await download();
