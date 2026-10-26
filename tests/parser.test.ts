@@ -911,6 +911,102 @@ describe('sanitized November spaced four-digit dates', () => {
 	});
 });
 
+describe('spaced slash and hyphen dates', () => {
+	const text = fs.readFileSync(
+		'tests/inputs/simple-blues-party-spaced-slash-sanitized.txt',
+		'utf8'
+	);
+	it('associates the labeled date and overnight interval with exact source evidence and exports', () => {
+		const d = parse(text);
+		expect(d.title.value).toBe('Simple Blues Party 3rd');
+		expect(d.start.value).toBe('2026-12-05 23:00');
+		expect(d.end.value).toBe('2026-12-06 03:30');
+		expect(d.location.value).toBe('쏘셜클럽');
+		expect(Core.effectiveZone(d)).toBe('Asia/Seoul');
+		expect(d.description).toBe(text);
+		for (const field of ['title', 'start', 'end', 'location'] as const)
+			expect(d[field].ownership).toBe('auto');
+		const start = Core.alternatives(d, 'start').find((c) => c.value === d.start.value)!;
+		const end = Core.alternatives(d, 'end').find((c) => c.value === d.end.value)!;
+		expect(start.completeness).toBe('complete');
+		expect(end.completeness).toBe('complete');
+		expect(start.groups.some((g) => end.groups.includes(g))).toBe(true);
+		for (const [candidate, clock] of [
+			[start, '23:00 '],
+			[end, '03:30']
+		] as const) {
+			for (const token of ['2026 / 12 /05', clock])
+				expect(candidate.spans).toContainEqual({
+					start: text.indexOf(token),
+					end: text.indexOf(token) + token.length
+				});
+			expect(candidate.inferred).not.toContain('inferred-year');
+			expect(candidate.inferred).not.toContain('assumed-end');
+		}
+		const event = Core.validate(d).event!;
+		const query = new URL(Core.googleUrl(event)).searchParams;
+		expect(query.get('dates')).toBe('20261205T140000Z/20261205T183000Z');
+		expect(query.get('details')).toBe(text);
+		const ics = Core.ics(event, 'simple-blues', '20261024T030000Z').replace(/\r\n /g, '');
+		expect(ics).toContain('DTSTART:20261205T140000Z\r\nDTEND:20261205T183000Z');
+		expect(ics).toContain(
+			`DESCRIPTION:${text
+				.replace(/\\/g, '\\\\')
+				.replace(/([;,])/g, '\\$1')
+				.replace(/\n/g, '\\n')}\r\n`
+		);
+	});
+	it.each([
+		'2026 / 12 /05',
+		'2026/12/05',
+		'2026 /12/ 05',
+		'2026\t/\t12/\t05',
+		'2026 - 12 - 05',
+		'2026-12-05',
+		'2026- 12 -05',
+		'2026\t-12\t-05',
+		'2026 . 12 . 05'
+	])('retains UTF-16 spans and the explicit year in %s', (token) => {
+		const source = `🙂 일자 : ${token}\n시간 : 23:00 - 03:30`;
+		const d = parse(source, { ...context, referenceInstant: '2031-10-24T03:00:00Z' });
+		expect(d.start.value).toBe('2026-12-05 23:00');
+		expect(d.end.value).toBe('2026-12-06 03:30');
+		for (const field of ['start', 'end'] as const) {
+			const c = Core.alternatives(d, field).find((c) => c.value === d[field].value)!;
+			expect(c.spans).toContainEqual({
+				start: source.indexOf(token),
+				end: source.indexOf(token) + token.length
+			});
+			expect(c.inferred).not.toContain('inferred-year');
+		}
+	});
+	it.each([
+		'26 / 12 /05',
+		'26 - 12 -05',
+		'12 / 05',
+		'12 - 05',
+		'2026 / 13 /05',
+		'2026 - 02 - 30',
+		'2026 / 12 /050',
+		'12026 / 12 /05',
+		'2026 / 12 /05 / 1',
+		'2026 - 12 -05 - 1',
+		'version 2026 / 12 /05',
+		'v2026 - 12 -05',
+		'₩2026 / 12 /05',
+		'2026 / 12 /05원',
+		'2026 - 12 -05 USD',
+		'계좌: 110 - 2026 - 12 -05',
+		'https://example.test/2026/12/05',
+		'23:00 - 03:30',
+		'2026 /\n12 /05'
+	])('does not treat numeric noise as a date: %s', (token) => {
+		const d = parse(token);
+		expect(d.suggestions.candidates.filter((c) => c.date)).toEqual([]);
+		expect(d.suggestions.contextDates).toEqual([]);
+	});
+});
+
 describe('Korean overnight party', () => {
 	const text = fs.readFileSync('tests/inputs/overnight-party-sanitized.txt', 'utf8');
 	it('auto-resolves the complete event and retains related next-day DJ ranges', () => {
