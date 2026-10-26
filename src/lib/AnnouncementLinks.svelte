@@ -64,6 +64,8 @@
 	$effect(() => {
 		const text = original;
 		untrack(() => {
+			// Parsing and sibling field edits can replace the draft without changing its text.
+			if (text === trackedDescription) return;
 			imported = trackFormIntroduction(trackedDescription, text, imported);
 			trackedDescription = text;
 			confirmReplacement = false;

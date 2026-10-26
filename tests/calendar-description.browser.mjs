@@ -222,7 +222,10 @@ export async function checkDescriptionReviewRegressions(page, touch = false) {
 			await details.getByLabel('Confirmation Sheet', { exact: true }).inputValue(),
 			's.REVIEW_SHEET'
 		);
-		await activate(details.getByRole('button', { name: 'Add to description', exact: true }));
+		const add = details.getByRole('button', { name: 'Add to description', exact: true });
+		// Scrolling the sticky editor resizes its textarea; settle that before the click's stability check.
+		await add.scrollIntoViewIfNeeded();
+		await activate(add);
 		const initial = `${source}\n\n---\n\nFirst Form\n\nIntroduction version 1`;
 		assert.equal(await description.inputValue(), initial);
 		// Unchanged metadata must still allow restoring an edited import.
@@ -230,6 +233,17 @@ export async function checkDescriptionReviewRegressions(page, touch = false) {
 		await description.fill(editedInitial);
 		await open(first);
 		await activate(details.getByRole('button', { name: 'Review replacement', exact: true }));
+		// Draft updates must not dismiss review when Description itself is unchanged.
+		await page.locator('#title').fill('Replacement review stays open');
+		await page.waitForFunction(
+			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
+		);
+		assert.equal(
+			await details
+				.getByRole('group', { name: 'Replace edited Form details', exact: true })
+				.count(),
+			1
+		);
 		assert.equal(await description.inputValue(), editedInitial);
 		await activate(details.getByRole('button', { name: 'Keep edits', exact: true }));
 		assert.equal(await description.inputValue(), editedInitial);
