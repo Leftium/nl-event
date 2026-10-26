@@ -981,6 +981,12 @@
 									<label
 										><input type="checkbox" bind:checked={trimOvernight} /> Trim overnight tail</label
 									>
+
+									<small
+										class="calendar-end"
+										class:preview-hidden={!trimOvernight}
+										aria-hidden={!trimOvernight}>Calendar end: {overnight.calendarEnd}</small
+									>
 									<details class="overnight-help">
 										<summary aria-label="About trimming overnight tail"
 											><span aria-hidden="true">?</span></summary
@@ -991,11 +997,6 @@
 											export description. Open without description omits that note.
 										</p>
 									</details>
-									<small
-										class="calendar-end"
-										class:preview-hidden={!trimOvernight}
-										aria-hidden={!trimOvernight}>Calendar end: {overnight.calendarEnd}</small
-									>
 								</div>
 							</div>
 						{/if}
@@ -1110,7 +1111,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		margin: 0;
+		margin: 0 0 0 0.2rem;
 		white-space: nowrap;
 		cursor: pointer;
 	}
