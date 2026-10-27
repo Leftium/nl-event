@@ -1,4 +1,5 @@
 import { chromium, webkit } from 'playwright';
+import { profile, measure } from './browser-profile.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -13,6 +14,7 @@ import {
 
 async function checkInitialFocus(browser) {
 	for (const scenario of ['fresh', 'scroll', 'before-hydration', 'enable-race']) {
+		const endScenario = profile?.begin(`initial-focus/${scenario}`, 'scenario');
 		const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 		const page = await context.newPage();
 		await page.addInitScript((scenario) => {
@@ -75,6 +77,7 @@ async function checkInitialFocus(browser) {
 		}
 		assert.equal(await page.locator('.description-editor.fullscreen').count(), 0);
 		await context.close();
+		endScenario?.();
 	}
 }
 
@@ -1251,6 +1254,7 @@ async function checkCandidates(page) {
 		const fixture = JSON.parse(
 			await fs.readFile(`tests/fixtures/nl-event/expected/${file}`, 'utf8')
 		);
+		const endFixture = profile?.begin(fixture.id, 'fixture');
 		await page.clock.setFixedTime(new Date(fixture.context.referenceInstant));
 		await reset();
 		const text = await fs.readFile(`tests/fixtures/nl-event/inputs/${fixture.id}.txt`, 'utf8');
@@ -1313,6 +1317,7 @@ async function checkCandidates(page) {
 				await page.getByRole('button', { name: 'Download .ics', exact: true }).isDisabled(),
 				true
 			);
+		endFixture?.();
 	}
 	await reset();
 	await page
@@ -2509,8 +2514,11 @@ for (const [name, engine] of [
 	['chromium', chromium],
 	['webkit', webkit]
 ]) {
+	const endEngine = profile?.begin(name, 'engine');
+	profile?.instrumentEngine(engine, name);
 	const browser = await engine.launch();
-	await checkInitialFocus(browser);
+	await measure('checkInitialFocus', () => checkInitialFocus(browser));
+	const endDesktop = profile?.begin('desktop', 'mode');
 	const context = await browser.newContext({
 		timezoneId: 'Asia/Seoul',
 		acceptDownloads: true,
@@ -2526,11 +2534,12 @@ for (const [name, engine] of [
 	await page.goto(process.env.NL_EVENT_BASE_URL || 'http://localhost:5173/');
 	await page.locator('#description').waitFor();
 	await page.waitForFunction(() => !document.querySelector('#description').disabled);
-	await checkAnnouncementLinks(page);
-	await checkCalendarDescription(page);
-	await checkOvernightExport(page);
-	await checkSpacedClock(page);
-	await checkDescriptionReviewRegressions(page);
+	await measure('checkAnnouncementLinks', () => checkAnnouncementLinks(page));
+	await measure('checkCalendarDescription', () => checkCalendarDescription(page));
+	await measure('checkOvernightExport', () => checkOvernightExport(page));
+	await measure('checkSpacedClock', () => checkSpacedClock(page));
+	await measure('checkDescriptionReviewRegressions', () => checkDescriptionReviewRegressions(page));
+	const endValidation = profile?.begin('inline-validation', 'scenario');
 	assert.deepEqual(
 		await page
 			.locator('textarea:visible, input[type=text]:visible')
@@ -2556,30 +2565,32 @@ for (const [name, engine] of [
 	await page.locator('#end-error').waitFor();
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 	assert.equal(await page.locator('#start-error, #end-error').count(), 0);
-	await checkDescriptionEditor(page);
-	await checkEvidenceHighlights(page);
-	await checkTitleEvidence(page);
-	await checkStickyDescription(page);
-	await checkPendingClipboard(page);
-	await checkCandidates(page);
-	await checkCompactDates(page);
-	await checkEvidenceLabels(page);
-	await checkEnglishDates(page);
-	await checkSlowSaturday(page);
-	await checkRhythmParty(page);
-	await checkNumericDateReports(page);
-	await checkTemporalParts(page);
-	await checkDurations(page);
-	await checkFreeform(page);
-	await checkSelectedTitle(page, name);
-	await checkMapLocations(page);
-	await checkOvernightParty(page);
-	await checkBulletedWorkshop(page);
-	await checkReviewedMidnight(page);
-	await checkSelectionActions(page);
-	await checkSelectOnFocus(page);
-	await checkLunch(page);
-	await checkFallbacks(page);
+	endValidation?.();
+	await measure('checkDescriptionEditor', () => checkDescriptionEditor(page));
+	await measure('checkEvidenceHighlights', () => checkEvidenceHighlights(page));
+	await measure('checkTitleEvidence', () => checkTitleEvidence(page));
+	await measure('checkStickyDescription', () => checkStickyDescription(page));
+	await measure('checkPendingClipboard', () => checkPendingClipboard(page));
+	await measure('checkCandidates', () => checkCandidates(page));
+	await measure('checkCompactDates', () => checkCompactDates(page));
+	await measure('checkEvidenceLabels', () => checkEvidenceLabels(page));
+	await measure('checkEnglishDates', () => checkEnglishDates(page));
+	await measure('checkSlowSaturday', () => checkSlowSaturday(page));
+	await measure('checkRhythmParty', () => checkRhythmParty(page));
+	await measure('checkNumericDateReports', () => checkNumericDateReports(page));
+	await measure('checkTemporalParts', () => checkTemporalParts(page));
+	await measure('checkDurations', () => checkDurations(page));
+	await measure('checkFreeform', () => checkFreeform(page));
+	await measure('checkSelectedTitle', () => checkSelectedTitle(page, name));
+	await measure('checkMapLocations', () => checkMapLocations(page));
+	await measure('checkOvernightParty', () => checkOvernightParty(page));
+	await measure('checkBulletedWorkshop', () => checkBulletedWorkshop(page));
+	await measure('checkReviewedMidnight', () => checkReviewedMidnight(page));
+	await measure('checkSelectionActions', () => checkSelectionActions(page));
+	await measure('checkSelectOnFocus', () => checkSelectOnFocus(page));
+	await measure('checkLunch', () => checkLunch(page));
+	await measure('checkFallbacks', () => checkFallbacks(page));
+	const endRelative = profile?.begin('inline-relative-all-day', 'scenario');
 	await page.locator('#description').fill('unsubscribe netflix in 30 days');
 	await page.waitForFunction(
 		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
@@ -2611,7 +2622,9 @@ for (const [name, engine] of [
 	assert.ok(Math.abs(actionBox.x + actionBox.width - textareaBox.x - textareaBox.width) < 2);
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 
-	await checkAllDay(page);
+	endRelative?.();
+	await measure('checkAllDay', () => checkAllDay(page));
+	let endTail = profile?.begin('inline-clipboard-source', 'scenario');
 	// A clipboard paste shows source phrases while preview/export retain context.
 	await page.evaluate(() =>
 		Object.defineProperty(navigator, 'clipboard', {
@@ -2628,6 +2641,8 @@ for (const [name, engine] of [
 	assert.equal(await page.locator('.zone-token').textContent(), 'America/Chicago');
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 
+	endTail?.();
+	endTail = profile?.begin('inline-export-uid', 'scenario');
 	await page.locator('#description').fill('  Original 한글🙂\nDescription; comma, slash\\  \n');
 	await page.locator('#title').fill('Manual title');
 	await page.locator('#start').fill('2026-10-25 17:00');
@@ -2661,6 +2676,8 @@ for (const [name, engine] of [
 	assert.equal(await page.locator('#start').inputValue(), '');
 	await page.locator('#start').fill('2026-10-25 17:00');
 	await page.locator('#end').fill('2026-10-25 18:00');
+	endTail?.();
+	endTail = profile?.begin('inline-clipboard-outcomes', 'scenario');
 	// Stub browser permission/read outcomes; never reads the developer's real clipboard.
 	const clipboard = async (value) =>
 		page.evaluate(
@@ -2691,6 +2708,8 @@ for (const [name, engine] of [
 		() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
 	);
 	assert.equal(await page.locator('#start').inputValue(), 'Tomorrow');
+	endTail?.();
+	endTail = profile?.begin('inline-all-day-dst', 'scenario');
 	await page.locator('#start').fill('2026-10-25');
 	await page.locator('#end').fill('2026-10-26');
 	assert.notEqual(uid(await download()), uid(first));
@@ -2725,6 +2744,8 @@ for (const [name, engine] of [
 		new URL(await google.getAttribute('href')).searchParams.get('dates'),
 		'20261101T073000Z/20261101T083000Z'
 	);
+	endTail?.();
+	endTail = profile?.begin('inline-keyboard-tooltip', 'scenario');
 	// Settle scrolling before focus, since scrolling dismisses tooltips.
 	const resetStart = page.getByRole('switch', { name: 'Auto Start', exact: true });
 	await resetStart.evaluate(async (node) => {
@@ -2748,6 +2769,8 @@ for (const [name, engine] of [
 	assert.equal(await page.locator('#start').inputValue(), 'Tomorrow');
 	await page.locator('#start').fill('2026-11-01 01:30');
 	await page.getByRole('radio', { name: 'Later (UTC-06:00)', exact: true }).check();
+	endTail?.();
+	endTail = profile?.begin('inline-layout-screenshots', 'scenario');
 	for (const [layout, width, height] of [
 		['desktop', 1280, 900],
 		['mobile', 390, 844]
@@ -2778,6 +2801,8 @@ for (const [name, engine] of [
 			fullPage: true
 		});
 	}
+	endTail?.();
+	endTail = profile?.begin('inline-dst-gap-reset', 'scenario');
 	await page.locator('#start').fill('2026-03-08 02:30');
 	await page.locator('#end').fill('2026-03-08 04:00');
 	assert.equal(
@@ -2794,6 +2819,9 @@ for (const [name, engine] of [
 		await page.locator('#description').evaluate((node) => node === document.activeElement),
 		true
 	);
+	endTail?.();
+	endDesktop?.();
+	const endTouch = profile?.begin('touch', 'mode');
 	const touchContext = await browser.newContext({
 		timezoneId: 'Asia/Seoul',
 		hasTouch: true,
@@ -2803,11 +2831,14 @@ for (const [name, engine] of [
 	touchPage.on('pageerror', (error) => errors.push(error.message));
 	await touchPage.goto(process.env.NL_EVENT_BASE_URL || 'http://localhost:5173/');
 	await touchPage.waitForFunction(() => !document.querySelector('#description').disabled);
-	await checkAnnouncementLinks(touchPage, true);
-	await checkCalendarDescription(touchPage, true);
-	await checkOvernightExport(touchPage, true);
-	await checkSpacedClock(touchPage, true);
-	await checkDescriptionReviewRegressions(touchPage, true);
+	await measure('checkAnnouncementLinks', () => checkAnnouncementLinks(touchPage, true));
+	await measure('checkCalendarDescription', () => checkCalendarDescription(touchPage, true));
+	await measure('checkOvernightExport', () => checkOvernightExport(touchPage, true));
+	await measure('checkSpacedClock', () => checkSpacedClock(touchPage, true));
+	await measure('checkDescriptionReviewRegressions', () =>
+		checkDescriptionReviewRegressions(touchPage, true)
+	);
+	const endTouchControls = profile?.begin('inline-touch-controls-and-layout', 'scenario');
 	await touchPage.locator('#title').fill('Touch target check');
 	await touchPage.locator('#start').fill('2026-10-25 17:00');
 	await touchPage.locator('#end').fill('2026-10-25 18:00');
@@ -2881,12 +2912,15 @@ for (const [name, engine] of [
 	);
 	await touchPage.getByRole('button', { name: 'Reset', exact: true }).tap();
 	await touchPage.waitForFunction(() => document.querySelector('#description').offsetHeight < 100);
-	await checkDescriptionEditor(touchPage, { touch: true });
-	await checkSelectionActions(touchPage, { touch: true });
+	endTouchControls?.();
+	await measure('checkDescriptionEditor', () => checkDescriptionEditor(touchPage, { touch: true }));
+	await measure('checkSelectionActions', () => checkSelectionActions(touchPage, { touch: true }));
 	await touchContext.close();
+	endTouch?.();
 	assert.deepEqual(errors, []);
 	console.log(
 		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, sanitized October/November/December numeric dates, prices, midnight and inferred End with Google/ICS parity, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
 	);
 	await browser.close();
+	endEngine?.();
 }

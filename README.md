@@ -49,6 +49,8 @@ pnpm test:browser
 
 Browser tests use Chromium and WebKit against a running dev server. Install the browsers with `pnpm exec playwright install chromium webkit`. Set `NL_EVENT_BASE_URL` to test a different server.
 
+For opt-in runtime profiling, use `NL_EVENT_PROFILE_SERVER='Describe the server and warm/cold state' pnpm test:browser:profile /tmp/nl-event-profile.jsonl`. The output path must be new; failed and partial runs are retained. The [profile](tests/browser/PROFILE.md) explains overlapping timings and the measured baseline; the [coverage inventory](tests/browser/COVERAGE.md) distinguishes browser contracts from pure logic covered by Vitest. The normal `pnpm test:browser` command keeps its existing coverage and installs no timing hooks.
+
 The app uses SvelteKit 3, Svelte 5, ReScript 12, and Nimble.css. The main pieces are:
 
 - `src/routes/+page.svelte`: editor, focus, clipboard, and calendar handoff.

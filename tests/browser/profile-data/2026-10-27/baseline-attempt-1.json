@@ -1,0 +1,21 @@
+{
+	"kind": "untouched-baseline",
+	"wallMs": 253.12304100953043,
+	"exitCode": 1,
+	"environment": {
+		"recordedAt": "2026-10-27T12:28:20Z",
+		"platform": "macOS-15.8.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"cpu": "arm",
+		"logicalCpus": 10,
+		"baseUrl": "http://localhost:5173/",
+		"server": "agent-started pnpm dev; Vite strict default port confirmed 5173; first browser run after server start; no browser prewarm",
+		"command": ["pnpm", "test:browser"],
+		"commit": "d78133640ed35e7bad1f9e30263ad4e3c2880f00",
+		"node": "v24.16.0",
+		"pnpm": "12.5.1",
+		"playwright": "Version 1.64.1",
+		"hardware": "Mac16,10\n17179869184\nApple M4"
+	},
+	"log": "baseline-attempt-1.log"
+}

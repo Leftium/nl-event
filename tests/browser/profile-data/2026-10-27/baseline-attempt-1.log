@@ -1,0 +1,25 @@
+$ rescript && node tests/browser-smoke.mjs
+Cleaned 0/3
+Parsed 0 source files
+Compiled 0 modules
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+browserType.launch: Executable doesn't exist at /Users/leftium/Library/Caches/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-mac-arm64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     pnpm exec playwright install                           ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+    at /Volumes/p/nl-event/tests/browser-smoke.mjs:2512:31
+    at async node:internal/modules/esm/loader:633:26 {
+  log: [],
+  name: 'Error'
+}
+
+Node.js v24.16.0
+[ELIFECYCLE] Command failed with exit code 1.
