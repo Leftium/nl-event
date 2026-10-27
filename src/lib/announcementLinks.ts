@@ -1,8 +1,8 @@
 import { find } from 'linkifyjs';
 import { signupSource, VENEER_ORIGIN } from './calendarDescription';
 
-export type LinkKind = 'Form' | 'Sheet' | 'Short link' | 'Veneer' | 'Map' | 'Other';
-export type LinkRole = 'Signup' | 'Confirmation' | 'Location';
+type LinkKind = 'Form' | 'Sheet' | 'Short link' | 'Veneer' | 'Map' | 'Other';
+type LinkRole = 'Signup' | 'Confirmation' | 'Location';
 export type AnnouncementLink = {
 	identity: string;
 	source: string;
