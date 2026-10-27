@@ -5,12 +5,15 @@
 		formIntroduction,
 		sheetIdentity,
 		signupSource,
-		trackFormIntroduction,
-		writeFormIntroduction,
-		type FormIntroductionSection,
 		type FormMetadata
 	} from './calendarDescription';
 	import { loadFormMetadata } from './formMetadata';
+	import {
+		addFormDetails,
+		dismissReview,
+		reviewDetails,
+		trackDescription
+	} from './formImportReview';
 
 	let {
 		links,
@@ -33,17 +36,17 @@
 	let metadata = $state<FormMetadata>();
 	let phase = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
 	let failure = $state('');
-	let imported = $state<FormIntroductionSection>();
-	let trackedDescription = '';
-	let confirmReplacement = $state(false);
+	let review = $state({
+		description: '',
+		section: undefined,
+		confirmReplacement: false
+	} as import('./formImportReview').FormImportReview);
 	let generation = 0;
 	let disposed = false;
 	let source = $derived(signupSource(selected?.href ?? ''));
 	let intro = $derived(metadata?.type === 'form' ? formIntroduction(metadata) : '');
-	let edited = $derived(
-		!!imported && original.slice(imported.start, imported.end) !== imported.text
-	);
-	let alreadyUsed = $derived(!!intro && imported?.text === intro && !edited);
+	let imported = $derived(review.section);
+	let { edited, alreadyUsed } = $derived(reviewDetails(review, original, intro));
 	let included = $derived(selected?.veneerUrl);
 	let sheet = $derived(included ? (new URL(included).pathname.split('/')[2] ?? '') : '');
 	let sheets = $derived([
@@ -64,11 +67,7 @@
 	$effect(() => {
 		const text = original;
 		untrack(() => {
-			// Parsing and sibling field edits can replace the draft without changing its text.
-			if (text === trackedDescription) return;
-			imported = trackFormIntroduction(trackedDescription, text, imported);
-			trackedDescription = text;
-			confirmReplacement = false;
+			review = trackDescription(review, text);
 		});
 	});
 	onDestroy(() => {
@@ -78,7 +77,7 @@
 	});
 
 	async function show(link: AnnouncementLink, button = trigger, refresh = false) {
-		confirmReplacement = false;
+		review = dismissReview(review);
 		trigger = button;
 		const same = selected?.identity === link.identity;
 		if (same && !refresh && phase !== 'error') {
@@ -121,7 +120,7 @@
 		}
 	}
 	function dismiss(restoreFocus = false) {
-		confirmReplacement = false;
+		review = dismissReview(review);
 		generation++;
 		selectedIdentity = undefined;
 		metadata = undefined;
@@ -130,14 +129,9 @@
 		if (restoreFocus && trigger?.isConnected) trigger.focus({ preventScroll: true });
 	}
 	function addDetails(replaceEdited = false) {
-		if (!selected || !intro || alreadyUsed) return;
-		if (edited && !replaceEdited) {
-			confirmReplacement = true;
-			return;
-		}
-		const result = writeFormIntroduction(original, intro, imported);
-		imported = result.section;
-		trackedDescription = result.description;
+		const result = addFormDetails(review, original, intro, !!selected, replaceEdited);
+		review = result.state;
+		if (result.description === undefined) return;
 		dismiss();
 		onimport(result.description);
 	}
@@ -230,10 +224,10 @@
 					>{phase === 'error' ? 'Retry' : 'Refresh'}</button
 				>{/if}
 		</div>
-		{#if confirmReplacement}
+		{#if review.confirmReplacement}
 			<div role="group" aria-label="Replace edited Form details">
 				<p>The imported details were edited. Replace that section with the current Form details?</p>
-				<button type="button" class="quiet" onclick={() => (confirmReplacement = false)}
+				<button type="button" class="quiet" onclick={() => (review = dismissReview(review))}
 					>Keep edits</button
 				>
 				<button type="button" class="inline outline" onclick={() => addDetails(true)}
