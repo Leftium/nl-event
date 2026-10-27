@@ -1,0 +1,6 @@
+{
+	"label": "warmup",
+	"command": "pnpm test:browser",
+	"wallSeconds": 99.932825209,
+	"exitCode": 0
+}

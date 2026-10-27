@@ -15,6 +15,8 @@
 		"test": "rescript && vitest run",
 		"res:build": "rescript",
 		"test:browser": "rescript && node tests/browser-smoke.mjs",
+		"test:browser:chromium": "rescript && NL_EVENT_BROWSER_ENGINE=chromium node tests/browser-smoke.mjs",
+		"test:browser:webkit": "rescript && NL_EVENT_BROWSER_ENGINE=webkit node tests/browser-smoke.mjs",
 		"test:browser:profile": "node scripts/profile-browser.mjs"
 	},
 	"devDependencies": {

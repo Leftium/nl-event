@@ -44,12 +44,18 @@ pnpm check
 pnpm test
 pnpm lint
 pnpm build
-pnpm test:browser
+pnpm test:browser:chromium # routine UI verification
+pnpm test:browser:webkit   # complete WebKit block
+pnpm test:browser          # Chromium, then WebKit
 ```
 
-Browser tests use Chromium and WebKit against a running dev server. Install the browsers with `pnpm exec playwright install chromium webkit`. Set `NL_EVENT_BASE_URL` to test a different server.
+Browser tests use the selected engine(s) against a running dev server. Each selection retains every desktop, touch, hydration, selection, clipboard, and download check for that engine, in the existing order. Install the browsers with `pnpm exec playwright install chromium webkit`. Set `NL_EVENT_BASE_URL` to test a different server.
 
-For opt-in runtime profiling, use `NL_EVENT_PROFILE_SERVER='Describe the server and warm/cold state' pnpm test:browser:profile /tmp/nl-event-profile.jsonl`. The output path must be new; failed and partial runs are retained. The [profile](tests/browser/PROFILE.md) explains overlapping timings and the measured baseline; the [coverage inventory](tests/browser/COVERAGE.md) distinguishes browser contracts from pure logic covered by Vitest. The normal `pnpm test:browser` command keeps its existing coverage and installs no timing hooks.
+Use Chromium for routine UI changes. This accepts the risk of missing WebKit-specific regressions on those runs. Run `pnpm test:browser` for focus, selection, textarea/IME, touch, clipboard, browser-specific events, fullscreen, and risky integration changes; also run it before each release and at least weekly while UI work is active. For WebKit-specific fixes, run both engines. Parser/domain-only changes may use `pnpm test` alone when established functional-core coverage proves the affected contract; follow the fixture guide below and escalate cross-cutting changes to browser verification. Choose by behavior and reviewer judgment, not an automatic file map.
+
+The shared `NL_EVENT_BROWSER_ENGINE` selector accepts `chromium`, `webkit`, or `both`; unset defaults to both, and other values (including empty) fail explicitly. The named single-engine commands set this selector. For a single-engine profile, use `NL_EVENT_BROWSER_ENGINE=chromium pnpm test:browser:profile /tmp/chromium-profile.jsonl` (or `webkit`). Profiles record `selectedEngines` plus actual browser launch/version records, so partial failures can be distinguished from completed execution.
+
+For opt-in runtime profiling, use `NL_EVENT_PROFILE_SERVER='Describe the server and warm/cold state' pnpm test:browser:profile /tmp/nl-event-profile.jsonl`. The output path must be new; failed and partial runs are retained. The [profile](tests/browser/PROFILE.md) explains overlapping timings and the measured baseline; the [coverage inventory](tests/browser/COVERAGE.md) distinguishes browser contracts from pure logic covered by Vitest. The normal `pnpm test:browser` command keeps its existing coverage and installs no timing hooks. Run the Node tooling tests separately with `node --test tests/browser-engines.test.mjs tests/browser-profile.test.mjs`; `pnpm test` runs the functional-core Vitest suite.
 
 The app uses SvelteKit 3, Svelte 5, ReScript 12, and Nimble.css. The main pieces are:
 

@@ -1,0 +1,6 @@
+{
+	"label": "both",
+	"command": "pnpm test:browser",
+	"wallSeconds": 100.246380041,
+	"exitCode": 0
+}

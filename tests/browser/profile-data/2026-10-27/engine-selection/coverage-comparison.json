@@ -1,0 +1,23 @@
+{
+	"chromium": {
+		"orderedScenarioModeFixtureEngineRecords": 58,
+		"categories": {
+			"engine": 1,
+			"scenario": 52,
+			"mode": 2,
+			"fixture": 3
+		},
+		"matchesFullSuiteBlock": true
+	},
+	"webkit": {
+		"orderedScenarioModeFixtureEngineRecords": 58,
+		"categories": {
+			"engine": 1,
+			"scenario": 52,
+			"mode": 2,
+			"fixture": 3
+		},
+		"matchesFullSuiteBlock": true
+	},
+	"fullEngineOrder": ["chromium", "webkit"]
+}

@@ -3,6 +3,9 @@ import { mkdirSync, openSync, writeSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { selectBrowserEngines } from './browser-engines.mjs';
+
+const selectedEngines = selectBrowserEngines();
 
 const origin = process.hrtime.bigint();
 const require = createRequire(import.meta.url);
@@ -22,6 +25,7 @@ const inspect = (command, args) => {
 emit({
 	type: 'environment',
 	schemaVersion: 1,
+	selectedEngines,
 	startedAt: new Date().toISOString(),
 	command: process.argv,
 	cwd: process.cwd(),

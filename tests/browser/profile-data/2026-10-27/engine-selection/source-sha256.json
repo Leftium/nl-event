@@ -1,0 +1,8 @@
+{
+	"package.json": "9324f46ea2d85005f22f3a2820bd625ac20afa25ac9e34ba129511901a5f73f5",
+	"scripts/browser-engines.mjs": "604432c70d760e451fd34289247dfd8d4b94f9cb55ea168807beedac204b0da7",
+	"scripts/profile-browser.mjs": "e303b14e42e82b24f2dd811e417197c40a5ca60ce3b7ef641e1a40f0f00c64f2",
+	"tests/browser-smoke.mjs": "d958c8e82931810b2fc5fbe411b55b7bcf97c9353e759b812f1dc5739b00a95e",
+	"tests/browser-profile.mjs": "712df3aa0c3e6499f7814c571c426928982c652e068bdf23966e9aae7288e308",
+	"tests/browser-engines.test.mjs": "66af1f5bb8e077f5a07a31f08410fedcc4f0e552bca6453ffb971dbee0aaa177"
+}

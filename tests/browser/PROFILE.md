@@ -1,5 +1,9 @@
 # Browser runtime profile - PR #46
 
+For current single-engine commands, verification policy, and PR #50 measurements,
+see [engine selection](ENGINE-SELECTION.md). The figures below are the historical
+profiling baseline.
+
 Measured on 2026-10-27 for [#41](https://github.com/Leftium/nl-event/issues/41).
 This PR adds observation only: no selection, ordering, assertion, timeout, fixture,
 product behavior or browser coverage was removed or optimized.

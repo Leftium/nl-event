@@ -1,0 +1,6 @@
+{
+	"label": "webkit",
+	"command": "pnpm test:browser:webkit",
+	"wallSeconds": 47.39556325,
+	"exitCode": 0
+}

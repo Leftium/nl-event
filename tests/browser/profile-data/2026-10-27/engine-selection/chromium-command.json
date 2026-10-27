@@ -1,0 +1,6 @@
+{
+	"label": "chromium",
+	"command": "pnpm test:browser:chromium",
+	"wallSeconds": 52.168531666,
+	"exitCode": 0
+}

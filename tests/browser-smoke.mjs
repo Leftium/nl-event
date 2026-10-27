@@ -1,4 +1,6 @@
 import { chromium, webkit } from 'playwright';
+import { selectBrowserEngines } from '../scripts/browser-engines.mjs';
+
 import { profile, measure } from './browser-profile.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -11,6 +13,8 @@ import {
 	checkCalendarDescription,
 	checkDescriptionReviewRegressions
 } from './calendar-description.browser.mjs';
+
+const selectedEngines = selectBrowserEngines();
 
 async function checkInitialFocus(browser) {
 	for (const scenario of ['fresh', 'scroll', 'before-hydration', 'enable-race']) {
@@ -2528,10 +2532,8 @@ async function checkSelectOnFocus(page) {
 	await page.getByRole('button', { name: 'Reset', exact: true }).click();
 }
 
-for (const [name, engine] of [
-	['chromium', chromium],
-	['webkit', webkit]
-]) {
+for (const name of selectedEngines) {
+	const engine = { chromium, webkit }[name];
 	const endEngine = profile?.begin(name, 'engine');
 	profile?.instrumentEngine(engine, name);
 	const browser = await engine.launch();

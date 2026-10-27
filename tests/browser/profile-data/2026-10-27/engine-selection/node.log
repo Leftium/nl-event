@@ -1,0 +1,16 @@
+✔ default and explicit full selection preserve engine order (20.126792ms)
+✔ each engine can be selected without the other (0.073334ms)
+✔ invalid selectors fail in both entry points before server or compiler work (813.993333ms)
+✔ normal runs return the original promise without timing hooks or a new async boundary (0.399917ms)
+✔ uncovered time subtracts the union of overlapping children, not their sum (0.166625ms)
+✔ failure and unfinished spans survive a truncated final record (0.126916ms)
+✔ async spans retain fixture ancestry and uncaught errors finalize open scopes (20.065625ms)
+✔ launcher appends after child writes and refuses to overwrite an existing report (583.176542ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 863.927125
