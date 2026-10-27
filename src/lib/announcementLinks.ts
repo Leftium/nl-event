@@ -158,16 +158,3 @@ export function groupEquivalentLinks(links: AnnouncementLink[]): AnnouncementLin
 	}
 	return [...groups.values()];
 }
-
-export function primarySignup(links: AnnouncementLink[], explicit?: string | null) {
-	if (explicit === null) return undefined;
-	if (
-		explicit &&
-		links.some((link) => link.identity === explicit && !link.sheet && link.kind !== 'Map')
-	)
-		return explicit;
-	const candidates = links.filter(
-		(link) => link.form || (!link.sheet && link.roles.includes('Signup') && link.kind !== 'Map')
-	);
-	return candidates.length === 1 && candidates[0].form ? candidates[0].identity : undefined;
-}

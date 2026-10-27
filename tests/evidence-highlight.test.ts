@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { evidenceSegments, styledEvidenceSegments } from '../src/lib/evidenceHighlight';
+import { styledEvidenceSegments } from '../src/lib/evidenceHighlight';
 import * as Core from '../src/lib/core/EventCore.gen';
 
 const context = { referenceInstant: '2026-10-24T03:00:00Z', browserTimeZone: 'Asia/Seoul' };
@@ -9,41 +9,48 @@ const parse = (text: string) => {
 };
 
 it('renders plain text when evidence is absent during a development update', () => {
-	expect(evidenceSegments('Description', undefined)).toEqual([
-		{ text: 'Description', highlighted: false }
+	expect(styledEvidenceSegments('Description', [])).toEqual([
+		{ text: 'Description', kind: undefined, hovered: false }
 	]);
 });
 
 it('splits UTF-16 offsets without losing emoji, CRLF, whitespace or duplicate instances', () => {
 	const text = '🙂 same\r\n same  ';
-	const segments = evidenceSegments(text, [{ start: 10, end: 14 }]);
+	const segments = styledEvidenceSegments(text, [
+		{ kind: 'selected', ranges: [{ start: 10, end: 14 }] }
+	]);
 	expect(segments).toEqual([
-		{ text: '🙂 same\r\n ', highlighted: false },
-		{ text: 'same', highlighted: true },
-		{ text: '  ', highlighted: false }
+		{ text: '🙂 same\r\n ', kind: undefined, hovered: false },
+		{ text: 'same', kind: 'selected', hovered: false },
+		{ text: '  ', kind: undefined, hovered: false }
 	]);
 	expect(segments.map((s) => s.text).join('')).toBe(text);
 });
 
 it('merges nested and overlapping ranges, supports gaps and rejects invalid offsets', () => {
 	expect(
-		evidenceSegments('0123456789', [
-			{ start: 6, end: 8 },
-			{ start: 1, end: 4 },
-			{ start: 2, end: 3 },
-			{ start: 3, end: 5 },
-			{ start: -1, end: 1 },
-			{ start: 5, end: 11 },
-			{ start: 5, end: 5 },
-			{ start: 0.5, end: 1 },
-			{ start: NaN, end: 2 }
+		styledEvidenceSegments('0123456789', [
+			{
+				kind: 'selected',
+				ranges: [
+					{ start: 6, end: 8 },
+					{ start: 1, end: 4 },
+					{ start: 2, end: 3 },
+					{ start: 3, end: 5 },
+					{ start: -1, end: 1 },
+					{ start: 5, end: 11 },
+					{ start: 5, end: 5 },
+					{ start: 0.5, end: 1 },
+					{ start: NaN, end: 2 }
+				]
+			}
 		])
 	).toEqual([
-		{ text: '0', highlighted: false },
-		{ text: '1234', highlighted: true },
-		{ text: '5', highlighted: false },
-		{ text: '67', highlighted: true },
-		{ text: '89', highlighted: false }
+		{ text: '0', kind: undefined, hovered: false },
+		{ text: '1234', kind: 'selected', hovered: false },
+		{ text: '5', kind: undefined, hovered: false },
+		{ text: '67', kind: 'selected', hovered: false },
+		{ text: '89', kind: undefined, hovered: false }
 	]);
 });
 
@@ -51,11 +58,13 @@ it('keeps duplicate date/clock evidence separate before merging candidates', () 
 	const text = '🙂 Party\r\n2026-10-25 16:00-18:00\r\n2026-10-25 16:00-18:00';
 	const draft = parse(text);
 	const fragments = (name: 'start' | 'end', part: Core.temporalPart, value: string) =>
-		evidenceSegments(
-			text,
-			Core.temporalOptions(draft, name, part).find((o) => o.value === value)!.evidence
-		)
-			.filter((s) => s.highlighted)
+		styledEvidenceSegments(text, [
+			{
+				kind: 'selected',
+				ranges: Core.temporalOptions(draft, name, part).find((o) => o.value === value)!.evidence
+			}
+		])
+			.filter((s) => s.kind === 'selected')
 			.map((s) => s.text);
 	expect(fragments('start', 'date', '2026-10-25')).toEqual(['2026-10-25', '2026-10-25']);
 	expect(fragments('start', 'time', '16:00')).toEqual(['16:00', '16:00']);
