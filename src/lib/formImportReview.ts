@@ -37,6 +37,8 @@ export function addFormDetails(
 	selected: boolean,
 	replaceEdited = false
 ): { state: FormImportReview; description?: string } {
+	state = trackDescription(state, description);
+	if (replaceEdited && !state.confirmReplacement) return { state };
 	const { edited, alreadyUsed } = reviewDetails(state, description, intro);
 	if (!selected || !intro || alreadyUsed) return { state };
 	if (edited && !replaceEdited) return { state: { ...state, confirmReplacement: true } };

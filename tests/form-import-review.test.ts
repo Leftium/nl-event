@@ -51,6 +51,15 @@ describe('Form import review transitions', () => {
 		expect(reset.confirmReplacement).toBe(false);
 	});
 
+	it('rejects replacement when Description changed before tracking ran', () => {
+		const { state, description } = editedReview();
+		const changed = `Prefix ${description}`;
+		const result = addFormDetails(state, changed, 'New details', true, true);
+		expect(result.description).toBeUndefined();
+		expect(result.state.confirmReplacement).toBe(false);
+		expect(result.state.description).toBe(changed);
+	});
+
 	it('does not request review without a selection, usable intro, or a change to already imported details', () => {
 		const first = addFormDetails(initial(), 'Announcement', 'Details', true);
 		for (const result of [
