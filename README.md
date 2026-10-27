@@ -39,6 +39,12 @@ pnpm dev
 
 `pnpm dev` compiles ReScript, starts its watcher, and runs Vite. Edit the `.res` source files rather than generated `.res.js` or `.gen.ts` output.
 
+Run `pnpm audit:knip` and `pnpm audit:knip:production` for opt-in advisory
+reachability reports. Both rebuild the ReScript bridge first. Findings do not
+fail these commands or gate other checks; analyzer/setup errors still fail.
+The [audit pilot report](specs/source-audit.md) records canaries, limitations,
+cleanup candidates, and the decision to defer Fallow.
+
 ```sh
 pnpm check
 pnpm test
