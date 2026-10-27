@@ -19,11 +19,6 @@
       "end": "2026-10-25 18:00",
       "location": "연남동 레스토랑 [모닥불]"
     },
-    "candidateValues": {
-      "start": [
-        "2026-10-25 17:00"
-      ]
-    },
     "inferred": {
       "year": true,
       "endDurationMinutes": 60
@@ -32,7 +27,21 @@
       "inferred-year",
       "assumed-end"
     ],
-    "expectedZone": "Asia/Seoul"
+    "expectedZone": "Asia/Seoul",
+    "orderedCandidateValues": {
+      "title": [
+        "잘익은 보르도 레드와인 탐구하기! 근데 신대륙 시라(쉬라즈)를 곁들인^^"
+      ],
+      "start": [
+        "2026-10-25 17:00"
+      ],
+      "end": [
+        "2026-10-25 18:00"
+      ],
+      "location": [
+        "연남동 레스토랑 [모닥불]"
+      ]
+    }
   },
   "tags": [
     "korean",

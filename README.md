@@ -58,4 +58,4 @@ The app uses SvelteKit 3, Svelte 5, ReScript 12, and Nimble.css. The main pieces
 - `src/lib/core/EventCore.res`: draft state, field ownership, validation, and exports.
 - `src/lib/core/TimeInput.res` and `src/lib/core/calendarAdapter.ts`: freeform time input, calendar arithmetic, time zones, and DST.
 
-For parser rules, edge cases, and current verification gaps, see the [product specification](specs/nl-event-spec.md). The [fixture contract](tests/fixtures/nl-event/README.md) explains the adopted test inputs and why calendar oracles are kept separate from text parsing.
+For parser rules, edge cases, and current verification gaps, see the [product specification](specs/nl-event-spec.md). The [fixture guide](tests/fixtures/nl-event/README.md#adding-an-announcement-regression) explains how to add an announcement regression and run core-only verification. Its [test-selection policy](tests/fixtures/nl-event/README.md#choosing-core-only-or-browser-verification) identifies changes that still need browser coverage. Calendar oracles remain separate from text parsing.

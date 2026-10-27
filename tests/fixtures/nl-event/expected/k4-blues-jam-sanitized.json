@@ -19,16 +19,6 @@
       "end": "2026-04-13 22:30",
       "locationContains": "서울 마포구 와우산로29길 27"
     },
-    "candidateValues": {
-      "start": [
-        "2026-04-13 20:00",
-        "2026-04-13 20:30"
-      ],
-      "end": [
-        "2026-04-13 20:30",
-        "2026-04-13 22:30"
-      ]
-    },
     "relationships": [
       {
         "group": "mini-workshop",
@@ -49,7 +39,18 @@
     "ignoredAsDates": [
       "5천원"
     ],
-    "dedupeRepeatedDate": true
+    "dedupeRepeatedDate": true,
+    "orderedCandidateValues": {
+      "start": [
+        "2026-04-13 20:00",
+        "2026-04-13 20:30",
+        "2026-04-13"
+      ],
+      "end": [
+        "2026-04-13 22:30",
+        "2026-04-13 20:30"
+      ]
+    }
   },
   "tags": [
     "korean",

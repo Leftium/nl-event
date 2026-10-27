@@ -223,6 +223,9 @@ for (const file of fs.readdirSync('tests/fixtures/nl-event/expected')) {
 					expect.arrayContaining(expected as string[])
 				);
 		}
+		// Opt in only for small lists whose full membership and order are meaningful.
+		for (const [name, expected] of Object.entries(a.orderedCandidateValues ?? {}))
+			expect(values(draft, name as Core.fieldName)).toEqual(expected);
 		if (a.expectedZone) expect(Core.effectiveZone(draft)).toBe(a.expectedZone);
 		for (const warning of a.warnings ?? []) expect(draft.suggestions.warnings).toContain(warning);
 		if (a.partialCandidateValues?.startTimes) {
@@ -282,11 +285,90 @@ for (const file of fs.readdirSync('tests/fixtures/nl-event/expected')) {
 			);
 		}
 		// Every candidate has actual current-source evidence, including inferred ends.
-		for (const c of draft.suggestions.candidates)
-			for (const span of c.spans)
-				expect(text.slice(span.start, span.end).length).toBeGreaterThan(0);
+		for (const c of draft.suggestions.candidates) {
+			expect(c.spans.length).toBeGreaterThan(0);
+			for (const span of [
+				...c.spans,
+				...(c.dateSpans ?? []),
+				...(c.timeSpans ?? []),
+				...(c.textSpans ?? [])
+			]) {
+				expect(Number.isInteger(span.start) && Number.isInteger(span.end)).toBe(true);
+				expect(span.start).toBeGreaterThanOrEqual(0);
+				expect(span.end).toBeGreaterThan(span.start);
+				expect(span.end).toBeLessThanOrEqual(text.length);
+			}
+		}
 	});
 }
+
+it('promotes the related inferred lesson End ahead of the higher-ranked social End', () => {
+	const text = fs.readFileSync('tests/fixtures/nl-event/inputs/k2-milonga-excerpt.txt', 'utf8');
+	let draft = parse(text);
+	const lesson = Core.alternatives(draft, 'start').find((c) => c.time === '18:00')!;
+	const originalEnd = draft.end;
+	draft = Core.selectCandidate(draft, 'start', lesson.id);
+	const [related, social] = Core.alternatives(draft, 'end');
+	expect([related.value, social.value]).toEqual(['2026-10-18 19:00', '2026-10-18 22:30']);
+	expect(related.rank).toBeLessThan(social.rank);
+	expect(related.groups.some((group) => lesson.groups.includes(group))).toBe(true);
+	expect(social.groups.some((group) => lesson.groups.includes(group))).toBe(false);
+	expect(related.inferred).toContain('assumed-end');
+	// The inferred 19:00 has no clock evidence of its own.
+	expect(related.timeSpans).toEqual([]);
+	expect(related.spans).toEqual(lesson.spans);
+	expect(lesson.timeSpans).toEqual([
+		{ start: text.indexOf('6시'), end: text.indexOf('6시') + '6시 '.length }
+	]);
+	expect(draft.start).toMatchObject({ value: lesson.value, ownership: 'manual' });
+	expect(draft.end).toEqual(originalEnd);
+	expect(Core.evidenceWarnings(draft, 'end').join()).toContain('different activities');
+	draft = Core.reset(draft, 'end');
+	expect(draft.end).toMatchObject({ value: related.value, ownership: 'auto' });
+	const event = Core.validate(draft).event!;
+	expect(event).toMatchObject({ start: '20261018T090000Z', end: '20261018T100000Z' });
+	expect(new URL(Core.googleUrl(event)).searchParams.get('dates')).toBe(
+		'20261018T090000Z/20261018T100000Z'
+	);
+	expect(Core.ics(event, 'lesson', '20261024T030000Z')).toContain(
+		'DTSTART:20261018T090000Z\r\nDTEND:20261018T100000Z'
+	);
+});
+
+it('selects a lower-ranked source title independently and exports it in the inferred city zone', () => {
+	const text = fs
+		.readFileSync('tests/fixtures/nl-event/inputs/e1-st-paul-houseparty-sanitized.txt', 'utf8')
+		.replace('Community house party', 'Community house party 🙂')
+		.replaceAll('\n', '\r\n');
+	const draft = parse(text);
+	const [heading, activity] = Core.alternatives(draft, 'title');
+	expect(heading.rank).toBeGreaterThan(activity.rank);
+	expect(activity.value).toBe('Music from');
+	const at = text.indexOf('Music from');
+	expect(activity.textSpans).toEqual([{ start: at, end: at + 'Music from'.length }]);
+	expect(activity.spans.map((s) => text.slice(s.start, s.end))).toEqual([
+		'Music from 8:00 pm - midnight.'
+	]);
+	const selected = Core.selectCandidate(draft, 'title', activity.id);
+	expect(selected.title).toMatchObject({ value: 'Music from', ownership: 'manual' });
+	for (const field of ['start', 'end', 'location'] as const)
+		expect(selected[field]).toEqual(draft[field]);
+	expect(selected.suggestions.zoneProvenance).toBe('Inferred from recognized city');
+	const event = Core.validate(selected).event!;
+	expect(event).toMatchObject({
+		title: 'Music from',
+		start: '20261115T020000Z',
+		end: '20261115T060000Z',
+		zone: 'America/Chicago',
+		description: text
+	});
+	expect(new URL(Core.googleUrl(event)).searchParams.get('text')).toBe('Music from');
+	expect(Core.ics(event, 'activity', '20261024T030000Z')).toContain('SUMMARY:Music from\r\n');
+	expect(Core.reset(selected, 'title').title).toMatchObject({
+		value: 'Community house party 🙂',
+		ownership: 'auto'
+	});
+});
 
 describe('ownership, revisions and incomplete evidence', () => {
 	it('preserves typing, manual blank, UID and override while Auto fields refresh', () => {

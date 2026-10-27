@@ -19,16 +19,6 @@
       "end": "2026-10-18 22:30",
       "location": "연남동 568-51"
     },
-    "candidateValues": {
-      "start": [
-        "2026-10-18 18:30",
-        "2026-10-18 18:00"
-      ],
-      "end": [
-        "2026-10-18 22:30",
-        "2026-10-18 19:00"
-      ]
-    },
     "relationships": [
       {
         "group": "main-social",
@@ -48,7 +38,18 @@
     ],
     "unasserted": [
       "title: main event title is not explicitly labeled in this excerpt"
-    ]
+    ],
+    "orderedCandidateValues": {
+      "start": [
+        "2026-10-18 18:30",
+        "2026-10-18 18:00",
+        "2026-10-18"
+      ],
+      "end": [
+        "2026-10-18 22:30",
+        "2026-10-18 19:00"
+      ]
+    }
   },
   "tags": [
     "korean",
