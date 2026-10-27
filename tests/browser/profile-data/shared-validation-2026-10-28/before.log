@@ -1,0 +1,20 @@
+$ rescript && node scripts/profile-editor.mjs /tmp/nl-event-validation-before.json
+Cleaned 0/3
+Parsed 0 source files
+Compiled 0 modules
+3:07:15 AM [vite] (ssr) connected.
+200 GET /
+normal/chromium: short and long journeys passed
+200 GET /
+normal/webkit: short and long journeys passed
+3:07:49 AM [vite] (ssr) connected.
+200 GET /
+disabled/chromium: short and long journeys passed
+200 GET /
+disabled/webkit: short and long journeys passed
+3:08:23 AM [vite] (ssr) connected.
+200 GET /
+enabled/chromium: short and long journeys passed
+200 GET /
+enabled/webkit: short and long journeys passed
+Editor profile passed: /tmp/nl-event-validation-before.json

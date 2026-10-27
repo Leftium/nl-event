@@ -1,0 +1,67 @@
+Cleaned 0/3
+Parsed 0 source files
+Compiled 0 modules
+vite v8.3.5 building ssr environment for production...
+transforming...
+✓ 167 modules transformed.
+rendering chunks...
+computing gzip size...
+.svelte-kit/output/server/.vite/manifest.json                              4.48 kB │ gzip:  0.69 kB
+.svelte-kit/output/server/_app/immutable/assets/_page.5dK5tfY2.css        15.73 kB │ gzip:  3.42 kB
+.svelte-kit/output/server/_app/immutable/assets/_layout.DaTZ7LHl.css      27.47 kB │ gzip:  4.89 kB
+.svelte-kit/output/server/env.js                                           0.29 kB │ gzip:  0.18 kB │ map:   0.57 kB
+.svelte-kit/output/server/chunks/index-server.js                           0.48 kB │ gzip:  0.30 kB │ map:   1.70 kB
+.svelte-kit/output/server/entries/fallbacks/error.svelte.js                1.34 kB │ gzip:  0.51 kB │ map:   2.86 kB
+.svelte-kit/output/server/entries/endpoints/api/form-meta/_server.ts.js    1.97 kB │ gzip:  0.97 kB │ map:   3.92 kB
+.svelte-kit/output/server/index.js                                         2.38 kB │ gzip:  0.99 kB │ map:   3.46 kB
+.svelte-kit/output/server/entries/pages/_layout.svelte.js                  2.58 kB │ gzip:  1.06 kB │ map:   2.79 kB
+.svelte-kit/output/server/chunks/calendarDescription.js                    5.60 kB │ gzip:  1.99 kB │ map:  13.42 kB
+.svelte-kit/output/server/chunks/uneval.js                                19.35 kB │ gzip:  5.35 kB │ map:  40.86 kB
+.svelte-kit/output/server/chunks/server-errors.js                         24.24 kB │ gzip:  4.59 kB │ map:  35.01 kB
+.svelte-kit/output/server/chunks/server.js                                45.47 kB │ gzip: 12.42 kB │ map: 128.08 kB
+.svelte-kit/output/server/remote-entry.js                                 55.20 kB │ gzip: 11.91 kB │ map:  90.75 kB
+.svelte-kit/output/server/chunks/internal.js                             109.52 kB │ gzip: 28.78 kB │ map: 238.70 kB
+.svelte-kit/output/server/entries/pages/_page.svelte.js                  127.47 kB │ gzip: 32.85 kB │ map: 307.98 kB
+.svelte-kit/output/server/chunks/instance.js                             130.65 kB │ gzip: 34.72 kB │ map: 260.54 kB
+
+✓ built in 160ms
+Analysing routes
+Building app
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 782 modules transformed.
+rendering chunks...
+computing gzip size...
+.svelte-kit/output/client/_app/version.json                           0.02 kB │ gzip:   0.04 kB
+.svelte-kit/output/client/.vite/manifest.json                         4.67 kB │ gzip:   0.68 kB
+.svelte-kit/output/client/_app/immutable/assets/2.5dK5tfY2.css       15.73 kB │ gzip:   3.42 kB
+.svelte-kit/output/client/_app/immutable/assets/0.DaTZ7LHl.css       27.47 kB │ gzip:   4.89 kB
+.svelte-kit/output/client/_app/immutable/entry/payload.DSmR2FwN.js    0.06 kB │ gzip:   0.07 kB
+.svelte-kit/output/client/_app/immutable/nodes/1.vlknKMzJ.js          0.32 kB │ gzip:   0.24 kB
+.svelte-kit/output/client/_app/immutable/entry/start.DhP5DtSI.js      0.52 kB │ gzip:   0.31 kB
+.svelte-kit/output/client/_app/immutable/entry/app.D9sgT_z7.js        1.12 kB │ gzip:   0.57 kB
+.svelte-kit/output/client/_app/immutable/chunks/Bjy-W4x2.js           1.36 kB │ gzip:   0.65 kB
+.svelte-kit/output/client/_app/immutable/chunks/CRzLMJPS.js           1.53 kB │ gzip:   0.80 kB
+.svelte-kit/output/client/_app/immutable/nodes/0.BK_zuWJ2.js          2.38 kB │ gzip:   0.98 kB
+.svelte-kit/output/client/_app/immutable/chunks/B5kvVNqA.js           4.29 kB │ gzip:   1.93 kB
+.svelte-kit/output/client/_app/immutable/chunks/CJB_8ULx.js          39.71 kB │ gzip:  14.65 kB
+.svelte-kit/output/client/_app/immutable/chunks/XuNCcCsP.js          43.91 kB │ gzip:  16.99 kB
+.svelte-kit/output/client/_app/immutable/nodes/2.Bw2vy0qr.js        784.14 kB │ gzip: 285.76 kB
+
+✓ built in 168ms
+
+Run npm run preview to preview your production build locally.
+
+> Using @sveltejs/adapter-auto
+✔ done
+$ rescript && vite build
+(node:82903) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+(node:82903) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Could not detect a supported production environment. See https://svelte.dev/docs/kit/adapters to learn how to configure your app to run on the platform of your choosing

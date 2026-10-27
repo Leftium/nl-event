@@ -104,3 +104,56 @@ test('transform preserves segmentation, node creation and replacement nesting', 
 		else process.env.NL_EVENT_EDITOR_PROFILE = before;
 	}
 });
+
+test('real editor projection and generated helper anchors remain instrumented', async () => {
+	const { readFileSync } = await import('node:fs');
+	const { compile } = await import('svelte/compiler');
+	const before = process.env.NL_EVENT_EDITOR_PROFILE;
+	process.env.NL_EVENT_EDITOR_PROFILE = '1';
+	try {
+		const plugin = editorProfilePlugin();
+		const page = readFileSync('src/routes/+page.svelte', 'utf8');
+		const transformed = plugin.transform(page, '/src/routes/+page.svelte');
+		compile(transformed, { filename: 'src/routes/+page.svelte', generate: 'client' });
+		for (const name of [
+			'editor',
+			'highlights',
+			'labels',
+			'chips',
+			'durationValue',
+			'durationOptions'
+		])
+			assert.equal(transformed.split(`__profile.measure('projection.${name}',`).length - 1, 1);
+		const core = readFileSync('src/lib/core/EventCore.res.js', 'utf8');
+		const instrumented = plugin.transform(core, '/src/lib/core/EventCore.res.js').code;
+		for (const name of [
+			'editorProjection',
+			'validate',
+			'validateBase',
+			'temporalPartsFrom',
+			'temporalOptionsFrom',
+			'durationValueFrom',
+			'durationOptionsFrom'
+		])
+			assert.ok(instrumented.includes(`__profile.begin('EventCore.res.js:${name}'`));
+		assert.throws(
+			() =>
+				plugin.transform(
+					page.replace('Core.editorProjection(draft)', 'changed(draft)'),
+					'/src/routes/+page.svelte'
+				),
+			/Profiling call site changed: editor/
+		);
+		assert.throws(
+			() =>
+				plugin.transform(
+					core.replace('function editorProjection(', 'function changed('),
+					'/src/lib/core/EventCore.res.js'
+				),
+			/Profiling function missing: EventCore.res.js:editorProjection/
+		);
+	} finally {
+		if (before === undefined) delete process.env.NL_EVENT_EDITOR_PROFILE;
+		else process.env.NL_EVENT_EDITOR_PROFILE = before;
+	}
+});

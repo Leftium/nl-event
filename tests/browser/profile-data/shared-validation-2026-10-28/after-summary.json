@@ -1,0 +1,5068 @@
+{
+	"environment": {
+		"date": "2026-10-27T18:10:10.128Z",
+		"platform": "darwin",
+		"release": "24.6.0",
+		"arch": "arm64",
+		"cpu": "Apple M4",
+		"cores": 10,
+		"memory": 17179869184,
+		"node": "v24.16.0",
+		"dependencies": {
+			"vite": "8.3.5",
+			"svelte": "5.57.2",
+			"rescript": "12.3.1",
+			"playwright": "1.64.1",
+			"@js-temporal/polyfill": "0.5.1",
+			"compromise": "14.19.0",
+			"compromise-dates": "3.10.0"
+		},
+		"chromium": "156.0.8078.4",
+		"webkit": "27.2"
+	},
+	"conditions": {
+		"server": "Vite dev, dedicated loopback port 5174; no other task server",
+		"warmupJourneysPerSize": 2,
+		"samplesPerSize": 5,
+		"order": ["normal", "disabled", "enabled"],
+		"clock": "Date fixed; performance.now captured before clock installation; Node performance.now for wall",
+		"viewport": {
+			"width": 1280,
+			"height": 900
+		},
+		"inputs": {
+			"short": {
+				"utf16": 108,
+				"utf8": 138
+			},
+			"long": {
+				"utf16": 6739,
+				"utf8": 9489
+			}
+		}
+	},
+	"sourceHashes": {
+		"scripts/profile-editor.mjs": "b09bb4287db635ecd22a020f6cf24e6bc11f32d330b757c8cf18b6d44b909ed7",
+		"scripts/editor-profile-plugin.mjs": "a8d1ba56309b7601906f43efe607800b43129713d4deaea493bbac91e8c91ef6",
+		"tests/editor-profile-runtime.mjs": "3fb4ba1a2357dd7f100b5d9f20211e348b6594bc8337ad071929a99b02c9b4eb",
+		"src/routes/+page.svelte": "c1dd26613162a66ac1dffad388accc77ce97dd6965d7285df0dd72706f1b8086",
+		"src/lib/descriptionEditor.ts": "e042e8a9279ce6110840ec54e742d58bf0c649ba35fbf28d817626690ae5fed2",
+		"src/lib/core/EventCore.res": "e3b07ff6c640a38dd63f0ed158e017eae3d4a1aff30436b9610ef8af36a11afd",
+		"src/lib/core/EventCore.res.js": "03691acb02fe8ff67709ccdb2a7bb444cec3346ed7292b706345c3008234a8b1",
+		"src/lib/core/TimeInput.res": "968717aad67e70acec1a916df81e023ed893421d65e256257efde3953958260b",
+		"src/lib/core/TimeInput.res.js": "2326a89a107fd6e7c79f8a4a6f898ead610508b33382b0fb3f82ec672f33de82",
+		"src/lib/core/Parser.res": "b1c911251f12e2790afa27649ee13b7125e3fb3ad922452f4fd352dd8cd1bea8",
+		"src/lib/core/Parser.res.js": "212d6ca77155a242c48e444716d9140a16cf5edbcacd541a5888e653be2b3359",
+		"vite.config.ts": "33e8f884036702de0505c4b64509642e9c64352783624313f17a19a36c24cd0b",
+		"rescript.json": "933d15c1acdf5363cac54f99ec37607b905af43a35038f39718013fc79ecdd0f",
+		"pnpm-lock.yaml": "096d76f144cdc9e0e774cb856c114fc22633a70970bb27d4366a15de023c80f4"
+	},
+	"calibration": [
+		{
+			"engine": "chromium",
+			"runs": [
+				{
+					"kind": "plain",
+					"repetition": 0,
+					"iterations": 10000,
+					"wallMs": 0.10000002384185791,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "disabled",
+					"repetition": 0,
+					"iterations": 10000,
+					"wallMs": 0.30000001192092896,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "enabled",
+					"repetition": 0,
+					"iterations": 10000,
+					"wallMs": 1.0999999642372131,
+					"spans": 10000,
+					"dropped": 0
+				},
+				{
+					"kind": "plain",
+					"repetition": 1,
+					"iterations": 10000,
+					"wallMs": 0.20000004768371582,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "disabled",
+					"repetition": 1,
+					"iterations": 10000,
+					"wallMs": 0.09999996423721313,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "enabled",
+					"repetition": 1,
+					"iterations": 10000,
+					"wallMs": 1.199999988079071,
+					"spans": 10000,
+					"dropped": 0
+				},
+				{
+					"kind": "plain",
+					"repetition": 2,
+					"iterations": 10000,
+					"wallMs": 0.20000004768371582,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "disabled",
+					"repetition": 2,
+					"iterations": 10000,
+					"wallMs": 0.19999998807907104,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "enabled",
+					"repetition": 2,
+					"iterations": 10000,
+					"wallMs": 1.0999999642372131,
+					"spans": 10000,
+					"dropped": 0
+				}
+			]
+		},
+		{
+			"engine": "webkit",
+			"runs": [
+				{
+					"kind": "plain",
+					"repetition": 0,
+					"iterations": 10000,
+					"wallMs": 0,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "disabled",
+					"repetition": 0,
+					"iterations": 10000,
+					"wallMs": 1,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "enabled",
+					"repetition": 0,
+					"iterations": 10000,
+					"wallMs": 1,
+					"spans": 10000,
+					"dropped": 0
+				},
+				{
+					"kind": "plain",
+					"repetition": 1,
+					"iterations": 10000,
+					"wallMs": 0,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "disabled",
+					"repetition": 1,
+					"iterations": 10000,
+					"wallMs": 0,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "enabled",
+					"repetition": 1,
+					"iterations": 10000,
+					"wallMs": 1,
+					"spans": 10000,
+					"dropped": 0
+				},
+				{
+					"kind": "plain",
+					"repetition": 2,
+					"iterations": 10000,
+					"wallMs": 0,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "disabled",
+					"repetition": 2,
+					"iterations": 10000,
+					"wallMs": 0,
+					"spans": 0,
+					"dropped": 0
+				},
+				{
+					"kind": "enabled",
+					"repetition": 2,
+					"iterations": 10000,
+					"wallMs": 1,
+					"spans": 10000,
+					"dropped": 0
+				}
+			]
+		}
+	],
+	"groups": {
+		"chromium/normal/short/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 302.0711249999995,
+			"wallRangeMs": [301.266083, 304.5067919999992],
+			"rootMedianMs": 0,
+			"inputCount": [9, 9, 9, 9, 9],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 22,
+				"RecalcStyleCount": 46,
+				"LayoutDuration": 0.004596000000000003,
+				"RecalcStyleDuration": 0.010660000000000003
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 43.83399999999983,
+			"wallRangeMs": [43.243500000000495, 44.33674999999994],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 6,
+				"LayoutDuration": 0.0017520000000000036,
+				"RecalcStyleDuration": 0.0033410000000000384
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 303.14845799999966,
+			"wallRangeMs": [301.0237909999996, 303.23691599999984],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 20,
+				"LayoutDuration": 0.003137000000000001,
+				"RecalcStyleDuration": 0.0072389999999999954
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 61.003917,
+			"wallRangeMs": [58.84716599999956, 62.094082999999955],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 0,
+				"RecalcStyleCount": 4,
+				"LayoutDuration": 0,
+				"RecalcStyleDuration": 0.0014220000000000066
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 42.82270799999969,
+			"wallRangeMs": [40.821625000000495, 43.36833299999944],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.0009509999999999935,
+				"RecalcStyleDuration": 0.0026459999999999817
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 28.486582999999882,
+			"wallRangeMs": [27.373749999999745, 42.03291700000045],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 10,
+				"LayoutDuration": 0.0007129999999999984,
+				"RecalcStyleDuration": 0.001457
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 43.93595800000003,
+			"wallRangeMs": [29.87262499999997, 46.1899999999996],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 5,
+				"LayoutDuration": 0.0006350000000000036,
+				"RecalcStyleDuration": 0.0010080000000000089
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 75.4375829999999,
+			"wallRangeMs": [60.82183400000031, 92.01791700000012],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 2,
+				"RecalcStyleCount": 7,
+				"LayoutDuration": 0.0006740000000000079,
+				"RecalcStyleDuration": 0.0026430000000000065
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 31.330167000000074,
+			"wallRangeMs": [25.345542000000023, 34.548499999999876],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 10,
+				"LayoutDuration": 0.0007069999999999993,
+				"RecalcStyleDuration": 0.0032250000000000056
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 23.790625000000546,
+			"wallRangeMs": [20.95508400000017, 24.51074999999946],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 1,
+				"RecalcStyleCount": 2,
+				"LayoutDuration": 0.000060999999999991616,
+				"RecalcStyleDuration": 0.0003500000000000031
+			},
+			"spans": {}
+		},
+		"chromium/normal/short/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 44.643958000000566,
+			"wallRangeMs": [30.265041000000565, 47.16487499999948],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 10,
+				"LayoutDuration": 0.0015079999999999955,
+				"RecalcStyleDuration": 0.003168000000000004
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 352.1885420000017,
+			"wallRangeMs": [351.0500830000001, 366.908707999999],
+			"rootMedianMs": 0,
+			"inputCount": [169, 169, 169, 169, 169],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 342,
+				"RecalcStyleCount": 430,
+				"LayoutDuration": 0.17763799999999996,
+				"RecalcStyleDuration": 0.003188000000000024
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 44.92320899999868,
+			"wallRangeMs": [44.374916999999186, 45.695583999999144],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 7,
+				"LayoutDuration": 0.004857999999999918,
+				"RecalcStyleDuration": 0.00167299999999998
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 319.3165420000005,
+			"wallRangeMs": [318.01224999999977, 333.53220800000054],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 28,
+				"LayoutDuration": 0.009330999999999978,
+				"RecalcStyleDuration": 0.003951000000000038
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 62.88316599999962,
+			"wallRangeMs": [62.25604200000089, 64.86191700000018],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 0,
+				"RecalcStyleCount": 5,
+				"LayoutDuration": 0,
+				"RecalcStyleDuration": 0.0004529999999999812
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 43.177708999999595,
+			"wallRangeMs": [30.655041999998502, 44.73533300000054],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.0027369999999999894,
+				"RecalcStyleDuration": 0.0010759999999999659
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 45.349082999999155,
+			"wallRangeMs": [31.07166700000016, 45.900125000000116],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.002494999999999914,
+				"RecalcStyleDuration": 0.0010410000000000141
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 43.00641700000051,
+			"wallRangeMs": [29.80525000000125, 45.537625000000844],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 5,
+				"LayoutDuration": 0.0024680000000001368,
+				"RecalcStyleDuration": 0.0007889999999999842
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 62.63975000000028,
+			"wallRangeMs": [60.80524999999943, 78.49866699999984],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 2,
+				"RecalcStyleCount": 8,
+				"LayoutDuration": 0.0020020000000000593,
+				"RecalcStyleDuration": 0.0012440000000000229
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 33.405125000001135,
+			"wallRangeMs": [23.16808300000048, 34.44195799999943],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 5,
+				"RecalcStyleCount": 11,
+				"LayoutDuration": 0.002785999999999955,
+				"RecalcStyleDuration": 0.002760999999999958
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 25.203165999999328,
+			"wallRangeMs": [21.892040999999153, 26.778540999999677],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 1,
+				"RecalcStyleCount": 2,
+				"LayoutDuration": 0.00006299999999992423,
+				"RecalcStyleDuration": 0.00035200000000001896
+			},
+			"spans": {}
+		},
+		"chromium/normal/long/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 30.269875000001775,
+			"wallRangeMs": [29.755957999999737, 30.974624999998923],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.00526800000000005,
+				"RecalcStyleDuration": 0.002471000000000001
+			},
+			"spans": {}
+		},
+		"webkit/normal/short/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 302.91012500000215,
+			"wallRangeMs": [287.48912500000006, 304.3602499999979],
+			"rootMedianMs": 0,
+			"inputCount": [9, 9, 9, 9, 9],
+			"inputTypes": ["insertText", "insertParagraph"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 45.775250000002416,
+			"wallRangeMs": [43.963707999999315, 46.43095800000083],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 302.9433339999996,
+			"wallRangeMs": [301.2335830000011, 304.3172080000004],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 62.61966599999869,
+			"wallRangeMs": [61.74279199999728, 63.659749999998894],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 43.79395800000202,
+			"wallRangeMs": [30.546375000001717, 46.71958299999824],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 29.77295899999808,
+			"wallRangeMs": [28.213958000000275, 30.47979199999827],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 31.466667000000598,
+			"wallRangeMs": [29.4376250000023, 46.052458999998635],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 63.842625000001135,
+			"wallRangeMs": [62.72004200000083, 79.86362499999814],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 37.03429199999664,
+			"wallRangeMs": [28.734832999998616, 41.12695800000074],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 25.946875000001455,
+			"wallRangeMs": [25.470374999997148, 26.50420799999847],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/short/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 32.2790419999983,
+			"wallRangeMs": [30.576750000000175, 48.04845800000112],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 287.4683330000007,
+			"wallRangeMs": [286.47337499999776, 288.47741699999824],
+			"rootMedianMs": 0,
+			"inputCount": [169, 169, 169, 169, 169],
+			"inputTypes": ["insertText", "insertParagraph"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 44.58483400000114,
+			"wallRangeMs": [44.560457999999926, 45.53991699999824],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 320.0218750000022,
+			"wallRangeMs": [288.7413329999981, 321.3667919999971],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 62.22674999999799,
+			"wallRangeMs": [59.07583299999533, 63.753875000002154],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 31.75195900000108,
+			"wallRangeMs": [30.573374999999942, 45.19133299999885],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 30.694875000001048,
+			"wallRangeMs": [30.125208000001294, 46.50933300000179],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 30.25708300000042,
+			"wallRangeMs": [29.94608299999527, 46.4776669999992],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 63.615499999999884,
+			"wallRangeMs": [61.086167000001296, 79.21966600000087],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 30.316749999998137,
+			"wallRangeMs": [26.376790999998775, 34.60108300000138],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 25.527541999999812,
+			"wallRangeMs": [23.41016700000182, 26.070167000001675],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/normal/long/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 31.79108300000007,
+			"wallRangeMs": [30.3727919999983, 47.8929169999974],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"chromium/disabled/short/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 302.6028329999972,
+			"wallRangeMs": [286.28654200000165, 316.65758300000016],
+			"rootMedianMs": 0,
+			"inputCount": [9, 9, 9, 9, 9],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 22,
+				"RecalcStyleCount": 44,
+				"LayoutDuration": 0.004317000000000001,
+				"RecalcStyleDuration": 0.009999999999999981
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 43.499125000002095,
+			"wallRangeMs": [29.683208000002196, 45.69124999999622],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 5,
+				"LayoutDuration": 0.0015929999999999972,
+				"RecalcStyleDuration": 0.0031990000000000074
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 302.4060000000027,
+			"wallRangeMs": [301.0395419999986, 304.1151249999966],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 23,
+				"LayoutDuration": 0.0032900000000000013,
+				"RecalcStyleDuration": 0.008355000000000001
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 59.928334000003815,
+			"wallRangeMs": [58.76820900000166, 60.751374999999825],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 0,
+				"RecalcStyleCount": 5,
+				"LayoutDuration": 0,
+				"RecalcStyleDuration": 0.0012859999999999955
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 41.91779200000019,
+			"wallRangeMs": [30.496416999994835, 42.91333299999678],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 8,
+				"LayoutDuration": 0.0006610000000000019,
+				"RecalcStyleDuration": 0.0017240000000000033
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 31.908582999996725,
+			"wallRangeMs": [29.371040999998513, 44.62016699999367],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 10,
+				"LayoutDuration": 0.0005339999999999998,
+				"RecalcStyleDuration": 0.0015459999999999918
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 29.707875000000058,
+			"wallRangeMs": [28.648375000004307, 44.74816699999792],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 5,
+				"LayoutDuration": 0.0004630000000000051,
+				"RecalcStyleDuration": 0.0005580000000000029
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 63.83012500000041,
+			"wallRangeMs": [61.33791700000438, 78.8996249999982],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 2,
+				"RecalcStyleCount": 6,
+				"LayoutDuration": 0.00039000000000000146,
+				"RecalcStyleDuration": 0.0013250000000000206
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 35.15912500000559,
+			"wallRangeMs": [32.29945800000132, 43.80241699999897],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 11,
+				"LayoutDuration": 0.0006610000000000088,
+				"RecalcStyleDuration": 0.0030210000000000514
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 24.447999999996682,
+			"wallRangeMs": [22.49541699999827, 26.802499999997963],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 1,
+				"RecalcStyleCount": 3,
+				"LayoutDuration": 0.00007899999999999574,
+				"RecalcStyleDuration": 0.00038199999999999346
+			},
+			"spans": {}
+		},
+		"chromium/disabled/short/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 45.673084000001836,
+			"wallRangeMs": [29.227999999995518, 48.73208299999533],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 10,
+				"LayoutDuration": 0.0017240000000000033,
+				"RecalcStyleDuration": 0.003263000000000016
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 365.40237499999785,
+			"wallRangeMs": [350.47445799999696, 367.89091700000426],
+			"rootMedianMs": 0,
+			"inputCount": [169, 169, 169, 169, 169],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 342,
+				"RecalcStyleCount": 432,
+				"LayoutDuration": 0.18125499999999994,
+				"RecalcStyleDuration": 0.00300499999999998
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 44.62245800000528,
+			"wallRangeMs": [44.337625000000116, 45.09616599999572],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 8,
+				"LayoutDuration": 0.004852999999999996,
+				"RecalcStyleDuration": 0.001658999999999966
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 318.8448750000025,
+			"wallRangeMs": [303.3497500000012, 318.9495420000021],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 27,
+				"LayoutDuration": 0.009160999999999975,
+				"RecalcStyleDuration": 0.0039779999999999816
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 62.55074999999488,
+			"wallRangeMs": [61.58958300000086, 62.76641599999857],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 0,
+				"RecalcStyleCount": 5,
+				"LayoutDuration": 0,
+				"RecalcStyleDuration": 0.0003210000000000157
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 43.11983400000463,
+			"wallRangeMs": [30.565457999997307, 44.9140419999967],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.0028120000000000367,
+				"RecalcStyleDuration": 0.0010410000000000141
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 30.07404200000019,
+			"wallRangeMs": [29.512125000001106, 46.09729199999856],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 10,
+				"LayoutDuration": 0.0025399999999999867,
+				"RecalcStyleDuration": 0.0011599999999999944
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 44.19400000000314,
+			"wallRangeMs": [30.473875000003318, 46.26850000000559],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 5,
+				"LayoutDuration": 0.0021169999999999245,
+				"RecalcStyleDuration": 0.0005229999999999957
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 78.77300000000105,
+			"wallRangeMs": [61.436290999998164, 79.1642920000013],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 2,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.0030530000000001944,
+				"RecalcStyleDuration": 0.0014299999999999868
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 32.00383299999521,
+			"wallRangeMs": [22.205832999999984, 35.76062500000262],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 11,
+				"LayoutDuration": 0.002678999999999987,
+				"RecalcStyleDuration": 0.002839000000000036
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 23.666416000000027,
+			"wallRangeMs": [19.051208000004408, 24.868415999997524],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 1,
+				"RecalcStyleCount": 2,
+				"LayoutDuration": 0.00006299999999992423,
+				"RecalcStyleDuration": 0.0003549999999999942
+			},
+			"spans": {}
+		},
+		"chromium/disabled/long/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 30.283125000001746,
+			"wallRangeMs": [30.15312499999709, 30.67041700000118],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 8,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.005502000000000118,
+				"RecalcStyleDuration": 0.0027409999999999934
+			},
+			"spans": {}
+		},
+		"webkit/disabled/short/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 302.7092920000068,
+			"wallRangeMs": [302.2760830000043, 303.53337499999907],
+			"rootMedianMs": 0,
+			"inputCount": [9, 9, 9, 9, 9],
+			"inputTypes": ["insertText", "insertParagraph"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 46.284459000002244,
+			"wallRangeMs": [45.566500000000815, 46.601332999998704],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 303.1265829999975,
+			"wallRangeMs": [302.56429200000275, 304.3599999999933],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 62.910374999999476,
+			"wallRangeMs": [61.65458299999591, 63.097083000000566],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 44.90875000000233,
+			"wallRangeMs": [42.3714589999945, 45.260667000002286],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 29.853125000001455,
+			"wallRangeMs": [29.382999999994354, 46.516709000003175],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 31.027083000000857,
+			"wallRangeMs": [30.293625000005704, 46.62495900000067],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 63.75962499999878,
+			"wallRangeMs": [62.32616699999926, 79.75479199999972],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 36.16604200000438,
+			"wallRangeMs": [30.773583000001963, 41.77279200000339],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 26.063583000002836,
+			"wallRangeMs": [23.468790999999328, 27.5124580000047],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/short/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 32.63850000000093,
+			"wallRangeMs": [30.222500000003492, 47.19674999999552],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 287.16220800000156,
+			"wallRangeMs": [286.4981669999979, 288.61083399999916],
+			"rootMedianMs": 0,
+			"inputCount": [169, 169, 169, 169, 169],
+			"inputTypes": ["insertText", "insertParagraph"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 45.47854100000404,
+			"wallRangeMs": [44.869666999999026, 45.74116700000013],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 318.7671249999985,
+			"wallRangeMs": [304.5825829999958, 319.6452500000014],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 63.6059580000001,
+			"wallRangeMs": [62.5437080000047, 64.10633299999608],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 44.54295899999852,
+			"wallRangeMs": [28.716292000004614, 46.10791700000118],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 30.639875000000757,
+			"wallRangeMs": [30.01299999999901, 31.816083999998227],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 30.55033299999195,
+			"wallRangeMs": [30.214665999999852, 45.50520800000231],
+			"rootMedianMs": 0,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 63.28220899999724,
+			"wallRangeMs": [63.19604199999594, 79.13866700000654],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 33.40629199999967,
+			"wallRangeMs": [28.37225000000035, 40.56620899999689],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 24.267041999999492,
+			"wallRangeMs": [22.84766700000182, 25.10129200000665],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/disabled/long/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 45.41633300000103,
+			"wallRangeMs": [30.619082999997772, 47.60650000000169],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"chromium/enabled/short/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 302.4917920000007,
+			"wallRangeMs": [287.46462499999325, 303.14625000000524],
+			"rootMedianMs": 15.70000010728836,
+			"inputCount": [9, 9, 9, 9, 9],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 22,
+				"RecalcStyleCount": 46,
+				"LayoutDuration": 0.004181999999999998,
+				"RecalcStyleDuration": 0.009876999999999997
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0.2999999523162842,
+					"selfMedianMs": 0.2999999523162842
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0.3999999761581421,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0.3999999761581421,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 3.5000001192092896,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [20, 20, 20, 20, 20],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 1.2999999523162842,
+					"selfMedianMs": 1.2999999523162842
+				},
+				"EventCore.res.js:validate": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 1.2999999523162842,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [20, 20, 20, 20, 20],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [40, 40, 40, 40, 40],
+					"inclusiveMedianMs": 0.8999999165534973,
+					"selfMedianMs": 0.8999999165534973
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [40, 40, 40, 40, 40],
+					"inclusiveMedianMs": 0.9000000357627869,
+					"selfMedianMs": 0.19999992847442627
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [20, 20, 20, 20, 20],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0.8999999761581421,
+					"selfMedianMs": 0.7999999523162842
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 3.400000035762787,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 3.400000035762787,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [40, 40, 40, 40, 40],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [40, 40, 40, 40, 40],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [12, 12, 12, 12, 12],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [12, 12, 12, 12, 12],
+					"inclusiveMedianMs": 3.3000001311302185,
+					"selfMedianMs": 3.3000001311302185
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 7.600000023841858,
+					"selfMedianMs": 7.600000023841858
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 2.800000011920929,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/short/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 43.12983299999905,
+			"wallRangeMs": [37.39754199999152, 44.167874999999185],
+			"rootMedianMs": 7.500000059604645,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 7,
+				"LayoutDuration": 0.0012260000000000049,
+				"RecalcStyleDuration": 0.002566999999999986
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:validate": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0.2999999523162842,
+					"selfMedianMs": 0.2999999523162842
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0.40000003576278687,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.40000003576278687,
+					"selfMedianMs": 0.40000003576278687
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.8000000715255737,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.8000000715255737,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2.699999988079071,
+					"selfMedianMs": 2.699999988079071
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.899999976158142,
+					"selfMedianMs": 1.899999976158142
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1.300000011920929,
+					"selfMedianMs": 1.199999988079071
+				}
+			}
+		},
+		"chromium/enabled/short/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 300.076040999993,
+			"wallRangeMs": [299.42316700000083, 301.2655420000083],
+			"rootMedianMs": 16.19999998807907,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 22,
+				"LayoutDuration": 0.0030679999999999874,
+				"RecalcStyleDuration": 0.007091
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.2999999523162842,
+					"selfMedianMs": 0.19999998807907104
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.600000023841858,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.899999976158142,
+					"selfMedianMs": 1.899999976158142
+				},
+				"EventCore.res.js:validate": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0.9999999403953552,
+					"selfMedianMs": 0.9999999403953552
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 1.0999999642372131,
+					"selfMedianMs": 0.19999998807907104
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.300000011920929,
+					"selfMedianMs": 1.300000011920929
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 4.399999976158142,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 4.399999976158142,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1.899999976158142,
+					"selfMedianMs": 1.899999976158142
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 9.699999988079071,
+					"selfMedianMs": 9.699999988079071
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 3.799999952316284,
+					"selfMedianMs": 0.09999996423721313
+				}
+			}
+		},
+		"chromium/enabled/short/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 57.49704200000269,
+			"wallRangeMs": [54.240374999993946, 58.6705409999995],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 0,
+				"RecalcStyleCount": 5,
+				"LayoutDuration": 0,
+				"RecalcStyleDuration": 0.0010949999999999988
+			},
+			"spans": {}
+		},
+		"chromium/enabled/short/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 42.71987499999523,
+			"wallRangeMs": [38.903707999998005, 43.6639589999977],
+			"rootMedianMs": 2.800000011920929,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.0006940000000000002,
+				"RecalcStyleDuration": 0.0017439999999999956
+			},
+			"spans": {
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.8999999761581421,
+					"selfMedianMs": 0.8999999761581421
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.8999999761581421,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.5999999642372131,
+					"selfMedianMs": 0.5999999642372131
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.5999999642372131,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5,
+					"selfMedianMs": 0.40000003576278687
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2.099999964237213,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2.099999964237213,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 2.100000023841858,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5,
+					"selfMedianMs": 0.5
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.699999988079071,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/short/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 39.351333999991766,
+			"wallRangeMs": [27.065583000003244, 41.655082999990555],
+			"rootMedianMs": 2.3000000715255737,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.0006979999999999972,
+				"RecalcStyleDuration": 0.0013969999999999816
+			},
+			"spans": {
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.699999988079071,
+					"selfMedianMs": 0.699999988079071
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.699999988079071,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.30000007152557373,
+					"selfMedianMs": 0.30000007152557373
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.5,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.3999999761581421,
+					"selfMedianMs": 0.3999999761581421
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1.600000023841858,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1.600000023841858,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1.600000023841858,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5,
+					"selfMedianMs": 0.5
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.699999988079071,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/short/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 43.00424999999814,
+			"wallRangeMs": [27.864541000002646, 43.584124999993946],
+			"rootMedianMs": 6.199999988079071,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 6,
+				"LayoutDuration": 0.0005190000000000056,
+				"RecalcStyleDuration": 0.0010599999999999915
+			},
+			"spans": {
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 4
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 4.199999988079071,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4.599999964237213,
+					"selfMedianMs": 0.3999999761581421
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4.599999964237213,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0.30000001192092896
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.3999999761581421,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0.30000001192092896
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 5.400000035762787,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 5.400000035762787,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 5.400000035762787,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.40000003576278687,
+					"selfMedianMs": 0.40000003576278687
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/short/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 76.08041599999706,
+			"wallRangeMs": [58.73779100000684, 77.03425000001153],
+			"rootMedianMs": 0.7999999523162842,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 2,
+				"RecalcStyleCount": 8,
+				"LayoutDuration": 0.0005539999999999989,
+				"RecalcStyleDuration": 0.002150000000000013
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5,
+					"selfMedianMs": 0.40000003576278687
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.7999999523162842,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/short/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 28.243625000002794,
+			"wallRangeMs": [23.450874999994994, 29.88870899999165],
+			"rootMedianMs": 0.6000000238418579,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 10,
+				"LayoutDuration": 0.0006130000000000024,
+				"RecalcStyleDuration": 0.002901999999999988
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.40000003576278687,
+					"selfMedianMs": 0.40000003576278687
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.6000000238418579,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/short/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 22.237625000008848,
+			"wallRangeMs": [19.54608400000143, 25.214291999989655],
+			"rootMedianMs": 0.09999996423721313,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 1,
+				"RecalcStyleCount": 2,
+				"LayoutDuration": 0.00003700000000000231,
+				"RecalcStyleDuration": 0.0002959999999999907
+			},
+			"spans": {
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0.09999996423721313
+				}
+			}
+		},
+		"chromium/enabled/short/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 31.322832999998354,
+			"wallRangeMs": [29.51791600001161, 46.85841700001038],
+			"rootMedianMs": 0.9000000357627869,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 10,
+				"LayoutDuration": 0.0015169999999999906,
+				"RecalcStyleDuration": 0.002917000000000003
+			},
+			"spans": {
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [3, 3, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [3, 3, 2, 2, 2],
+					"inclusiveMedianMs": 0.5000000596046448,
+					"selfMedianMs": 0.5000000596046448
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5999999642372131,
+					"selfMedianMs": 0.5
+				}
+			}
+		},
+		"chromium/enabled/long/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 366.22020900000643,
+			"wallRangeMs": [351.20266699999047, 382.82624999999825],
+			"rootMedianMs": 189.89999985694885,
+			"inputCount": [169, 169, 169, 169, 169],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 342,
+				"RecalcStyleCount": 437,
+				"LayoutDuration": 0.181087,
+				"RecalcStyleDuration": 0.0037490000000000023
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0.6000000834465027,
+					"selfMedianMs": 0.5000001192092896
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0.6000000834465027,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 175.5000001192093,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [340, 340, 340, 340, 340],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 2.300000011920929,
+					"selfMedianMs": 2.200000047683716
+				},
+				"EventCore.res.js:validate": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 2.399999976158142,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [340, 340, 340, 340, 340],
+					"inclusiveMedianMs": 0.3999999761581421,
+					"selfMedianMs": 0.3999999761581421
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [680, 680, 680, 680, 680],
+					"inclusiveMedianMs": 1.600000023841858,
+					"selfMedianMs": 1.600000023841858
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [680, 680, 680, 680, 680],
+					"inclusiveMedianMs": 1.699999988079071,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [340, 340, 340, 340, 340],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0.40000003576278687,
+					"selfMedianMs": 0.40000003576278687
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 5.299999713897705,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 5.299999713897705,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [680, 680, 680, 680, 680],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"projection.chips": {
+					"counts": [680, 680, 680, 680, 680],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"projection.durationValue": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [173, 173, 173, 173, 173],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [173, 173, 173, 173, 173],
+					"inclusiveMedianMs": 174.700000166893,
+					"selfMedianMs": 174.700000166893
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 8.800000011920929,
+					"selfMedianMs": 8.800000011920929
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.800000011920929,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/long/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 40.99845800000185,
+			"wallRangeMs": [40.68424999999115, 43.73191699999734],
+			"rootMedianMs": 14.899999976158142,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 7,
+				"LayoutDuration": 0.004850999999999939,
+				"RecalcStyleDuration": 0.0016149999999999776
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 3.299999952316284,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.6000000238418579,
+					"selfMedianMs": 0.6000000238418579
+				},
+				"EventCore.res.js:validate": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.6000000238418579,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0.30000001192092896
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.2999999523162842,
+					"selfMedianMs": 0.2999999523162842
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.199999988079071,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.199999988079071,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 10.400000035762787,
+					"selfMedianMs": 10.400000035762787
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.699999988079071,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [3, 3, 3, 3, 3],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [3, 3, 3, 3, 3],
+					"inclusiveMedianMs": 3.300000011920929,
+					"selfMedianMs": 3.300000011920929
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/long/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 300.3977500000037,
+			"wallRangeMs": [299.0568750000093, 317.2327500000101],
+			"rootMedianMs": 25.899999976158142,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 7,
+				"RecalcStyleCount": 29,
+				"LayoutDuration": 0.008228000000000013,
+				"RecalcStyleDuration": 0.0033340000000000036
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.20000004768371582,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2.5,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.800000011920929,
+					"selfMedianMs": 0.800000011920929
+				},
+				"EventCore.res.js:validate": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.800000011920929,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0.40000003576278687,
+					"selfMedianMs": 0.40000003576278687
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0.40000003576278687,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.3999999761581421,
+					"selfMedianMs": 0.30000001192092896
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.5999999642372131,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1.5999999642372131,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [6, 6, 6, 6, 6],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [6, 6, 6, 6, 6],
+					"inclusiveMedianMs": 2.599999964237213,
+					"selfMedianMs": 2.599999964237213
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 21.399999976158142,
+					"selfMedianMs": 21.399999976158142
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1.199999988079071,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/long/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 60.17574999999488,
+			"wallRangeMs": [59.360166999991634, 62.05387499999779],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 0,
+				"RecalcStyleCount": 4,
+				"LayoutDuration": 0,
+				"RecalcStyleDuration": 0.00030399999999997096
+			},
+			"spans": {}
+		},
+		"chromium/enabled/long/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 30.30520799999067,
+			"wallRangeMs": [29.152084000001196, 45.32150000000547],
+			"rootMedianMs": 3.800000011920929,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 8,
+				"LayoutDuration": 0.0023919999999999497,
+				"RecalcStyleDuration": 0.0008599999999999719
+			},
+			"spans": {
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5999999642372131,
+					"selfMedianMs": 0.5999999642372131
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5999999642372131,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.3999999761581421,
+					"selfMedianMs": 0.3999999761581421
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.3999999761581421,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0.30000001192092896
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1.399999976158142,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1.399999976158142,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1.399999976158142,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2.300000011920929,
+					"selfMedianMs": 2.300000011920929
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2.400000035762787,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/long/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 28.344999999986612,
+			"wallRangeMs": [25.382916000002297, 41.140749999991385],
+			"rootMedianMs": 3.5,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 9,
+				"LayoutDuration": 0.0022599999999999287,
+				"RecalcStyleDuration": 0.0009480000000000044
+			},
+			"spans": {
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5,
+					"selfMedianMs": 0.5
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.5,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0.30000001192092896
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.3999999761581421,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0.30000001192092896
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1.2999999523162842,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1.2999999523162842,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1.2999999523162842,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2.100000023841858,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/long/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 45.01125000001048,
+			"wallRangeMs": [30.40183299999626, 45.47808400000213],
+			"rootMedianMs": 6.600000023841858,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {
+				"LayoutCount": 4,
+				"RecalcStyleCount": 6,
+				"LayoutDuration": 0.0020170000000001576,
+				"RecalcStyleDuration": 0.0005380000000000384
+			},
+			"spans": {
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 3.199999988079071,
+					"selfMedianMs": 3.199999988079071
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 3.400000035762787,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 3.700000047683716,
+					"selfMedianMs": 0.30000001192092896
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 3.700000047683716,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0.30000001192092896
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0.30000001192092896,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.2999999523162842,
+					"selfMedianMs": 0.2999999523162842
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4.400000035762787,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4.400000035762787,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 4.5,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2.100000023841858,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/long/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 61.42883299999812,
+			"wallRangeMs": [61.303459000002476, 76.44091599999228],
+			"rootMedianMs": 3.100000023841858,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 2,
+				"RecalcStyleCount": 8,
+				"LayoutDuration": 0.002807000000000004,
+				"RecalcStyleDuration": 0.0014319999999999888
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.19999998807907104,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0.10000002384185791
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2.800000011920929,
+					"selfMedianMs": 2.700000047683716
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/long/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 23.788833999991766,
+			"wallRangeMs": [19.45487500001036, 42.920916999995825],
+			"rootMedianMs": 2.5,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 3,
+				"RecalcStyleCount": 11,
+				"LayoutDuration": 0.0024850000000000705,
+				"RecalcStyleDuration": 0.0027369999999999894
+			},
+			"spans": {
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.09999996423721313,
+					"selfMedianMs": 0.09999996423721313
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.10000002384185791,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2.399999976158142,
+					"selfMedianMs": 2.399999976158142
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2.5,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/long/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 23.16158300000825,
+			"wallRangeMs": [21.23320899999817, 26.91745799999626],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 0,
+				"RecalcStyleCount": 3,
+				"LayoutDuration": 0,
+				"RecalcStyleDuration": 0.00040599999999996195
+			},
+			"spans": {
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [2, 2, 2, 2, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [2, 2, 2, 2, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"chromium/enabled/long/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 30.589999999996508,
+			"wallRangeMs": [29.985791999992216, 41.16333399999712],
+			"rootMedianMs": 0.8999999761581421,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {
+				"LayoutCount": 8,
+				"RecalcStyleCount": 10,
+				"LayoutDuration": 0.004270999999999914,
+				"RecalcStyleDuration": 0.0026470000000000105
+			},
+			"spans": {
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [3, 3, 2, 2, 3],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [3, 3, 2, 2, 3],
+					"inclusiveMedianMs": 0.4999999403953552,
+					"selfMedianMs": 0.4999999403953552
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0.40000003576278687,
+					"selfMedianMs": 0.3999999761581421
+				}
+			}
+		},
+		"webkit/enabled/short/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 319.5619580000057,
+			"wallRangeMs": [303.0464590000047, 320.50470900000073],
+			"rootMedianMs": 22,
+			"inputCount": [9, 9, 9, 9, 9],
+			"inputTypes": ["insertText", "insertParagraph"],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 5,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [20, 20, 20, 20, 20],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:validate": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [20, 20, 20, 20, 20],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [40, 40, 40, 40, 40],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [40, 40, 40, 40, 40],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [20, 20, 20, 20, 20],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [40, 40, 40, 40, 40],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [40, 40, 40, 40, 40],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [10, 10, 10, 10, 10],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [12, 12, 12, 12, 12],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [12, 12, 12, 12, 12],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 4
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 11,
+					"selfMedianMs": 11
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/short/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 49.166582999998354,
+			"wallRangeMs": [36.43675000000803, 50.34770800000115],
+			"rootMedianMs": 8,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:validate": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 4
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/short/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 302.3398750000051,
+			"wallRangeMs": [299.9857090000005, 317.1840830000001],
+			"rootMedianMs": 20,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"EventCore.res.js:validate": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 5,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 5,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 11,
+					"selfMedianMs": 11
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/short/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 58.95704100000148,
+			"wallRangeMs": [57.934582999994745, 64.60183400000096],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/enabled/short/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 45.50024999999732,
+			"wallRangeMs": [36.564540999999736, 48.647208000009414],
+			"rootMedianMs": 4,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/short/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 28.424165999997058,
+			"wallRangeMs": [27.61904199999117, 29.028250000003027],
+			"rootMedianMs": 3,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/short/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 29.75870799999393,
+			"wallRangeMs": [28.595917000013287, 44.39262500000768],
+			"rootMedianMs": 5,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 4
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/short/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 62.067499999990105,
+			"wallRangeMs": [61.06658400000015, 78.4464169999992],
+			"rootMedianMs": 1,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/short/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 30.631916000013007,
+			"wallRangeMs": [25.05320800001209, 37.14045900000201],
+			"rootMedianMs": 1,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/short/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 26.979249999989406,
+			"wallRangeMs": [26.482416999991983, 27.738000000012107],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/short/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 30.857042000003275,
+			"wallRangeMs": [30.61258299999463, 31.73399999999674],
+			"rootMedianMs": 1,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [2, 3, 3, 3, 3],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [2, 3, 3, 3, 3],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				}
+			}
+		},
+		"webkit/enabled/long/multiline-fill+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 542.2632910000102,
+			"wallRangeMs": [512.086083000002, 545.8597920000029],
+			"rootMedianMs": 120,
+			"inputCount": [169, 169, 169, 169, 169],
+			"inputTypes": ["insertText", "insertParagraph"],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 3
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 89,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [340, 340, 340, 340, 340],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"EventCore.res.js:validate": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [340, 340, 340, 340, 340],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [680, 680, 680, 680, 680],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [680, 680, 680, 680, 680],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [340, 340, 340, 340, 340],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 7,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 7,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [680, 680, 680, 680, 680],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [680, 680, 680, 680, 680],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [170, 170, 170, 170, 170],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [172, 172, 172, 172, 172],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [172, 172, 172, 172, 172],
+					"inclusiveMedianMs": 86,
+					"selfMedianMs": 85
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 30,
+					"selfMedianMs": 30
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/long/description-paste+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 41.59487499999523,
+			"wallRangeMs": [37.91916600000695, 51.802458999998635],
+			"rootMedianMs": 13,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertFromPaste"],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:validate": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 9,
+					"selfMedianMs": 9
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 3
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/long/description-keypress+settled-parse": {
+			"samples": 5,
+			"wallMedianMs": 317.8700830000016,
+			"wallRangeMs": [303.11970799999835, 318.695332999996],
+			"rootMedianMs": 33,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 0
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:validate": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [8, 8, 8, 8, 8],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [6, 6, 6, 6, 6],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [6, 6, 6, 6, 6],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 29,
+					"selfMedianMs": 29
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/long/settled-idle": {
+			"samples": 5,
+			"wallMedianMs": 60.4766660000023,
+			"wallRangeMs": [59.30733300000429, 61.097833000007086],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {}
+		},
+		"webkit/enabled/long/manual-title": {
+			"samples": 5,
+			"wallMedianMs": 44.26408300000185,
+			"wallRangeMs": [31.02637500000128, 45.75745800000732],
+			"rootMedianMs": 4,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/long/manual-canonical-start": {
+			"samples": 5,
+			"wallMedianMs": 28.812166999996407,
+			"wallRangeMs": [28.396291000011843, 29.513208000003942],
+			"rootMedianMs": 3,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/long/manual-freeform-start": {
+			"samples": 5,
+			"wallMedianMs": 29.458791000011843,
+			"wallRangeMs": [28.789082999996026, 44.51708399999188],
+			"rootMedianMs": 6,
+			"inputCount": [1, 1, 1, 1, 1],
+			"inputTypes": ["insertText"],
+			"renderingMedian": {},
+			"spans": {
+				"Parser.res.js:parse": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 3
+				},
+				"TimeInput.res.js:interpret": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 3,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validateBase": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:validate": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalPartsFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:temporalCandidates": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"EventCore.res.js:temporalOptionsFrom": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationValueFrom": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:durationOptionsFrom": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"EventCore.res.js:editorProjection": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"projection.editor": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"projection.highlights": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 4,
+					"selfMedianMs": 0
+				},
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				},
+				"projection.labels": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.chips": {
+					"counts": [4, 4, 4, 4, 4],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationValue": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"projection.durationOptions": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/long/evidence-hover": {
+			"samples": 5,
+			"wallMedianMs": 62.078542000002926,
+			"wallRangeMs": [60.98262500000419, 79.00725000000966],
+			"rootMedianMs": 2,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/long/evidence-focus": {
+			"samples": 5,
+			"wallMedianMs": 34.702084000004106,
+			"wallRangeMs": [29.169458000003942, 41.38337500000489],
+			"rootMedianMs": 2,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {
+				"mirror.segment": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"mirror.replaceChildren+nodes+segments": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:paintEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"descriptionEditor.ts:update": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/long/editor-scroll": {
+			"samples": 5,
+			"wallMedianMs": 25.694000000003143,
+			"wallRangeMs": [24.76358299999265, 25.823417000006884],
+			"rootMedianMs": 0,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [2, 2, 2, 2, 2],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				}
+			}
+		},
+		"webkit/enabled/long/viewport-resize": {
+			"samples": 5,
+			"wallMedianMs": 30.985958000004757,
+			"wallRangeMs": [29.947541000001365, 31.427083999995375],
+			"rootMedianMs": 3,
+			"inputCount": [0, 0, 0, 0, 0],
+			"inputTypes": [],
+			"renderingMedian": {},
+			"spans": {
+				"descriptionEditor.ts:revealEvidence": {
+					"counts": [3, 3, 3, 2, 3],
+					"inclusiveMedianMs": 0,
+					"selfMedianMs": 0
+				},
+				"descriptionEditor.ts:syncEvidence": {
+					"counts": [3, 3, 3, 2, 3],
+					"inclusiveMedianMs": 2,
+					"selfMedianMs": 2
+				},
+				"mirror.measureFrame": {
+					"counts": [1, 1, 1, 1, 1],
+					"inclusiveMedianMs": 1,
+					"selfMedianMs": 1
+				}
+			}
+		}
+	}
+}

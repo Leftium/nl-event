@@ -1,9 +1,117 @@
-# Editor projection and evidence profile - PR #56
+# Editor projection and evidence profiles - PR #56 / #57
 
-This is a measurement-only investigation for [#43](https://github.com/Leftium/nl-event/issues/43)
-and [#45](https://github.com/Leftium/nl-event/issues/45). The implementation changes
-tooling only. Application source, debounce, validation, textarea handling, draft
-ownership and exports remain unchanged.
+The original PR #56 measurement-only investigation is retained below. The PR #57
+follow-up implements shared validation for [#43](https://github.com/Leftium/nl-event/issues/43)
+and [#45](https://github.com/Leftium/nl-event/issues/45).
+
+## Shared validation follow-up - PR #57
+
+`EventCore.editorProjection(draft)` validates once, then derives Start/End date
+and time options and duration values/options from that result. The page consumes
+one Svelte `$derived` projection, including its validation for errors and exports.
+Highlights, labels and chips read the same four option arrays. No persistent or
+global cache is involved; the pure call receives the current draft, including
+its injected context, selections, ownership and revisions. Existing public
+`validate`, `temporalParts`, `temporalOptions`, `durationValue` and
+`durationOptions` APIs retain their behavior. Partial candidate selections still
+override normalized temporal parts before reading validation.
+
+The fresh before/after runs on 2026-10-28 (Seoul) used the unchanged PR #56 harness:
+Chromium 156.0.8078.4 and WebKit 27.2 on Apple M4, 10 logical CPUs, 16 GiB,
+Darwin 24.6.0 arm64, Node 24.16.0, Vite 8.3.5, Svelte 5.57.2, ReScript 12.3.1
+and Playwright 1.64.1. Each run retained 660 stages with no dropped spans or page
+errors. Conditions were identical: short/long inputs of 108/6,739 UTF-16 units,
+1280x900 viewport, Asia/Seoul zone, fixed Date, two warmup journeys then five
+retained journeys per size and mode. Mode order was normal, disabled, enabled;
+baseline ran first. No tests/builds ran during measurement.
+
+Manual freeform Start (`December 19 2026 at 6pm`), before / after medians in ms:
+
+| Engine / input | Parser calls | validate / validateBase | Disjoint instrumented work | Normal wall latency | Normal wall range         |
+| -------------- | ------------ | ----------------------- | -------------------------- | ------------------- | ------------------------- |
+| Chromium short | 15 / 1       | 15 / 15 -> 1 / 1        | 32.0 / 6.2                 | 62.24 / 43.94       | 61.24-63.35 / 29.87-46.19 |
+| Chromium long  | 15 / 1       | 15 / 15 -> 1 / 1        | 28.6 / 6.6                 | 62.94 / 43.01       | 61.22-63.04 / 29.81-45.54 |
+| WebKit short   | 15 / 1       | 15 / 15 -> 1 / 1        | 29.0 / 5.0                 | 63.16 / 31.47       | 62.04-63.28 / 29.44-46.05 |
+| WebKit long    | 15 / 1       | 15 / 15 -> 1 / 1        | 22.0 / 6.0                 | 62.96 / 30.26       | 61.00-70.95 / 29.95-46.48 |
+
+Counts are exact in every retained sample in both engines and sizes. Manual
+Title/canonical Start validations also fall from 15 to 1, with zero parser calls.
+Description paste/keypress (pending plus settled) validations fall from 26 to 2;
+the one Description parser call is unchanged. Each ordinary Manual edit builds
+four option arrays once rather than twelve times. Hover, focus and idle still
+perform no validation or parsing; mirror update counts are unchanged.
+
+Overhead controls, freeform Start wall medians (before / after, ms):
+
+| Engine / input | Collection disabled | Collection enabled |
+| -------------- | ------------------- | ------------------ |
+| Chromium short | 61.23 / 29.71       | 70.69 / 43.00      |
+| Chromium long  | 62.75 / 44.19       | 59.12 / 45.01      |
+| WebKit short   | 62.05 / 31.03       | 58.21 / 29.76      |
+| WebKit long    | 62.95 / 30.55       | 45.67 / 29.46      |
+
+Both measured synchronous work and normal, unprofiled interaction latency
+improve for this warmed development scenario. This supports the narrow reuse
+change beyond its lower call counts. It does not establish a precise percentage
+speedup or a production/mobile guarantee. Wall latency includes Playwright and
+two frame waits; the after samples split around 30 and 45ms, so scheduling and
+frame boundaries materially affect the medians. Five samples in fixed mode and
+before/after order do not control all JIT, GC or system noise. Disabled/enabled
+controls are not interchangeable with normal source, and WebKit has coarser
+timer resolution. Inclusive parser/validation spans overlap; they are never
+summed as savings. Evidence hover timings vary (for example Chromium long
+1.8 / 3.1ms); this change makes no evidence rendering performance claim.
+
+The opt-in plugin now instruments `editorProjection` and its shared helpers.
+`projection.editor` contains the actual derivation; highlights/labels/chips and
+duration page spans now measure property reads, not option construction. Original
+public wrappers remain instrumented for other callers. Core hooks still avoid
+extra draft property reads. Missing anchors fail explicitly, and the tooling
+test compiles the transformed real Svelte page and checks generated helper
+anchors. Production remains free of profiling transforms.
+
+[Raw before/after runs, source hashes, summaries and verification logs](profile-data/shared-validation-2026-10-28/)
+are retained. The baseline records HEAD `538c5d5`, whose complete source tree is
+identical to PR #57 bootstrap `2246bd1` (tree
+`86010bf5f9d761495e7460e913c3220274d708bc`). The after run records the bootstrap
+HEAD plus the uncommitted source identified by its SHA-256 hashes. Only the core,
+page and profiling plugin hashes changed; parser, time interpretation, mirror,
+harness, lockfile and compiler configuration hashes match.
+
+Reproduce each phase using a new output filename with the appropriate source
+checked out, outside other tests/builds:
+
+```sh
+pnpm profile:editor /tmp/shared-validation-before.json
+pnpm profile:editor /tmp/shared-validation-after.json
+pnpm profile:editor:report /tmp/shared-validation-before.json
+pnpm profile:editor:report /tmp/shared-validation-after.json
+```
+
+Focused parity coverage compares all option properties, validation/errors,
+duration values/options and Google/ICS outputs against the public APIs for
+canonical/freeform Start and End, relative End/duration, date-only/time-only and
+invalid input. Cases include partial selections, source pairing/spans, generated
+choices, stale parse tickets/evidence, Manual/Auto changes, zone/context revision
+changes, all-day overrides, DST gaps/folds and selected offsets. Existing browser
+contracts exercise the page's Svelte invalidation and native editor behavior.
+
+Verification passed: `pnpm test` (594 tests), `pnpm check`, `pnpm lint`,
+`pnpm build`, both Knip audits (no findings), all 12 Node tooling tests
+(including four editor profiler tests), and the complete `pnpm test:browser`
+Chromium/WebKit matrix with no page errors. The production client bundle
+contains no profiling hook strings. Build warnings remain the existing bundle
+size and adapter-auto deployment-target notices.
+[Independent review](profile-data/shared-validation-2026-10-28/independent-review.md)
+found no blocking issues and reproduced the raw benchmark rows. One public
+`validate` call can still normalize all-day inputs through two `validateBase`
+calls; the timed freeform counts above do not describe that separate path.
+
+## Original PR #56 investigation
+
+This was a measurement-only investigation. Its tooling changes left application
+source, debounce, validation, textarea handling, draft ownership and exports
+unchanged. The findings below describe that baseline, before PR #57.
 
 ## Findings and recommendation
 
