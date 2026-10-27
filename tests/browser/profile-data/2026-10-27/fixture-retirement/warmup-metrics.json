@@ -1,0 +1,41 @@
+{
+	"label": "warmup",
+	"wallSeconds": 125.63976537500275,
+	"exitCode": 0,
+	"engines": {
+		"chromium": 65.751481,
+		"webkit": 59.533313
+	},
+	"modes": {
+		"chromium/desktop": 46.65756,
+		"chromium/touch": 16.488586,
+		"webkit/desktop": 45.148735,
+		"webkit/touch": 12.152121
+	},
+	"fixtureCounts": {
+		"chromium": 14,
+		"webkit": 14
+	},
+	"fixtureSeconds": 9.059811,
+	"candidatesSeconds": 13.130837,
+	"commandSeconds": 125.554675375,
+	"compileSeconds": 0.079703792,
+	"runnerSeconds": 125.444845875,
+	"fixtureIds": [
+		"e1-st-paul-houseparty-sanitized",
+		"e2-workshop-times-only-sanitized",
+		"e3-series-deadline-synthetic",
+		"en-all-day-multiday-synthetic",
+		"en-dst-fall-back-synthetic",
+		"en-dst-spring-gap-synthetic",
+		"en-next-friday-synthetic",
+		"en-vague-evening-synthetic",
+		"k1-wine-excerpt",
+		"k2-milonga-excerpt",
+		"k3-slow-saturday-synthetic",
+		"k4-blues-jam-sanitized",
+		"ko-numeric-noise-synthetic",
+		"ko-tomorrow-synthetic"
+	],
+	"failures": []
+}

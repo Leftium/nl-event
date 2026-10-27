@@ -1248,11 +1248,15 @@ async function checkCandidates(page) {
 		await page.getByRole('button', { name: 'Reset', exact: true }).click();
 	};
 	await page.clock.install({ time: new Date('2026-10-24T03:00:00Z') });
-	// All 14 source inputs are also exercised through the actual UI. Only context
-	// enters the draft; expectation assertions are evaluated by the driver afterward.
-	for (const file of await fs.readdir('tests/fixtures/nl-event/expected')) {
+	// Keep English, incomplete-event and Korean DOM proofs in their original order.
+	// The full parser matrix belongs to parser.test.ts; see browser/COVERAGE.md.
+	for (const id of [
+		'e1-st-paul-houseparty-sanitized',
+		'en-vague-evening-synthetic',
+		'k1-wine-excerpt'
+	]) {
 		const fixture = JSON.parse(
-			await fs.readFile(`tests/fixtures/nl-event/expected/${file}`, 'utf8')
+			await fs.readFile(`tests/fixtures/nl-event/expected/${id}.json`, 'utf8')
 		);
 		const endFixture = profile?.begin(fixture.id, 'fixture');
 		await page.clock.setFixedTime(new Date(fixture.context.referenceInstant));
@@ -1319,6 +1323,8 @@ async function checkCandidates(page) {
 			);
 		endFixture?.();
 	}
+	// Later interactions/helpers share the final reference instant of the old loop.
+	await page.clock.setFixedTime(new Date('2026-10-24T03:00:00Z'));
 	await reset();
 	await page
 		.locator('#description')
@@ -2919,7 +2925,7 @@ for (const [name, engine] of [
 	endTouch?.();
 	assert.deepEqual(errors, []);
 	console.log(
-		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 14 parsing fixtures, sanitized October/November/December numeric dates, prices, midnight and inferred End with Google/ICS parity, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
+		`${name}: PASS - hydration, five fields, Google query, real ICS downloads, UID reuse/reset, 3 representative parsing fixtures, sanitized October/November/December numeric dates, prices, midnight and inferred End with Google/ICS parity, per-field candidates, partial resolution, debounce/new-draft invalidation, ownership/reset, address-first Google/ICS locations, selected-text Title and Location, freeform input/interpretations and export parity, no confirmation dialogs, clipboard failure/empty/replace and pending-read races, all-day bounds, zone/DST choices/gaps, desktop/390px layout, compact inline actions, keyboard focus/activation, coarse-pointer touch targets, expanding editor height/cap, native Enter/undo/redo, Chromium IME, fullscreen identity/selection/Escape, wrap/counts, orientation and touch selection; no page errors`
 	);
 	await browser.close();
 	endEngine?.();

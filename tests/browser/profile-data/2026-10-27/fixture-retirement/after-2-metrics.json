@@ -1,0 +1,30 @@
+{
+	"label": "after-2",
+	"wallSeconds": 116.66829400003189,
+	"exitCode": 0,
+	"engines": {
+		"chromium": 60.630614,
+		"webkit": 55.712855
+	},
+	"modes": {
+		"chromium/desktop": 43.075941,
+		"chromium/touch": 15.973499,
+		"webkit/desktop": 41.285865,
+		"webkit/touch": 12.344753
+	},
+	"fixtureCounts": {
+		"chromium": 3,
+		"webkit": 3
+	},
+	"fixtureSeconds": 1.977228,
+	"candidatesSeconds": 6.04416,
+	"commandSeconds": 116.588793042,
+	"compileSeconds": 0.07906624999999999,
+	"runnerSeconds": 116.497198083,
+	"fixtureIds": [
+		"e1-st-paul-houseparty-sanitized",
+		"en-vague-evening-synthetic",
+		"k1-wine-excerpt"
+	],
+	"failures": []
+}

@@ -1,0 +1,8 @@
+Cleaned 0/3
+Parsed 0 source files
+Compiled 0 modules
+Loading svelte-check in workspace: /Volumes/p/nl-event
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings
+$ rescript && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
