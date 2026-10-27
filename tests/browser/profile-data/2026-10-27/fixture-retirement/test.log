@@ -1,0 +1,25 @@
+Cleaned 0/3
+Parsed 0 source files
+Compiled 0 modules
+
+ RUN  v5.0.5 /Volumes/p/nl-event
+
+ ✓ tests/form-metadata.test.ts (4 tests) 38ms
+ ✓ tests/overnight-export.test.ts (18 tests) 90ms
+ ✓ tests/calendar-description.test.ts (35 tests) 26ms
+ ✓ tests/evidence-highlight.test.ts (10 tests) 217ms
+ ✓ tests/form-meta-proxy.test.ts (10 tests) 39ms
+ ✓ tests/announcement-links.test.ts (14 tests) 15ms
+ ✓ tests/event-core.test.ts (43 tests) 220ms
+ ✓ tests/duration-options.test.ts (9 tests) 240ms
+ ✓ tests/english-dates.test.ts (24 tests) 350ms
+ ✓ tests/temporal-parts.test.ts (16 tests) 376ms
+ ✓ tests/time-input.test.ts (54 tests) 424ms
+ ✓ tests/parser.test.ts (336 tests) 1020ms
+
+ Test Files  12 passed (12)
+      Tests  573 passed (573)
+   Start at  22:25:16
+   Duration  1.55s (import 55%, tests 42%, transform 3%)
+
+$ rescript && vitest run

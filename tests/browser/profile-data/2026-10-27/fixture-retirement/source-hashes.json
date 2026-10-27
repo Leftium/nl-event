@@ -1,0 +1,5 @@
+{
+	"baselineCommit": "931149e8b19e8bfb17be169e40eb8288f77fc716",
+	"beforeBrowserSmokeSha256": "9dbcbe4686789c8bd4577234dcca6e7e3d891be9eb5bbf57b921bff21ae8872c",
+	"afterBrowserSmokeSha256": "4fc0b8b93ecf83729643d2fd033af77900d3485a2ead886814dfddbe65b6b544"
+}
