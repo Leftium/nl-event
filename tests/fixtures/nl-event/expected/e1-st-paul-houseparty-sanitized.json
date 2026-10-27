@@ -23,7 +23,22 @@
     "expectedZone": "America/Chicago",
     "timezoneProvenance": "inferred-from-recognized-city",
     "warningIfZoneUnknown": "Ask for zone confirmation; do not silently interpret in Asia/Seoul.",
-    "notExpected": "23:55 end from separately stored calendar metadata"
+    "notExpected": "23:55 end from separately stored calendar metadata",
+    "orderedCandidateValues": {
+      "title": [
+        "Community house party",
+        "Music from"
+      ],
+      "start": [
+        "2026-11-14 20:00"
+      ],
+      "end": [
+        "2026-11-15 00:00"
+      ],
+      "location": [
+        "St Paul, MN"
+      ]
+    }
   },
   "tags": [
     "english",
