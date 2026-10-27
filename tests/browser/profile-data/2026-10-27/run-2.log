@@ -1,0 +1,18 @@
+$ node scripts/profile-browser.mjs /tmp/nl-event-profile-46/run-2.jsonl
+Cleaned 0/3
+Parsed 0 source files
+Compiled 0 modules
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.unroute: Target page, context or browser has been closed
+    at checkDescriptionReviewRegressions (/Volumes/p/nl-event/tests/calendar-description.browser.mjs:290:14)
+    at async file:///Volumes/p/nl-event/tests/browser-profile.mjs:51:19
+    at async file:///Volumes/p/nl-event/tests/browser-smoke.mjs:2838:2 {
+  log: []
+}
+
+Node.js v24.16.0
+Browser profile: /tmp/nl-event-profile-46/run-2.jsonl
+[ELIFECYCLE] Command failed with exit code 1.

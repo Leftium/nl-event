@@ -1,0 +1,5 @@
+{
+	"wallMs": 56525.13220801484,
+	"exitCode": 1,
+	"command": ["pnpm", "test:browser:profile", "/tmp/nl-event-profile-46/run-2.jsonl"]
+}

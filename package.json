@@ -14,7 +14,8 @@
 		"format": "prettier --write .",
 		"test": "rescript && vitest run",
 		"res:build": "rescript",
-		"test:browser": "rescript && node tests/browser-smoke.mjs"
+		"test:browser": "rescript && node tests/browser-smoke.mjs",
+		"test:browser:profile": "node scripts/profile-browser.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
