@@ -1,0 +1,10 @@
+$ rescript && node scripts/profile-editor.mjs /tmp/nl-editor-profile-attempt1.json
+Cleaned 0/3
+Parsed 0 source files
+Compiled 0 modules
+2:41:48 AM [vite] (ssr) connected.
+2:41:48 AM [vite] (ssr) Re-optimizing dependencies because vite config has changed
+2:41:48 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+200 GET /
+Editor profile failed: /tmp/nl-editor-profile-attempt1.json
+[ELIFECYCLE] Command failed with exit code 1.

@@ -1,0 +1,20 @@
+$ rescript && node scripts/profile-editor.mjs /tmp/nl-editor-profile-final3.json
+Cleaned 0/3
+Parsed 0 source files
+Compiled 0 modules
+2:55:34 AM [vite] (ssr) connected.
+200 GET /
+normal/chromium: short and long journeys passed
+200 GET /
+normal/webkit: short and long journeys passed
+2:56:08 AM [vite] (ssr) connected.
+200 GET /
+disabled/chromium: short and long journeys passed
+200 GET /
+disabled/webkit: short and long journeys passed
+2:56:41 AM [vite] (ssr) connected.
+200 GET /
+enabled/chromium: short and long journeys passed
+200 GET /
+enabled/webkit: short and long journeys passed
+Editor profile passed: /tmp/nl-editor-profile-final3.json
