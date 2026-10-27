@@ -17,7 +17,9 @@
 		"test:browser": "rescript && node tests/browser-smoke.mjs",
 		"test:browser:chromium": "rescript && NL_EVENT_BROWSER_ENGINE=chromium node tests/browser-smoke.mjs",
 		"test:browser:webkit": "rescript && NL_EVENT_BROWSER_ENGINE=webkit node tests/browser-smoke.mjs",
-		"test:browser:profile": "node scripts/profile-browser.mjs"
+		"test:browser:profile": "node scripts/profile-browser.mjs",
+		"audit:knip": "rescript && svelte-kit sync && knip --no-gitignore --no-exit-code",
+		"audit:knip:production": "pnpm audit:knip --production"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
@@ -30,6 +32,7 @@
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.19.0",
 		"globals": "^17.6.0",
+		"knip": "6.43.0",
 		"playwright": "^1.64.1",
 		"prettier": "^3.8.3",
 		"prettier-plugin-svelte": "^4.1.0",

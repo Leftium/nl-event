@@ -1,0 +1,15 @@
+{
+	"$schema": "https://unpkg.com/knip@6.43.0/schema.json",
+	// SvelteKit/Vitest plugins discover routes and unit tests. These are manual tools.
+	"entry": [
+		"scripts/report-browser-profile.mjs",
+		"tests/*.test.mjs",
+		"tests/browser/profile-data/**/measure.mjs"
+	],
+	// --no-gitignore is required for the generated FFI bridge. Keep its scope bounded.
+	"project": ["src/**/*.{ts,js,svelte}!", "scripts/**/*.mjs", "tests/**/*.{ts,mjs}"],
+	// Suppress compiler-output findings without cutting their import edges.
+	"ignoreIssues": {
+		"src/lib/core/*.{gen.ts,res.js}": ["exports", "types", "files"]
+	}
+}
