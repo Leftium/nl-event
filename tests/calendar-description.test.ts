@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-	addFormIntroduction,
-	composeDescription,
 	formIntroduction,
-	leadingVeneerLink,
 	readMetadata,
 	sheetIdentity,
 	signupSource,
 	setSignupLink,
 	veneerLink,
-	existingVeneerLinks,
 	writeFormIntroduction,
 	trackFormIntroduction
 } from '../src/lib/calendarDescription';
@@ -32,29 +28,27 @@ describe('export description composition', () => {
 	it('reuses an inline Veneer URL and updates or removes it in place', () => {
 		const url = `${veneer}/s.SHEET?tabs=info#form`;
 		const text = `Dance party\nSignup: ${url}\nKeep this text.  `;
-		expect(existingVeneerLinks(text)[0]).toMatchObject({ id: 'f.SYNTHETIC_FORM', veneerUrl: url });
 		expect(setSignupLink(text, url)).toBe(text);
 		expect(setSignupLink(text, `${veneer}/s.OTHER`)).toBe(text.replace(url, `${veneer}/s.OTHER`));
 		expect(setSignupLink(text, undefined, 'f.SYNTHETIC_FORM')).toBe(text.replace(url, ''));
-		expect(existingVeneerLinks(`Ignore https://veneer.leftium.com.evil.example/f.FORM`)).toEqual(
-			[]
-		);
+		const impostor = 'Ignore https://veneer.leftium.com.evil.example/f.FORM';
+		expect(setSignupLink(impostor, undefined, 'f.FORM')).toBe(impostor);
 	});
 	it('keeps source whitespace, Unicode and repeated prose in the agreed order', () => {
 		const original = '  춤 🎵\r\nIntro\n\n ';
-		expect(composeDescription(original, veneer)).toBe(`${veneer}\n\n---\n\n${original}`);
-		expect(composeDescription(original)).toBe(original);
+		expect(setSignupLink(original, veneer)).toBe(`${veneer}\n\n---\n\n${original}`);
+		expect(setSignupLink(original)).toBe(original);
 	});
 	it('adds dividers only between present sections without trimming sources', () => {
-		expect(composeDescription('')).toBe('');
-		expect(composeDescription('', veneer)).toBe(veneer);
-		expect(composeDescription(' ')).toBe(' ');
+		expect(setSignupLink('')).toBe('');
+		expect(setSignupLink('', veneer)).toBe(veneer);
+		expect(setSignupLink(' ')).toBe(' ');
 	});
 	it('recomposes from the working Description without appending extra copies', () => {
-		const first = composeDescription('Original', veneer);
-		expect(composeDescription('Original', veneer)).toBe(first);
-		expect(composeDescription('Original', veneer)).toBe(`${veneer}\n\n---\n\nOriginal`);
-		expect(composeDescription('Edited', veneer)).toBe(`${veneer}\n\n---\n\nEdited`);
+		const first = setSignupLink('Original', veneer);
+		expect(setSignupLink('Original', veneer)).toBe(first);
+		expect(setSignupLink('Original', veneer)).toBe(`${veneer}\n\n---\n\nOriginal`);
+		expect(setSignupLink('Edited', veneer)).toBe(`${veneer}\n\n---\n\nEdited`);
 	});
 	it('preserves valid Veneer URLs and only explicitly replaces a Sheet', () => {
 		const existing = `${veneer}/s.EXISTING?tabs=info#form`;
@@ -72,27 +66,29 @@ describe('export description composition', () => {
 	it('imports Form title and introduction before a link-only input, or after an announcement', () => {
 		const intro = formIntroduction(metadata({ title: 'Form title' }));
 		expect(intro).toBe('Form title\n\nIntro\n\nVenue\nMain hall');
-		expect(addFormIntroduction(form, intro)).toBe(`${intro}\n\n${form}`);
-		expect(addFormIntroduction('Original\n ', intro)).toBe(`Original\n \n\n---\n\n${intro}`);
-		expect(addFormIntroduction('', intro)).toBe(intro);
-		expect(addFormIntroduction('Original', '')).toBe('Original');
-		expect(addFormIntroduction(setSignupLink(form, veneer), intro)).toBe(
+		expect(writeFormIntroduction(form, intro).description).toBe(`${intro}\n\n${form}`);
+		expect(writeFormIntroduction('Original\n ', intro).description).toBe(
+			`Original\n \n\n---\n\n${intro}`
+		);
+		expect(writeFormIntroduction('', intro).description).toBe(intro);
+		expect(formIntroduction(metadata({ title: '', infoText: '' }))).toBe('');
+		expect(writeFormIntroduction(setSignupLink(form, veneer), intro).description).toBe(
 			`${veneer}\n\n---\n\n${intro}\n\n${form}`
 		);
 	});
 	it('adds, replaces, and removes a leading signup link without changing the announcement', () => {
 		const original = '  춤 🎵\r\n\nOriginal  ';
 		const text = setSignupLink(original, veneer);
-		expect(text).toBe(composeDescription(original, veneer));
-		expect(leadingVeneerLink(text)?.id).toBe('f.SYNTHETIC_FORM');
+		expect(text).toBe(`${veneer}\n\n---\n\n${original}`);
 		expect(setSignupLink(text, veneer)).toBe(text);
 		expect(setSignupLink(text)).toBe(original);
 		expect(setSignupLink(text, `${veneer}/s.SHEET`)).toBe(
-			composeDescription(original, `${veneer}/s.SHEET`)
+			`${veneer}/s.SHEET\n\n---\n\n${original}`
 		);
 		expect(setSignupLink(original)).toBe(original);
 		expect(setSignupLink(veneer)).toBe('');
-		expect(leadingVeneerLink('https://veneer.leftium.com.evil.example/f.FORM')).toBeUndefined();
+		const impostor = 'https://veneer.leftium.com.evil.example/f.FORM';
+		expect(setSignupLink(impostor)).toBe(impostor);
 	});
 });
 
@@ -215,7 +211,10 @@ it('changes only normalized description and uses exactly the same text for Googl
 		start: '20261101T100000Z',
 		end: '20261101T110000Z'
 	};
-	const text = composeDescription(addFormIntroduction(original, 'Intro\nBring shoes.'), veneer);
+	const text = setSignupLink(
+		writeFormIntroduction(original, 'Intro\nBring shoes.').description,
+		veneer
+	);
 	const enriched = { ...event, description: text };
 	const google = new URL(Core.googleUrl(enriched));
 	expect(google.searchParams.get('details')).toBe(text);
@@ -229,11 +228,11 @@ it('changes only normalized description and uses exactly the same text for Googl
 	google.searchParams.delete('details');
 	baseGoogle.searchParams.delete('details');
 	const normalizedGoogle = new URL(
-		Core.googleUrl({ ...event, description: composeDescription(original) })
+		Core.googleUrl({ ...event, description: setSignupLink(original) })
 	);
 	expect(normalizedGoogle.href).toBe(Core.googleUrl(event));
 	expect(
-		Core.ics({ ...event, description: composeDescription(original) }, 'same', '20261026T000000Z')
+		Core.ics({ ...event, description: setSignupLink(original) }, 'same', '20261026T000000Z')
 	).toBe(Core.ics(event, 'same', '20261026T000000Z'));
 	expect(google.href).toBe(baseGoogle.href);
 	expect(event.description).toBe(original);
