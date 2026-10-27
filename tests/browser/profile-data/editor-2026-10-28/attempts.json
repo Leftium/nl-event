@@ -1,0 +1,44 @@
+[
+	{
+		"run": "attempt1",
+		"status": "failed",
+		"samples": 0,
+		"reason": "Excluded: warmup assertion targeted All day, which has no source evidence.",
+		"error": "AssertionError [ERR_ASSERTION]: 0 == true\n    at file:///Volumes/p/nl-event/scripts/profile-editor.mjs:102:10\n    at async stage (file:///Volumes/p/nl-event/scripts/profile-editor.mjs:67:3)\n    at async journey (file:///Volumes/p/nl-event/scripts/profile-editor.mjs:99:2)\n    at async file:///Volumes/p/nl-event/scripts/profile-editor.mjs:151:35"
+	},
+	{
+		"run": "attempt2",
+		"status": "failed",
+		"samples": 0,
+		"reason": "Excluded: warmup selector used evidence-proxy instead of source-backed and timed out.",
+		"error": "locator.hover: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#start-time-options button.evidence-proxy').first()\u001b[22m\n\n    at /Volumes/p/nl-event/scripts/profile-editor.mjs:101:14\n    at stage (/Volumes/p/nl-event/scripts/profile-editor.mjs:67:9)\n    at async journey (/Volumes/p/nl-event/scripts/profile-editor.mjs:99:2)\n    at async file:///Volumes/p/nl-event/scripts/profile-editor.mjs:151:35"
+	},
+	{
+		"run": "attempt3",
+		"status": "passed",
+		"samples": 540,
+		"reason": "Diagnostic only: source changed during the run and Vite restarted; no overhead inference.",
+		"error": null
+	},
+	{
+		"run": "final1",
+		"status": "passed",
+		"samples": 660,
+		"reason": "Excluded from final comparisons: empty-loop calibration used the clock-replaced performance.now. Application spans used the captured clock.",
+		"error": null
+	},
+	{
+		"run": "final2",
+		"status": "passed",
+		"samples": 660,
+		"reason": "Excluded from final acceptance: update span size recorded the previous Description length. Counts and timings were independently checked; corrected in final3.",
+		"error": null
+	},
+	{
+		"run": "final3",
+		"status": "passed",
+		"samples": 660,
+		"reason": "Accepted: corrected incoming update size, generated-code/config/lock hashes and dependency versions; stable run passed all modes/engines.",
+		"error": null
+	}
+]

@@ -18,6 +18,8 @@
 		"test:browser:chromium": "rescript && NL_EVENT_BROWSER_ENGINE=chromium node tests/browser-smoke.mjs",
 		"test:browser:webkit": "rescript && NL_EVENT_BROWSER_ENGINE=webkit node tests/browser-smoke.mjs",
 		"test:browser:profile": "node scripts/profile-browser.mjs",
+		"profile:editor": "rescript && node scripts/profile-editor.mjs",
+		"profile:editor:report": "node scripts/report-editor-profile.mjs",
 		"audit:knip": "rescript && svelte-kit sync && knip --no-gitignore --no-exit-code",
 		"audit:knip:production": "pnpm audit:knip --production"
 	},
