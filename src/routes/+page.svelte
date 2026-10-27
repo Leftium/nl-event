@@ -31,7 +31,8 @@
 	let draft = $state(
 		Core.create({ referenceInstant: '2000-01-01T00:00:00Z', browserTimeZone: 'UTC' })
 	);
-	let result = $derived(Core.validate(draft));
+	let projection = $derived(Core.editorProjection(draft));
+	let result = $derived(projection.validation);
 	let links = $derived(groupEquivalentLinks(discoverLinks(draft.description)));
 	let trimOvernight = $state(true);
 	let overnight = $derived(overnightExport(result.event, trimOvernight));
@@ -94,7 +95,7 @@
 		for (const { name } of fields) {
 			if (name === 'start' || name === 'end') {
 				for (const part of ['date', 'time'] as const) {
-					for (const option of Core.temporalOptions(draft, name, part)) {
+					for (const option of projection[name][part]) {
 						const chosen = option.selected && (part !== 'time' || !result.allDay);
 						(chosen ? selected : unselected).push(...(option.evidence ?? []));
 					}
@@ -657,7 +658,7 @@
 				{@const fieldEvidence =
 					name === 'start' || name === 'end'
 						? ['date', 'time'].flatMap((part) =>
-								Core.temporalOptions(draft, name, part as Core.temporalPart).flatMap(
+								projection[name][part as Core.temporalPart].flatMap(
 									(option) => option.evidence ?? []
 								)
 							)
@@ -762,7 +763,7 @@
 						<small class="partial-evidence">{label}</small>
 					{/each}
 					{#if name === 'end'}
-						{@const duration = Core.durationValue(draft)}
+						{@const duration = projection.durationValue}
 						<div class="temporal-options">
 							<small class="part-label">
 								<span class="evidence-label">Duration</span>
@@ -773,7 +774,7 @@
 								{/if}
 							</small>
 							<ul class="suggestions part-options" aria-label="End/Duration duration alternatives">
-								{#each Core.durationOptions(draft) as option (option.amount)}
+								{#each projection.durationOptions as option (option.amount)}
 									<li>
 										<button
 											type="button"
@@ -799,7 +800,7 @@
 					{/if}
 					{#if name === 'start' || name === 'end'}
 						{#each ['date', 'time'] as part (part)}
-							{@const options = Core.temporalOptions(draft, name, part as Core.temporalPart)}
+							{@const options = projection[name][part as Core.temporalPart]}
 							{@const partEvidence = options.flatMap((option) => option.evidence ?? [])}
 							{@const collapsible = part === 'date' && options.length >= 5}
 							{@const visibleOptions =

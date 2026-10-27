@@ -772,9 +772,7 @@ let durationValueFrom = (result: validation) =>
 let durationValue = (draft: draft) => durationValueFrom(validate(draft))
 @genType
 type durationOption = {amount: int, label: string, selected: bool, source: string, custom: bool}
-@genType
-let durationOptions = (draft: draft): array<durationOption> => {
-  let result = validate(draft)
+let durationOptionsFrom = (draft: draft, result: validation): array<durationOption> => {
   let actual = durationValueFrom(result)
   let presets = result.allDay ? [1, 2, 3, 7] : [15, 30, 60, 90, 120, 180, 240]
   let starts = resolve(result.startValue, effectiveZone(draft))
@@ -833,6 +831,8 @@ let durationOptions = (draft: draft): array<durationOption> => {
   })
 }
 @genType
+let durationOptions = (draft: draft) => durationOptionsFrom(draft, validate(draft))
+@genType
 let selectDuration = (draft: draft, amount) => {
   let result = validate(draft)
   if result.startError != "" || !(durationOptions(draft)->Array.some(o => o.amount == amount)) {
@@ -858,8 +858,7 @@ type temporalOption = {
   paired: option<bool>,
   evidence: array<Parser.span>,
 }
-@genType
-let temporalParts = (draft: draft, name): temporalParts => {
+let temporalPartsFrom = (draft: draft, name, result: option<validation>): temporalParts => {
   let evidence = selection(draft, name)
   switch evidence {
   | Some(s)
@@ -869,7 +868,10 @@ let temporalParts = (draft: draft, name): temporalParts => {
       time: s.candidate.time,
     }
   | _ => {
-      let result = validate(draft)
+      let result = switch result {
+      | Some(result) => result
+      | None => validate(draft)
+      }
       let value = name == #start ? result.startValue : result.endValue
       {
         date: Parser.has(value, "^\\d{4}-\\d{2}-\\d{2}") ? Parser.slice(value, 0, 10) : "",
@@ -880,6 +882,8 @@ let temporalParts = (draft: draft, name): temporalParts => {
     }
   }
 }
+@genType
+let temporalParts = (draft: draft, name) => temporalPartsFrom(draft, name, None)
 // Context dates remain selectable without participating in Auto ranking.
 let sourceTemporalCandidates = (draft, name): array<Parser.candidate> =>
   Array.concat(
@@ -961,9 +965,12 @@ let temporalCandidates = (draft: draft, name): array<Parser.candidate> => {
     Array.concat(source, Array.concat(dates, times))
   }
 }
-@genType
-let temporalOptions = (draft: draft, name, part: temporalPart): array<temporalOption> => {
-  let current = temporalParts(draft, name)
+let temporalOptionsFrom = (
+  draft: draft,
+  name,
+  part: temporalPart,
+  current: temporalParts,
+): array<temporalOption> => {
   let options = temporalCandidates(draft, name)
   let values =
     options
@@ -1009,6 +1016,40 @@ let temporalOptions = (draft: draft, name, part: temporalPart): array<temporalOp
         : (part == #date ? c.dateSpans : c.timeSpans)->Option.getOr([]),
     }
   })
+}
+@genType
+let temporalOptions = (draft: draft, name, part: temporalPart) =>
+  temporalOptionsFrom(draft, name, part, temporalParts(draft, name))
+
+@genType
+type temporalProjection = {date: array<temporalOption>, time: array<temporalOption>}
+@genType
+type editorProjection = {
+  validation: validation,
+  start: temporalProjection,
+  end: temporalProjection,
+  durationValue: int,
+  durationOptions: array<durationOption>,
+}
+// Derive validation and its consumers from the same draft/context without a
+// persistent cache. Partial evidence still overrides normalized temporal parts.
+@genType
+let editorProjection = (draft: draft): editorProjection => {
+  let result = validate(draft)
+  let temporal = name => {
+    let current = temporalPartsFrom(draft, name, Some(result))
+    {
+      date: temporalOptionsFrom(draft, name, #date, current),
+      time: temporalOptionsFrom(draft, name, #time, current),
+    }
+  }
+  {
+    validation: result,
+    start: temporal(#start),
+    end: temporal(#end),
+    durationValue: durationValueFrom(result),
+    durationOptions: durationOptionsFrom(draft, result),
+  }
 }
 @genType
 let selectTemporalPart = (draft: draft, name, part: temporalPart, value) => {

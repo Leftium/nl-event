@@ -2,13 +2,18 @@ import ts from 'typescript';
 
 const functions = {
 	'EventCore.res.js': [
+		'editorProjection',
 		'validate',
 		'validateBase',
 		'durationValue',
 		'durationOptions',
+		'durationOptionsFrom',
+		'durationValueFrom',
 		'temporalParts',
+		'temporalPartsFrom',
 		'temporalCandidates',
-		'temporalOptions'
+		'temporalOptions',
+		'temporalOptionsFrom'
 	],
 	'TimeInput.res.js': ['interpret'],
 	'Parser.res.js': ['parse'],
@@ -28,16 +33,16 @@ export function editorProfilePlugin() {
 			const filename = id.split('/').at(-1);
 			if (filename === '+page.svelte' && id.endsWith('/src/routes/+page.svelte')) {
 				const calls = [
-					['validation', 'Core.validate(draft)'],
-					['highlights', 'Core.temporalOptions(draft, name, part)'],
-					['labels', 'Core.temporalOptions(draft, name, part as Core.temporalPart)'],
-					['durationValue', 'Core.durationValue(draft)'],
-					['durationOptions', 'Core.durationOptions(draft)']
+					['editor', 'Core.editorProjection(draft)'],
+					['highlights', 'projection[name][part]'],
+					['labels', 'projection[name][part as Core.temporalPart]'],
+					['durationValue', 'projection.durationValue'],
+					['durationOptions', 'projection.durationOptions']
 				];
 				// The two typed temporal call sites have identical expressions, in document order.
 				let temporalSite = 0;
 				source = source.replaceAll(
-					'Core.temporalOptions(draft, name, part as Core.temporalPart)',
+					'projection[name][part as Core.temporalPart]',
 					(call) =>
 						`__profile.measure('projection.${temporalSite++ === 0 ? 'labels' : 'chips'}', () => ${call})`
 				);

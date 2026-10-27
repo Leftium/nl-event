@@ -1,0 +1,20 @@
+✔ default and explicit full selection preserve engine order (23.706875ms)
+✔ each engine can be selected without the other (0.076125ms)
+✔ invalid selectors fail in both entry points before server or compiler work (874.706ms)
+✔ normal runs return the original promise without timing hooks or a new async boundary (0.442542ms)
+✔ uncovered time subtracts the union of overlapping children, not their sum (0.16925ms)
+✔ failure and unfinished spans survive a truncated final record (0.13ms)
+✔ async spans retain fixture ancestry and uncaught errors finalize open scopes (25.115917ms)
+✔ launcher appends after child writes and refuses to overwrite an existing report (545.733416ms)
+✔ nested costs, return values, throwing calls, disabled mode and clock binding (1.07925ms)
+✔ profiling transform is absent by default and from build configuration (0.446209ms)
+✔ transform preserves segmentation, node creation and replacement nesting (3.874833ms)
+✔ real editor projection and generated helper anchors remain instrumented (186.941167ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 931.458375
