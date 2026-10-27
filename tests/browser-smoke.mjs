@@ -2080,6 +2080,14 @@ async function checkMapLocations(page) {
 
 async function checkSelectionActions(page, { touch = false } = {}) {
 	const textarea = page.locator('#description');
+	// Prepare selection text through the real immediate input path. The clipboard
+	// toolbar replaces the whole draft and would reset the Manual fields under test.
+	const pasteDescription = (value) =>
+		textarea.evaluate((node, value) => {
+			node.focus();
+			node.value = value;
+			node.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste' }));
+		}, value);
 	const selected = ' 한글🙂 venue ';
 	const text = `Title: Original\nTomorrow at 7pm\nLocation: The Hall\n[${selected}]`;
 	const activate = (action) => (touch ? action.tap() : action.click());
@@ -2099,7 +2107,7 @@ async function checkSelectionActions(page, { touch = false } = {}) {
 		for (const fullscreen of [false, true]) {
 			for (const method of touch ? ['touch'] : ['mouse', 'keyboard']) {
 				await page.getByRole('button', { name: 'Reset', exact: true }).click();
-				await textarea.fill(text);
+				await pasteDescription(text);
 				await waitParsed();
 				const before = await Promise.all(
 					['title', 'start', 'end', 'location'].map((name) => page.locator(`#${name}`).inputValue())
@@ -2150,7 +2158,11 @@ async function checkSelectionActions(page, { touch = false } = {}) {
 						name !== field
 					);
 				}
-				await textarea.fill(text.replace('The Hall', 'New Hall'));
+				// Retain ordinary debounced edits for both Manual fields in every
+				// engine/mode; the other activation permutations only need a reparse.
+				const replacement = text.replace('The Hall', 'New Hall');
+				if (!fullscreen && method === (touch ? 'touch' : 'mouse')) await textarea.fill(replacement);
+				else await pasteDescription(replacement);
 				await waitParsed();
 				assert.equal(await page.locator(`#${field}`).inputValue(), selected);
 				await page
@@ -2168,7 +2180,7 @@ async function checkSelectionActions(page, { touch = false } = {}) {
 	}
 	// Both actions reject a cached range whose DOM offsets drift before select fires.
 	for (const field of ['Title', 'Location']) {
-		await textarea.fill(text);
+		await pasteDescription(text);
 		await waitParsed();
 		await capture();
 		await page
@@ -2184,7 +2196,7 @@ async function checkSelectionActions(page, { touch = false } = {}) {
 		);
 	}
 	for (const replacement of ['edit', 'reset', 'clipboard']) {
-		await textarea.fill(text);
+		await pasteDescription(text);
 		await waitParsed();
 		await capture();
 		if (replacement === 'edit') await textarea.fill('Changed Description');

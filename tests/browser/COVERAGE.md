@@ -106,3 +106,11 @@ permission, live Form-service or saved Google Calendar-event proof is added.
 See [the retirement measurements](FIXTURE-RETIREMENT.md) for comparable full-run
 wall times, engine times, counts and verification. The under-60-second routine
 browser target remains separate follow-up work.
+
+## Selection setup timing
+
+[PR #49's setup measurements and retained timing contracts](SELECTION-SETUP.md)
+cover the immediate paste-input preparation in `checkSelectionActions`. Its
+activation matrix and all assertions remain. Ordinary debounced Manual-field
+reparses remain for both fields in every engine/mode; the remaining preparation
+uses the real immediate input handler without whole-draft clipboard replacement.

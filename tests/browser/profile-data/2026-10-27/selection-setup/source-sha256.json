@@ -1,0 +1,37 @@
+{
+	"baselineCommit": "d68e0f128e014f39dc54951d92783e7080b63c5c",
+	"files": {
+		"tests/browser-smoke.mjs": {
+			"before": "4fc0b8b93ecf83729643d2fd033af77900d3485a2ead886814dfddbe65b6b544",
+			"after": "db718f645227ad2432031bc3682f694b4a1c82fe42374f5006f4c79cb9ba64da"
+		},
+		"tests/browser-profile.mjs": {
+			"before": "712df3aa0c3e6499f7814c571c426928982c652e068bdf23966e9aae7288e308",
+			"after": "712df3aa0c3e6499f7814c571c426928982c652e068bdf23966e9aae7288e308"
+		},
+		"scripts/profile-browser.mjs": {
+			"before": "a15d238b7a8f7ec95f74b687cd89433a66d902fea8a32a329f465f6d8ae67944",
+			"after": "a15d238b7a8f7ec95f74b687cd89433a66d902fea8a32a329f465f6d8ae67944"
+		},
+		"scripts/report-browser-profile.mjs": {
+			"before": "846403c0c2007b75856fd1755e382b28c7b31cffefa9dba234d23503e63b0277",
+			"after": "846403c0c2007b75856fd1755e382b28c7b31cffefa9dba234d23503e63b0277"
+		},
+		"tests/overnight-export.browser.mjs": {
+			"before": "ac56812810d7183ca1c85bd89a3f0660074c4e1bc32da5c8e3b68c6c64eaf111",
+			"after": "ac56812810d7183ca1c85bd89a3f0660074c4e1bc32da5c8e3b68c6c64eaf111"
+		},
+		"tests/spaced-clock.browser.mjs": {
+			"before": "6475aea946f648a0f1c67d3364ac257e2aa63a803700fdc379764b2599c52dc8",
+			"after": "6475aea946f648a0f1c67d3364ac257e2aa63a803700fdc379764b2599c52dc8"
+		},
+		"tests/announcement-links.browser.mjs": {
+			"before": "f51356e0c5703195ca516afe62b11d64466c97c765154fa813a6869ac35fd130",
+			"after": "f51356e0c5703195ca516afe62b11d64466c97c765154fa813a6869ac35fd130"
+		},
+		"tests/calendar-description.browser.mjs": {
+			"before": "fe6e5698c2b487915566e97a0e505ead802a91c69eaf12a8ffb2bee9e0d7eb23",
+			"after": "fe6e5698c2b487915566e97a0e505ead802a91c69eaf12a8ffb2bee9e0d7eb23"
+		}
+	}
+}
