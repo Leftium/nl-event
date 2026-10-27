@@ -197,8 +197,13 @@ export async function checkDescriptionReviewRegressions(page, touch = false) {
 				status: 'ok',
 				type: 'form',
 				documentId: isFirst ? 'f.REVIEW_FIRST' : 'f.REVIEW_SECOND',
-				title: isFirst ? 'First Form' : 'Second Form',
-				infoText: isFirst ? `Introduction version ${version}` : 'Second introduction',
+				title: isFirst && version === 4 ? '' : isFirst ? 'First Form' : 'Second Form',
+				infoText:
+					isFirst && version === 4
+						? ''
+						: isFirst
+							? `Introduction version ${version}`
+							: 'Second introduction',
 				autoSheets: [],
 				autoSheetsStatus: 'complete'
 			})
@@ -286,6 +291,20 @@ export async function checkDescriptionReviewRegressions(page, touch = false) {
 			await description.inputValue(),
 			initial.replace('Introduction version 1', 'Introduction version 3')
 		);
+		const beforeEmpty = await description.inputValue();
+		await open(first);
+		version = 4;
+		await activate(details.getByRole('button', { name: 'Refresh', exact: true }));
+		await details.getByRole('button', { name: 'Refresh', exact: true }).waitFor();
+		assert.equal(
+			await details
+				.getByRole('button', {
+					name: /^(Add to description|Update description|Review replacement|Already added)$/
+				})
+				.count(),
+			0
+		);
+		assert.equal(await description.inputValue(), beforeEmpty);
 	} finally {
 		await page.unroute('**/api/form-meta?*', routeHandler);
 		await reset();

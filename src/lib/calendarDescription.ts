@@ -81,7 +81,7 @@ export function veneerLink(source?: SignupSource, sheetOverride?: string): strin
 }
 
 /** Preserve each source verbatim, including repeated prose and trailing whitespace. */
-export function composeDescription(original: string, veneer?: string): string {
+function composeDescription(original: string, veneer?: string): string {
 	return [veneer, original]
 		.filter((section) => section != null && section !== '')
 		.join('\n\n---\n\n');
@@ -93,9 +93,7 @@ export function formIntroduction(metadata: FormMetadata): string {
 		.join('\n\n');
 }
 
-export function leadingVeneerLink(
-	description: string
-): (SignupSource & { length: number }) | undefined {
+function leadingVeneerLink(description: string): (SignupSource & { length: number }) | undefined {
 	const match = description.match(/^\s*(https:\/\/veneer\.leftium\.com\/\S+)[ \t]*(?:\r?\n|$)/i);
 	const source = match && signupSource(match[1]);
 	return source ? { ...source, length: match![0].length } : undefined;
@@ -107,7 +105,7 @@ function withoutLeadingVeneer(description: string): string {
 	return description.slice(leading.length).replace(/^\r?\n---\r?\n\r?\n|^\r?\n/, '');
 }
 
-export function existingVeneerLinks(description: string) {
+function existingVeneerLinks(description: string) {
 	return find(description, 'url').flatMap((match) => {
 		const source = signupSource(match.href);
 		return source && new URL(match.href).origin === VENEER_ORIGIN
@@ -135,12 +133,6 @@ export function setSignupLink(description: string, url?: string, id?: string): s
 		} else text = text.slice(0, link.start) + text.slice(link.end);
 	}
 	return text;
-}
-
-/** A link-only draft needs the imported title before its URL to provide title evidence. */
-export function addFormIntroduction(original: string, introduction: string): string {
-	if (!introduction) return original;
-	return writeFormIntroduction(original, introduction).description;
 }
 
 export type FormIntroductionSection = { start: number; end: number; text: string };
