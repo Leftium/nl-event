@@ -1,0 +1,13 @@
+$ rescript && vitest run
+Cleaned 0/3
+Parsed 0 source files
+Compiled 0 modules
+
+ RUN  v5.0.5 /Volumes/p/nl-event
+
+
+ Test Files  12 passed (12)
+      Tests  573 passed (573)
+   Start at  22:43:57
+   Duration  1.56s (import 52%, tests 42%, transform 6%, worker 1%)
+

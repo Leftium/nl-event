@@ -1,0 +1,60 @@
+{
+	"label": "after-2",
+	"wallSeconds": 100.50791975000175,
+	"exitCode": 0,
+	"engines": {
+		"chromium": 53.019493,
+		"webkit": 47.143287
+	},
+	"selectionSeconds": 7.415098,
+	"selectionByMode": {
+		"chromium/desktop": 2.318604,
+		"chromium/touch": 1.797804,
+		"webkit/desktop": 1.949525,
+		"webkit/touch": 1.349165
+	},
+	"parseWaits": {
+		"count": 156,
+		"seconds": 23.701409
+	},
+	"selectionParseWaits": {
+		"count": 68,
+		"seconds": 2.678666
+	},
+	"selectionWaitsByMode": {
+		"chromium/desktop": {
+			"count": 21,
+			"seconds": 0.592639
+		},
+		"chromium/touch": {
+			"count": 13,
+			"seconds": 0.569059
+		},
+		"webkit/desktop": {
+			"count": 21,
+			"seconds": 0.82166
+		},
+		"webkit/touch": {
+			"count": 13,
+			"seconds": 0.695308
+		}
+	},
+	"counts": {
+		"compile": 1,
+		"startup": 2,
+		"setup": 24,
+		"navigation": 12,
+		"wait": 676,
+		"action": 1410,
+		"teardown": 12,
+		"scenario": 104,
+		"screenshot": 32,
+		"fixture": 6,
+		"mode": 4,
+		"engine": 2,
+		"runner": 1,
+		"command": 1
+	},
+	"failures": [],
+	"unfinished": []
+}
