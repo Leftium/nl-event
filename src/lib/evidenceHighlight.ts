@@ -34,7 +34,7 @@ export function evidenceSegments(
 	return segments;
 }
 
-export type EvidenceKind = 'hovered' | 'selected' | 'unselected';
+type EvidenceKind = 'hovered' | 'selected' | 'unselected';
 export type EvidenceLayer = { kind: EvidenceKind; ranges: readonly EvidenceRange[] };
 
 /** Preserve selection state and transient preview independently on overlapping evidence. */
