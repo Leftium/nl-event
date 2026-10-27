@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { discoverLinks, groupEquivalentLinks, primarySignup } from '../src/lib/announcementLinks';
+import { discoverLinks, groupEquivalentLinks } from '../src/lib/announcementLinks';
 
 const form = 'https://docs.google.com/forms/d/e/SYNTHETIC_FORM/viewform';
 const sheet = 'https://docs.google.com/spreadsheets/d/SYNTHETIC_SHEET/edit';
@@ -37,7 +37,6 @@ it('discovers every URL in source order with Korean role hints and exact offsets
 	expect(links.map((link) => link.kind)).toEqual(['Form', 'Sheet', 'Map']);
 	expect(links.map((link) => link.roles)).toEqual([['Signup'], ['Confirmation'], ['Location']]);
 	for (const link of links) expect(source.slice(link.start, link.end)).toBe(link.source);
-	expect(primarySignup(links)).toBe(links[0].identity);
 });
 
 it('deduplicates normalized URLs and escaped ampersands without rewriting the source', () => {
@@ -73,7 +72,6 @@ it('recognizes Veneer document IDs without duplicating embedded links', () => {
 		[false, true],
 		[false, false]
 	]);
-	expect(primarySignup(links)).toBe(links[0].identity);
 });
 
 it('groups map services locally and retains unrelated URLs', () => {
@@ -84,27 +82,30 @@ it('groups map services locally and retains unrelated URLs', () => {
 	expect(discoverLinks('No URLs here. Contact synthetic@example.com')).toEqual([]);
 });
 
-it('requires a choice for ambiguous Forms and preserves an explicit choice through reorder', () => {
-	const links = discoverLinks(`${form}\nhttps://forms.gle/SECOND_SYNTHETIC`);
-	expect(primarySignup(links)).toBeUndefined();
-	expect(primarySignup([...links].reverse(), links[1].identity)).toBe(links[1].identity);
-	expect(primarySignup(links, null)).toBeUndefined();
-	expect(primarySignup(discoverLinks(sheet), links[1].identity)).toBeUndefined();
-	expect(primarySignup(discoverLinks(''), links[1].identity)).toBeUndefined();
+it('retains distinct signup links and their identities in source order', () => {
+	const second = 'https://forms.gle/SECOND_SYNTHETIC';
+	const links = groupEquivalentLinks(discoverLinks(`${form}\n${second}`));
+	expect(links.map((link) => link.identity)).toEqual([
+		'signup:f.SYNTHETIC_FORM',
+		'signup:g.SECOND_SYNTHETIC'
+	]);
+	expect(
+		groupEquivalentLinks(discoverLinks(`${second}\n${form}`)).map((link) => link.identity)
+	).toEqual(['signup:g.SECOND_SYNTHETIC', 'signup:f.SYNTHETIC_FORM']);
 });
 
-it('does not guess between a Form and an explicitly labelled opaque signup link', () => {
+it('retains a Form and a labelled opaque signup link as distinct choices', () => {
 	const links = discoverLinks(`${form}\nRegister: https://url.kr/SYNTHETIC`);
-	expect(primarySignup(links)).toBeUndefined();
-	expect(primarySignup(links, links[1].identity)).toBe(links[1].identity);
-	expect(links[1].form).toBe(false);
+	expect(links.map((link) => link.identity)).toEqual([form, 'https://url.kr/SYNTHETIC']);
+	expect(links.map((link) => link.roles)).toEqual([[], ['Signup']]);
+	expect(links.map((link) => link.form)).toEqual([true, false]);
 });
 
 it('combines weak hints from duplicate occurrences without changing first-occurrence order', () => {
 	const links = discoverLinks(`${form}\nRegistration: ${form}\n${sheet}`);
 	expect(links).toHaveLength(2);
 	expect(links[0].roles).toEqual(['Signup']);
-	expect(primarySignup([...links].reverse())).toBe(links[0].identity);
+	expect(links.map((link) => link.identity)).toEqual([form, sheet]);
 });
 
 it.each([
