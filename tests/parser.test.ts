@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import * as Core from '../src/lib/core/EventCore.gen';
+import { discoverLinks } from '../src/lib/announcementLinks';
 import { overnightExport } from '../src/lib/core/overnightExport';
 
 const context = { referenceInstant: '2026-10-24T03:00:00Z', browserTimeZone: 'Asia/Seoul' };
@@ -923,6 +924,79 @@ describe('address-first labeled locations', () => {
 		}
 		expect(Core.extract(draft).candidates).toEqual(draft.suggestions.candidates);
 	});
+	it.each(['\n', '\r\n'])(
+		'keeps repeated decorated emoji venue and address evidence through map trimming (%j)',
+		(newline) => {
+			const venue = '피스타🙂 Hall';
+			const address = '서울 마포구 와우산로29길 27';
+			const text = [
+				'🙂 한글 provenance',
+				'Tomorrow at 7pm',
+				`## **장소**: ~ **${venue}**`,
+				'  ',
+				`${address} (B1) https://naver.me/example`,
+				`Venue: **${venue}**; ${address} (Suite 2) https://maps.google.com/?q=Hall`
+			].join(newline);
+			const draft = parse(text);
+			const candidates = Core.alternatives(draft, 'location');
+			expect(candidates.map((c) => c.value)).toEqual([address, venue]);
+			for (const [index, candidate] of candidates.entries()) {
+				const first = text.indexOf(candidate.value);
+				const last = text.lastIndexOf(candidate.value);
+				expect(candidate).toMatchObject({
+					rank: index === 0 ? 220 : 200,
+					label: index === 0 ? 'Address' : 'Venue',
+					groups: ['overall'],
+					inferred: [],
+					spans: [
+						{ start: first, end: first + candidate.value.length },
+						{ start: last, end: last + candidate.value.length }
+					]
+				});
+				expect(candidate.spans.map((s) => text.slice(s.start, s.end))).toEqual([
+					candidate.value,
+					candidate.value
+				]);
+			}
+			expect(draft.description).toBe(text);
+			const event = Core.validate(draft).event!;
+			expect(new URL(Core.googleUrl(event)).searchParams.get('location')).toBe(address);
+			expect(new URL(Core.googleUrl(event)).searchParams.get('details')).toBe(text);
+			expect(
+				Core.ics(event, 'lexical-location', '20261024T030000Z').replace(/\r\n /g, '')
+			).toContain(`LOCATION:${address}\r\n`);
+		}
+	);
+	it.each([
+		['https://map.naver.com/p/entry/place/123', true, 'Map'],
+		['http://naver.me/example', true, 'Map'],
+		['https://map.kakao.com/link/map/123', true, 'Map'],
+		['https://kko.kakao.com/example', true, 'Other'],
+		['https://maps.google.com/?q=Hall', true, 'Map'],
+		['https://google.com/maps', true, 'Map'],
+		['https://www.google.com/maps/place/Hall', true, 'Map'],
+		['https://maps.app.goo.gl/example', true, 'Map'],
+		['https://kko.to/example', false, 'Map'],
+		['https://goo.gl/maps/example', false, 'Map'],
+		['https://google.co.kr/maps/place/Hall', false, 'Map'],
+		['https://www.google.co.kr/maps/place/Hall', false, 'Map'],
+		['https://google.com/mapslookalike', false, 'Other'],
+		['https://map.naver.com.evil.example/place/123', false, 'Other'],
+		['https://maps.app.goo.gl.evil.example/place/123', false, 'Other'],
+		['https://example.com/maps', false, 'Other']
+	] as const)(
+		'preserves distinct parser and link-chip map recognition for %s',
+		(url, stripped, kind) => {
+			const text = `🙂 한글\r\n장소: **피스타🙂** ${url}`;
+			const draft = parse(text);
+			expect(values(draft, 'location')).toEqual(stripped ? ['피스타🙂'] : []);
+			expect(discoverLinks(text).map((link) => link.kind)).toEqual([kind]);
+			expect(draft.description).toBe(text);
+			expect(values(parse(`장소: ${url}`), 'location')).toEqual([]);
+			expect(values(parse(`장소: 피스타 ${url} 추가 안내`), 'location')).toEqual([]);
+			expect(values(parse(`장소: ${url} 피스타`), 'location')).toEqual([]);
+		}
+	);
 	it('keeps Manual Location through reparses and restores the latest address on Auto', () => {
 		let draft = parse(announcement);
 		const venue = Core.alternatives(draft, 'location').find((c) => c.value === '피스타')!;

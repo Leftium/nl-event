@@ -30,7 +30,7 @@ type output = {
   zoneWarning: string,
   warnings: array<string>,
 }
-type lexical = {text: string, groups: array<string>, start: int, end: int}
+type lexical = LocationLex.lexical
 type parts = {year: int, month: int, day: int, weekday: int}
 @module("./primitives.ts") external matches: (string, string) => array<lexical> = "matches"
 @module("./primitives.ts") external slice: (string, int, int) => string = "slice"
@@ -387,20 +387,6 @@ let sectionLine = (line: lexical): lexical =>
     }
   }
 
-// Keep lexical offsets while removing presentation only at the edges.
-let locationContent = (line: lexical): lexical => {
-  let leading = matches(line.text, "^[\\s~*#>•·✓✔☑✅-]+")->Array.get(0)
-  let start = leading->Option.map(m => m.end)->Option.getOr(0)
-  let rest = slice(line.text, start, String.length(line.text))
-  let trailing = matches(rest, "[\\s*~]+$")->Array.get(0)
-  let end = trailing->Option.map(m => m.start)->Option.getOr(String.length(rest))
-  {text: slice(rest, 0, end), groups: [], start: line.start + start, end: line.start + start + end}
-}
-let locationLabel = (line: lexical) =>
-  matches(
-    line.text,
-    "^(?:(?:장소|주소|위치|Location|Venue)(?:\\*{1,2})?(?:\\s*[:：]\\s*|\\s+|$)|📍\\s*)(.*)$",
-  )->Array.get(0)
 let locationSectionBoundary = text =>
   has(
     text,
@@ -411,20 +397,6 @@ let locationBoundary = text =>
     text,
     "^(?:(?:기간|날짜|시간|일시|제목|신청|등록|마감|회비|비용|문의|연락처|준비물|Date|Time|When|Title|Registration|Deadline|Fee|Cost|Contact|Tickets?|Price|Admission|https?)(?:\\s|[:：]|$)|[♥❤])|https?://|www\\.|@|\\d+\\s*(?:시|원|번\\s*출구)|(?:역\\s*\\d*\\s*번?\\s*출구)|\\b(?:directions?|exit\\s+\\d+|walk(?:ing)?\\s+\\d+\\s*(?:minutes?|mins?)|(?:walk|turn)\\s+(?:left|right|straight|towards?|for|to|from)|(?:subway|station)\\s+(?:exit|directions?))\\b|^(?:Take\\s+(?:the\\s+)?(?:subway|train|bus)|(?:subway|station|exit)\\s*[:：])|(?:역에서|에서\\s*도보|도보\\s*\\d+\\s*분|(?:좌|우)회전)|^(?:B\\d+|지하\\s*\\d+층|\\d+층)(?:\\s|$)",
   )
-let locationAddresses = text =>
-  matches(
-    text,
-    "(?:(?:서울|부산|대구|인천|광주|대전|울산|세종|제주|[가-힣]+(?:특별시|광역시|도|시|군|구))\\s+)*[가-힣0-9]+(?:동|읍|면|리|로\\d*길|로|길)\\s+(?:산\\s*)?\\d+(?:-\\d+)?(?:번지)?(?![\\d가-힣-])|\\b\\d+[A-Za-z]?\\s+(?:[A-Za-z0-9.'-]+\\s+){1,5}(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct)\\b\\.?",
-  )
-let locationVenue = (line: lexical): lexical => {
-  let annotation =
-    matches(
-      line.text,
-      "\\s*(?:\\((?:B\\d+|지하[^)]*|\\d+\\s*(?:층|F)|(?:floor|unit|suite)[^)]*)\\)|(?:지하\\s*)?\\d+\\s*층|\\d+호|\\b(?:floor|unit|suite)\\b|[가-힣]+역\\s*\\d+\\s*번?\\s*출구)",
-    )->Array.get(0)
-  let end = annotation->Option.map(m => m.start)->Option.getOr(String.length(line.text))
-  locationContent({...line, text: slice(line.text, 0, end), end: line.start + end})
-}
 let credibleVenue = text =>
   text != "" &&
   String.length(text) <= 100 &&
@@ -876,7 +848,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     | None =>
       if (
         index == headingIndex.contents &&
-        locationLabel(locationContent(line))->Option.isNone &&
+        LocationLex.label(LocationLex.content(line))->Option.isNone &&
         !has(
           line.text,
           "^(?:날짜|시간|일시|When|All day|Time zone|Location|장소|주소)[:： ]|^📍",
@@ -903,19 +875,10 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     }
   })
   let addLocation = (line: lexical, venueAllowed, fallbackRank) => {
-    let map =
-      matches(
-        line.text,
-        "\\s+https?://(?:map\\.naver\\.com|naver\\.me|map\\.kakao\\.com|kko\\.kakao\\.com|maps\\.google\\.com|(?:www\\.)?google\\.com/maps|maps\\.app\\.goo\\.gl)(?:[/?#]\\S*)?\\s*$",
-      )->Array.get(0)
-    let line = switch map {
-    | None => line
-    | Some(m) =>
-      locationContent({...line, text: slice(line.text, 0, m.start), end: line.start + m.start})
-    }
-    let addresses = locationAddresses(line.text)->Array.filter(address => {
+    let line = LocationLex.withoutTrailingMap(line)
+    let addresses = LocationLex.addresses(line.text)->Array.filter(address => {
       // Address-shaped text inside a directions/contact/prose line is not location evidence.
-      let prefix = locationContent({...line, text: slice(line.text, 0, address.start)})
+      let prefix = LocationLex.content({...line, text: slice(line.text, 0, address.start)})
       prefix.text == "" || credibleVenue(prefix.text)
     })
     addresses->Array.forEach(address =>
@@ -934,18 +897,7 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     )
     let venueEnd =
       addresses->Array.get(0)->Option.map(m => m.start)->Option.getOr(String.length(line.text))
-    let venue = locationVenue({
-      ...line,
-      text: slice(line.text, 0, venueEnd),
-      end: line.start + venueEnd,
-    })
-    // A separating comma belongs to neither the venue nor address evidence.
-    let separator = matches(venue.text, "[,;]\\s*$")->Array.get(0)
-    let venue = switch separator {
-    | None => venue
-    | Some(m) =>
-      locationContent({...venue, text: slice(venue.text, 0, m.start), end: venue.start + m.start})
-    }
+    let venue = LocationLex.venueBefore(line, venueEnd)
     let acceptedVenue = venueAllowed && credibleVenue(venue.text)
     if acceptedVenue {
       add(
@@ -964,11 +916,10 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
     (Array.length(addresses) > 0, acceptedVenue)
   }
   lines->Array.forEachWithIndex((source, index) => {
-    let line = locationContent(source)
-    switch locationLabel(line) {
+    let line = LocationLex.content(source)
+    switch LocationLex.label(line) {
     | Some(label) => {
-        let offset = String.length(label.text) - String.length(group(label, 1))
-        let value = locationContent({...line, text: group(label, 1), start: line.start + offset})
+        let value = LocationLex.labelContent(line, label)
         let (address, venue) = value.text == "" ? (false, false) : addLocation(value, true, 200)
         // An inline venue starts the same bounded block as a standalone header.
         // A complete address or invalid inline value must not consume neighboring lines.
@@ -977,11 +928,11 @@ let parse = (text, referenceInstant, browserZone, override: option<string>): out
         let consumed = ref(value.text == "" ? 0 : 1)
         lines->Array.forEachWithIndex((next, nextIndex) => {
           if active.contents && nextIndex > index {
-            let content = locationContent(next)
+            let content = LocationLex.content(next)
             if content.text != "" {
               if (
                 consumed.contents >= 2 ||
-                locationLabel(content)->Option.isSome ||
+                LocationLex.label(content)->Option.isSome ||
                 locationSectionBoundary(content.text)
               ) {
                 active := false
