@@ -19,23 +19,23 @@ const event = (
 const unfold = (text: string) => text.replace(/\r\n /g, '');
 
 describe('overnight export', () => {
-	it('defaults to exclusive next-day midnight and preserves every other field and original byte', () => {
+	it('defaults to the original start and preserves every other field and original byte', () => {
 		const original = event();
 		const snapshot = structuredClone(original);
 		const output = overnightExport(original);
 		expect(output.eligible).toBe(true);
 		expect(output.event).toEqual({
 			...original,
-			end: '20261030T150000Z',
+			end: original.start,
 			description: `${original.description}\n\n---\n\nActual end: Oct 31, 2026, 02:00 (Asia/Seoul; next day)`
 		});
 		expect(original).toEqual(snapshot);
-		expect(output.calendarEnd).toBe('Oct 31, 00:00');
+		expect(output.calendarEnd).toBe('Oct 30, 21:00');
 		expect(overnightExport(output.event).event).toBe(output.event);
 	});
-	it('leaves explicitly unchecked exports byte identical, including UID and stamp', () => {
+	it('leaves explicitly opted-in exports byte identical, including UID and stamp', () => {
 		const original = event();
-		const output = overnightExport(original, false);
+		const output = overnightExport(original, true);
 		expect(output.eligible).toBe(true);
 		expect(output.event).toBe(original);
 		expect(Core.googleUrl(output.event!)).toBe(Core.googleUrl(original));
@@ -46,7 +46,7 @@ describe('overnight export', () => {
 	it('uses the same Google and ICS interval and description and supports the empty-description fallback', () => {
 		for (const original of [event(), event('2026-10-30 21:00', '2026-11-01 06:00')]) {
 			for (const enabled of [true, false]) {
-				const output = overnightExport(original, enabled).event!;
+				const output = overnightExport(original, !enabled).event!;
 				if (!enabled) {
 					expect(Core.googleUrl(output)).toBe(Core.googleUrl(original));
 					expect(Core.ics(output, 'uid@nl-event', '20260101T000000Z')).toBe(
@@ -55,11 +55,15 @@ describe('overnight export', () => {
 				}
 				const query = new URL(Core.googleUrl(output)).searchParams;
 				const ics = unfold(Core.ics(output, 'uid@nl-event', '20260101T000000Z'));
+				if (output.start === output.end) {
+					expect(ics).not.toContain('DTEND');
+					expect(ics).not.toContain('DURATION');
+				}
 				expect(query.get('dates')).toBe(`${output.start}/${output.end}`);
 				expect(query.get('details')).toBe(output.description);
 				for (const line of [
 					`DTSTART:${output.start}`,
-					`DTEND:${output.end}`,
+					...(output.start === output.end ? [] : [`DTEND:${output.end}`]),
 					'UID:uid@nl-event',
 					'DTSTAMP:20260101T000000Z'
 				])
@@ -85,12 +89,12 @@ describe('overnight export', () => {
 		const next = event('2026-10-30 21:00', '2026-10-31 03:00');
 		expect(overnightExport(next).event!.description).toContain('03:00');
 		expect(overnightExport(next).event!.description.match(/Actual end:/g)).toHaveLength(1);
-		expect(overnightExport(next, false).event!.description).toBe(next.description);
+		expect(overnightExport(next, true).event!.description).toBe(next.description);
 	});
-	it('keeps one minute for a very late start', () => {
+	it('collapses a very late start', () => {
 		const output = overnightExport(event('2026-10-30 23:59'));
 		expect(output.event!.start).toBe('20261030T145900Z');
-		expect(output.event!.end).toBe('20261030T150000Z');
+		expect(output.event!.end).toBe('20261030T145900Z');
 	});
 	it('ignores all-day, same-day, exact-midnight, invalid and reversed intervals', () => {
 		for (const original of [
@@ -107,8 +111,8 @@ describe('overnight export', () => {
 	});
 	it('uses the event zone across spring and autumn DST changes', () => {
 		for (const [start, end, cutoff] of [
-			['2026-03-07 21:00', '2026-03-08 04:00', '20260308T050000Z'],
-			['2026-10-31 21:00', '2026-11-01 04:00', '20261101T040000Z']
+			['2026-03-07 21:00', '2026-03-08 04:00', '20260308T020000Z'],
+			['2026-10-31 21:00', '2026-11-01 04:00', '20261101T010000Z']
 		]) {
 			expect(overnightExport(event(start, end, 'America/New_York')).event!.end).toBe(cutoff);
 		}
@@ -130,7 +134,11 @@ describe('overnight export', () => {
 			expect(result.eligible).toBe(eligible);
 			if (eligible) {
 				expect(result.event!.start).toBe(input.start);
-				expect(result.event!.end).toBe(resolve(`${date} 00:00`, input.zone).choices[0].instant);
+				expect(result.event!.end).toBe(
+					date === '2026-10-31'
+						? input.start
+						: resolve(`${date} 00:00`, input.zone).choices[0].instant
+				);
 				expect(input.end).toBe(original.end);
 			} else expect(result.event).toBe(input);
 		}
@@ -171,10 +179,21 @@ describe('overnight export', () => {
 		expect(draft).toEqual(snapshot);
 		expect(Core.validate(draft).event!.end).toBe('20261031T210000Z');
 	});
-	it('visibly declines nonexistent and ambiguous local midnight', () => {
+	it('collapses single-night events even when local midnight is absent or ambiguous', () => {
 		for (const [start, end, zone] of [
 			['2018-11-03 21:00', '2018-11-04 03:00', 'America/Sao_Paulo'],
 			['2020-10-31 21:00', '2020-11-01 03:00', 'America/Havana'],
+			['2026-12-31 23:00', '2027-01-01 03:00', 'Asia/Seoul']
+		]) {
+			const original = event(start, end, zone);
+			const output = overnightExport(original);
+			expect(output.eligible).toBe(true);
+			expect(output.event!.end).toBe(original.start);
+			expect(output.warning).toBeUndefined();
+		}
+	});
+	it('visibly declines nonexistent and ambiguous local midnight', () => {
+		for (const [start, end, zone] of [
 			['2018-11-02 21:00', '2018-11-04 03:00', 'America/Sao_Paulo'],
 			['2020-10-30 21:00', '2020-11-01 03:00', 'America/Havana']
 		]) {

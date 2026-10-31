@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 export async function checkOvernightExport(page, touch = false) {
 	const activate = (node) => (touch ? node.tap() : node.click());
 	const reset = () => activate(page.getByRole('button', { name: 'Reset', exact: true }));
-	const toggle = page.getByRole('checkbox', { name: 'Trim overnight tail' });
+	const toggle = page.getByRole('checkbox', { name: 'Include actual end time' });
 	const endField = page.getByRole('group', { name: 'End/Duration', exact: true });
 	const preview = endField.locator('.calendar-end');
 	const google = page.getByRole('link', { name: 'Open in Google Calendar', exact: true });
@@ -38,9 +38,12 @@ export async function checkOvernightExport(page, touch = false) {
 			() => !document.querySelector('#parse-status').textContent.includes('Parsing current')
 		);
 		await fillTimes();
-		assert.equal(await toggle.isChecked(), true);
+		assert.equal(await toggle.isChecked(), false);
 		assert.match(await page.locator('#end-hint').textContent(), /2026-10-31 02:00/);
-		assert.equal(await endField.getByRole('checkbox', { name: 'Trim overnight tail' }).count(), 1);
+		assert.equal(
+			await endField.getByRole('checkbox', { name: 'Include actual end time' }).count(),
+			1
+		);
 		assert.equal(
 			await endField.evaluate((node) =>
 				node.lastElementChild?.classList.contains('overnight-export')
@@ -48,7 +51,7 @@ export async function checkOvernightExport(page, touch = false) {
 			true
 		);
 		assert.equal(await page.locator('.actions .overnight-export').count(), 0);
-		assert.equal(await preview.textContent(), 'Calendar end: Oct 31, 00:00');
+		assert.equal(await preview.textContent(), 'Calendar: Oct 30, 21:00 (start only)');
 		assert.equal(
 			await endField.locator('.overnight-control').evaluate((node) => {
 				const label = node.querySelector('label').getBoundingClientRect();
@@ -56,19 +59,18 @@ export async function checkOvernightExport(page, touch = false) {
 				const help = node.querySelector('summary').getBoundingClientRect();
 				return (
 					label.right < help.left &&
-					help.right < preview.left &&
-					Math.abs((label.top + label.bottom) / 2 - (preview.top + preview.bottom) / 2) < 1
+					(help.right < preview.left || preview.top >= Math.max(label.bottom, help.bottom))
 				);
 			}),
 			true
 		);
-		const help = endField.getByLabel('About trimming overnight tail', { exact: true });
+		const help = endField.getByLabel('About including actual end time', { exact: true });
 		if (touch) await activate(help);
 		else {
 			await help.focus();
 			await page.keyboard.press('Enter');
 		}
-		await endField.getByText('For events ending by 6 AM', { exact: false }).waitFor();
+		await endField.getByText('Including the actual end time', { exact: false }).waitFor();
 		assert.equal(
 			await endField.locator('.overnight-help p').evaluate((node) => {
 				const box = node.getBoundingClientRect();
@@ -78,7 +80,7 @@ export async function checkOvernightExport(page, touch = false) {
 		);
 		await activate(help);
 		const on = await query();
-		assert.equal(on.get('dates'), '20261030T120000Z/20261030T150000Z');
+		assert.equal(on.get('dates'), '20261030T120000Z/20261030T120000Z');
 		assert.equal(
 			on.get('details'),
 			`${source}\n\n---\n\nActual end: Oct 31, 2026, 02:00 (Asia/Seoul; next day)`
@@ -93,7 +95,7 @@ export async function checkOvernightExport(page, touch = false) {
 			0
 		);
 		const clipped = await download();
-		assert.ok(clipped.includes('DTEND:20261030T150000Z\r\n'));
+		assert.ok(!clipped.includes('DTEND:'));
 		assert.ok(clipped.includes('Actual end: Oct 31\\, 2026\\, 02:00 (Asia/Seoul\\; next day)'));
 		const fieldHeight = (await endField.boundingBox()).height;
 		if (touch) await activate(toggle);
@@ -101,7 +103,7 @@ export async function checkOvernightExport(page, touch = false) {
 			await toggle.focus();
 			await page.keyboard.press('Space');
 		}
-		assert.equal(await toggle.isChecked(), false);
+		assert.equal(await toggle.isChecked(), true);
 		assert.equal(await preview.isVisible(), false);
 		assert.equal((await endField.boundingBox()).height, fieldHeight);
 		assert.equal((await query()).get('dates'), '20261030T120000Z/20261030T170000Z');
@@ -141,7 +143,7 @@ export async function checkOvernightExport(page, touch = false) {
 		await activate(toggle);
 		for (const clock of ['00:01', '05:59', '06:00']) {
 			await page.locator('#end').fill(`2026-11-01 ${clock}`);
-			assert.equal(await toggle.isChecked(), true);
+			assert.equal(await toggle.isChecked(), false);
 			assert.equal((await query()).get('dates'), '20261030T120000Z/20261031T150000Z');
 		}
 		for (const clock of ['00:00', '06:01', '17:00']) {
@@ -156,13 +158,13 @@ export async function checkOvernightExport(page, touch = false) {
 		await page.locator('#end').fill('2026-10-31 00:00');
 		assert.equal(await toggle.count(), 0);
 		await fillTimes();
-		assert.equal(await toggle.isChecked(), true);
+		assert.equal(await toggle.isChecked(), false);
 		await activate(toggle);
 		await description.fill(`${source}\nEdited`);
-		assert.equal(await toggle.isChecked(), false);
+		assert.equal(await toggle.isChecked(), true);
 		await reset();
 		await fillTimes();
-		assert.equal(await toggle.isChecked(), true);
+		assert.equal(await toggle.isChecked(), false);
 		await activate(toggle);
 		const descriptor = await page.evaluate(() => {
 			window.overnightClipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
@@ -179,7 +181,7 @@ export async function checkOvernightExport(page, touch = false) {
 				() => document.querySelector('#description').value === 'Replacement draft'
 			);
 			await fillTimes();
-			assert.equal(await toggle.isChecked(), true);
+			assert.equal(await toggle.isChecked(), false);
 		} finally {
 			await page.evaluate(() => {
 				if (window.overnightClipboardDescriptor)
@@ -197,7 +199,7 @@ export async function checkOvernightExport(page, touch = false) {
 		]) {
 			await page.locator('#start').fill(start);
 			await page.locator('#end').fill(end);
-			assert.equal(await toggle.isChecked(), true);
+			assert.equal(await toggle.isChecked(), false);
 			assert.equal((await query()).get('dates'), dates);
 			assert.equal((await query()).get('details').includes('next day'), false);
 			assert.equal((await query(fallback)).get('dates'), dates);
