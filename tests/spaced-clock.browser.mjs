@@ -11,7 +11,7 @@ export async function checkSpacedClock(page, touch = false) {
 	const activate = (node) => (touch ? node.tap() : node.click());
 	const reset = () => activate(page.getByRole('button', { name: 'Reset', exact: true }));
 	const description = page.locator('#description');
-	const trim = page.getByRole('checkbox', { name: 'Trim overnight tail', exact: true });
+	const trim = page.getByRole('checkbox', { name: 'Include actual end time', exact: true });
 	const google = page.getByRole('link', { name: 'Open in Google Calendar', exact: true });
 	const query = async () => new URL(await google.getAttribute('href')).searchParams;
 	const download = async () => {
@@ -47,12 +47,12 @@ export async function checkSpacedClock(page, touch = false) {
 				text.includes('23: 00')
 			)
 		);
-		assert.equal(await trim.isChecked(), true);
-		assert.equal((await query()).get('dates'), '20261219T140000Z/20261219T150000Z');
-		assert.match((await query()).get('details'), /Actual end: Dec 20, 2026, 03:00/);
-		assert.ok((await download()).includes('DTEND:20261219T150000Z\r\n'));
-		await activate(trim);
 		assert.equal(await trim.isChecked(), false);
+		assert.equal((await query()).get('dates'), '20261219T140000Z/20261219T140000Z');
+		assert.match((await query()).get('details'), /Actual end: Dec 20, 2026, 03:00/);
+		assert.ok(!(await download()).includes('DTEND:'));
+		await activate(trim);
+		assert.equal(await trim.isChecked(), true);
 		assert.equal((await query()).get('dates'), '20261219T140000Z/20261219T180000Z');
 		assert.equal((await query()).get('details'), source);
 		const ics = await download();

@@ -7,6 +7,7 @@ export type OvernightExport = {
 	eligible: boolean;
 	actualEnd?: string;
 	calendarEnd?: string;
+	singleNight?: boolean;
 	warning?: string;
 };
 
@@ -21,7 +22,10 @@ const label = (value: Temporal.ZonedDateTime) =>
 	`${value.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}, ${value.toPlainTime().toString({ smallestUnit: value.second ? 'second' : 'minute' })}`;
 
 // Always derive from validation, keeping the real draft and its description untouched.
-export function overnightExport(event: normalized | undefined, enabled = true): OvernightExport {
+export function overnightExport(
+	event: normalized | undefined,
+	includeActualEnd = false
+): OvernightExport {
 	const unchanged = { event, eligible: false };
 	if (!event || event.allDay || !validZone(event.zone)) return unchanged;
 	try {
@@ -36,11 +40,12 @@ export function overnightExport(event: normalized | undefined, enabled = true): 
 			Temporal.PlainTime.compare(endClock, '06:00') > 0
 		)
 			return unchanged;
+		const nextDay = finalDate.equals(start.toPlainDate().add({ days: 1 }));
 		const midnight = finalDate.toPlainDateTime('00:00');
 		let cutoff: Temporal.ZonedDateTime;
 		try {
 			// Reject both missing and repeated local midnights instead of guessing an offset.
-			cutoff = midnight.toZonedDateTime(event.zone, { disambiguation: 'reject' });
+			cutoff = nextDay ? start : midnight.toZonedDateTime(event.zone, { disambiguation: 'reject' });
 		} catch {
 			return {
 				...unchanged,
@@ -49,13 +54,12 @@ export function overnightExport(event: normalized | undefined, enabled = true): 
 			};
 		}
 		if (
-			Temporal.ZonedDateTime.compare(cutoff, start) <= 0 ||
+			Temporal.ZonedDateTime.compare(cutoff, start) < 0 ||
 			Temporal.ZonedDateTime.compare(cutoff, end) >= 0
 		)
 			return unchanged;
-		const nextDay = finalDate.equals(start.toPlainDate().add({ days: 1 }));
 		const actualEnd = `${label(end)} (${event.zone}${nextDay ? '; next day' : ''})`;
-		const calendarEnd = `${cutoff.toLocaleString('en-US', { month: 'short', day: 'numeric' })}, 00:00`;
+		const calendarEnd = `${cutoff.toLocaleString('en-US', { month: 'short', day: 'numeric' })}, ${cutoff.toPlainTime().toString({ smallestUnit: cutoff.second ? 'second' : 'minute' })}`;
 		const note = `Actual end: ${actualEnd}`;
 		const equivalent = (text: string) => text.trim().replace(/\s+/gu, ' ').toLowerCase();
 		const hasNote = event.description
@@ -65,7 +69,8 @@ export function overnightExport(event: normalized | undefined, enabled = true): 
 			eligible: true,
 			actualEnd,
 			calendarEnd,
-			event: enabled
+			singleNight: nextDay,
+			event: !includeActualEnd
 				? {
 						...event,
 						end: cutoff.toInstant().toString({ smallestUnit: 'second' }).replaceAll(/[-:]/g, ''),

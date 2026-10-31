@@ -64,14 +64,14 @@ it.each(['23:00', '23: 00', '23 :00', '23 : 00', '23\t:\t00', '23\u00a0:\u300000
 			zone: 'Asia/Seoul'
 		});
 		for (const enabled of [true, false]) {
-			const exported = overnightExport(event, enabled).event!;
-			const end = enabled ? '20261219T150000Z' : '20261219T180000Z';
+			const exported = overnightExport(event, !enabled).event!;
+			const end = enabled ? '20261219T140000Z' : '20261219T180000Z';
 			expect(new URL(Core.googleUrl(exported)).searchParams.get('dates')).toBe(
 				`20261219T140000Z/${end}`
 			);
 			expect(
 				Core.ics(exported, 'spaced-clock', '20261024T030000Z').replace(/\r\n /g, '')
-			).toContain(`DTSTART:20261219T140000Z\r\nDTEND:${end}`);
+			).toContain(`DTSTART:20261219T140000Z\r\n${enabled ? 'SUMMARY:' : `DTEND:${end}`}`);
 			expect(exported.description.includes('Actual end:')).toBe(enabled);
 		}
 	}

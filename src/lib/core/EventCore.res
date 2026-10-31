@@ -1231,7 +1231,7 @@ let ics = (event: normalized, uid: string, dtstamp: string) => {
     `UID:${escapeText(uid)}`,
     `DTSTAMP:${dtstamp}`,
     `DTSTART${dateParam}:${event.start}`,
-    `DTEND${dateParam}:${event.end}`,
+    ...(event.allDay || event.start != event.end ? [`DTEND${dateParam}:${event.end}`] : []),
     `SUMMARY:${escapeText(event.title)}`,
     `DESCRIPTION:${escapeText(event.description)}`,
     `LOCATION:${escapeText(event.location)}`,

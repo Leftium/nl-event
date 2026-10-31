@@ -34,8 +34,8 @@
 	let projection = $derived(Core.editorProjection(draft));
 	let result = $derived(projection.validation);
 	let links = $derived(groupEquivalentLinks(discoverLinks(draft.description)));
-	let trimOvernight = $state(true);
-	let overnight = $derived(overnightExport(result.event, trimOvernight));
+	let includeActualEnd = $state(false);
+	let overnight = $derived(overnightExport(result.event, includeActualEnd));
 	let exportEvent = $derived(overnight.event);
 	let googleUrl = $derived(exportEvent ? Core.googleUrl(exportEvent) : '');
 	let longGoogleUrl = $derived(googleUrl.length > 8000);
@@ -382,7 +382,7 @@
 	onMount(() => {
 		let mounted = true;
 		collapseDates();
-		trimOvernight = true;
+		includeActualEnd = false;
 		draft = Core.create(captureContext());
 		ready = true;
 		void tick().then(() => {
@@ -416,7 +416,7 @@
 		clearTimeout(parseTimer);
 		descriptionSelection = '';
 		collapseDates();
-		trimOvernight = true;
+		includeActualEnd = false;
 		draft = Core.create(captureContext());
 		displayNow = draft.context.referenceInstant;
 		zoneDialog?.close();
@@ -436,7 +436,7 @@
 			}
 			descriptionSelection = '';
 			collapseDates();
-			trimOvernight = true;
+			includeActualEnd = false;
 			draft = Core.replaceClipboard(draft, text, captureContext());
 			displayNow = draft.context.referenceInstant;
 			scheduleParse(true);
@@ -980,24 +980,25 @@
 							<div class="overnight-export">
 								<div class="overnight-control">
 									<label
-										><input type="checkbox" bind:checked={trimOvernight} /> Trim overnight tail</label
+										><input type="checkbox" bind:checked={includeActualEnd} /> Include actual end time</label
 									>
 
 									<details class="overnight-help no-nimble">
-										<summary aria-label="About trimming overnight tail"
+										<summary aria-label="About including actual end time"
 											><span aria-hidden="true">?</span></summary
 										>
 										<p>
-											Avoid an extra final-morning entry in Google Calendar's Schedule view. For
-											events ending by 6 AM, exports stop at midnight on the final day. Hours after
-											midnight won't be marked busy. The actual end stays in the regular export
-											description; Open without description omits it.
+											Including the actual end time may show the event on multiple dates in Google
+											Calendar's Schedule view.
 										</p>
 									</details>
 									<small
 										class="calendar-end"
-										class:preview-hidden={!trimOvernight}
-										aria-hidden={!trimOvernight}>Calendar end: {overnight.calendarEnd}</small
+										class:preview-hidden={includeActualEnd}
+										aria-hidden={includeActualEnd}
+										>{overnight.singleNight
+											? `Calendar: ${overnight.calendarEnd} (start only)`
+											: `Calendar end: ${overnight.calendarEnd}`}</small
 									>
 								</div>
 							</div>
